@@ -1,301 +1,453 @@
 'use client'
 
 import React, { useState } from 'react'
-import { ChevronLeft, MapPin, Calendar, Users, TrendingUp } from 'lucide-react'
-import { StatusBadge, TagBadge } from '../atoms/Badge'
-import { ProgressBar }  from '../atoms/ProgressBar'
-import { Avatar }       from '../atoms/Avatar'
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer,
-} from 'recharts'
-import { PROGRAMS, TEAM, ACTIVITY } from '@/lib/mock'
-import { formatNumber, formatCurrency, formatDate, pct } from '@/lib/utils'
+import { ChevronLeft, Plus, MapPin, Calendar, Target, DollarSign, Users, Activity } from 'lucide-react'
+import { COLORS, FONTS } from '@/lib/tokens'
+import { StatusBadge, GenericBadge } from '@/components/atoms/Badge'
+import { ProgressBar }  from '@/components/atoms/ProgressBar'
+import { EmptyState }   from '@/components/atoms/EmptyState'
+import { FormField, Input, Textarea } from '@/components/atoms/FormField'
+import { useModal, ModalFooter } from '@/components/Modal'
+import { useToast } from '@/components/Toast'
+import { nextId, todayISO, formatCurrency, pct } from '@/lib/utils'
+import type { Program, Indicator, BudgetCategory } from '@/lib/types'
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
 
 type Tab = 'overview' | 'indicators' | 'budget' | 'team' | 'activity'
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'overview',   label: 'Overview'   },
-  { id: 'indicators', label: 'Indicators' },
-  { id: 'budget',     label: 'Budget'     },
-  { id: 'team',       label: 'Team'       },
-  { id: 'activity',   label: 'Activity'   },
+  { id: 'overview',    label: 'Overview'    },
+  { id: 'indicators',  label: 'Indicators'  },
+  { id: 'budget',      label: 'Budget'      },
+  { id: 'team',        label: 'Team'        },
+  { id: 'activity',    label: 'Activity'    },
 ]
 
-const IND_TYPE_COLOR: Record<string, string> = {
-  output:  'bg-blue-50 text-blue-600',
-  outcome: 'bg-mist text-fern',
-  impact:  'bg-amber-50 text-amber-700',
-}
+// ── Props ─────────────────────────────────────────────────────────────────────
 
 interface ProgramDetailProps {
-  programId: string
-  onBack:    () => void
+  program:  Program | null
+  onBack:   () => void
+  onUpdate: (p: Program) => void
 }
 
-export function ProgramDetail({ programId, onBack }: ProgramDetailProps) {
+export function ProgramDetail({ program, onBack, onUpdate }: ProgramDetailProps) {
   const [tab, setTab] = useState<Tab>('overview')
-  const program = PROGRAMS.find(p => p.id === programId)
 
   if (!program) {
     return (
-      <div className="text-center py-16">
-        <p className="text-fern/60">Program not found.</p>
-        <button onClick={onBack} className="mt-3 text-sm text-fern hover:text-moss transition-colors">
-          Back to programs
-        </button>
+      <div style={{ maxWidth: 960, margin: '0 auto' }}>
+        <EmptyState title="Program not found" description="This program may have been deleted." action={
+          <button onClick={onBack} style={{ padding: '8px 16px', borderRadius: 8, background: COLORS.moss, color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+            Back to Programs
+          </button>
+        } />
       </div>
     )
   }
 
-  const budPct  = pct(program.spent, program.budget)
-  const benefPct = pct(program.beneficiaries, program.targetBenef)
-  const teamMembers = TEAM.filter(t => program.team.includes(t.id))
-  const leadMember  = TEAM.find(t => t.id === program.lead)
-  const activity    = ACTIVITY.filter(a => a.programId === program.id)
-
   return (
-    <div className="max-w-5xl space-y-5">
+    <div style={{ maxWidth: 960, margin: '0 auto' }}>
       {/* Back */}
-      <button onClick={onBack} className="inline-flex items-center gap-1 text-sm text-fern hover:text-moss transition-colors">
+      <button
+        onClick={onBack}
+        className="fade-up"
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          fontSize: 12, color: COLORS.stone, cursor: 'pointer',
+          marginBottom: 16, transition: 'color 0.15s',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.color = COLORS.fern)}
+        onMouseLeave={e => (e.currentTarget.style.color = COLORS.stone)}
+      >
         <ChevronLeft size={14} /> Back to Programs
       </button>
 
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 mb-1.5">
-            <h2 className="font-fraunces text-2xl font-semibold text-forest">{program.name}</h2>
+      {/* Header card */}
+      <div
+        className="fade-up-1"
+        style={{
+          borderRadius: 16,
+          background: `linear-gradient(135deg, ${COLORS.forest} 0%, ${COLORS.canopy} 100%)`,
+          padding: '28px 32px',
+          marginBottom: 24,
+          color: '#fff',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+          <div>
             <StatusBadge status={program.status} />
+            <h1 style={{ fontFamily: FONTS.heading, fontSize: 22, fontWeight: 600, color: '#fff', marginTop: 8 }}>
+              {program.name}
+            </h1>
+            {program.funder && program.funder !== 'TBD' && (
+              <GenericBadge label={program.funder} bg={COLORS.gold + '22'} text={COLORS.gold} style={{ marginTop: 6 }} />
+            )}
           </div>
-          <div className="flex flex-wrap items-center gap-4 text-xs text-fern/60">
-            <span className="flex items-center gap-1"><MapPin size={11} />{program.region}, {program.country}</span>
-            <span className="flex items-center gap-1"><Calendar size={11} />{formatDate(program.startDate)} – {formatDate(program.endDate)}</span>
-            <span className="flex items-center gap-1"><Users size={11} />{teamMembers.length} team members</span>
+          <div style={{ textAlign: 'right' }}>
+            <p style={{ fontSize: 11, color: 'rgba(125,212,160,0.6)', marginBottom: 4 }}>Progress</p>
+            <p style={{ fontSize: 28, fontWeight: 700, color: '#fff', lineHeight: 1 }}>{program.progress}%</p>
           </div>
         </div>
-        <div className="flex gap-2 flex-shrink-0">
-          <button className="px-3 py-1.5 rounded-lg border border-mist text-sm text-fern hover:bg-foam transition-colors">Edit</button>
-          <button className="px-3 py-1.5 rounded-lg bg-moss text-white text-sm font-semibold hover:bg-fern transition-colors">Add Field Data</button>
-        </div>
-      </div>
 
-      {/* KPI strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: 'Beneficiaries', value: formatNumber(program.beneficiaries), sub: `of ${formatNumber(program.targetBenef)}` },
-          { label: 'Budget Used',   value: formatCurrency(program.spent),        sub: `of ${formatCurrency(program.budget)}` },
-          { label: 'Completion',    value: `${program.progress}%`,               sub: 'overall progress' },
-          { label: 'Indicators',    value: program.indicators.length,             sub: 'being tracked' },
-        ].map(s => (
-          <div key={s.label} className="card p-4 text-center">
-            <p className="text-xl font-fraunces font-semibold text-forest">{s.value}</p>
-            <p className="text-[10px] text-fern/50 mt-0.5">{s.sub}</p>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-fern/40 mt-1">{s.label}</p>
-          </div>
-        ))}
+        <div style={{ display: 'flex', gap: 24 }}>
+          {program.location && program.location !== 'TBD' && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: COLORS.mint }}>
+              <MapPin size={12} /> {program.location}
+            </span>
+          )}
+          {program.start && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: COLORS.mint }}>
+              <Calendar size={12} /> {program.start} → {program.end}
+            </span>
+          )}
+          {program.budget > 0 && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: COLORS.mint }}>
+              <DollarSign size={12} /> {formatCurrency(program.budget, program.currency)}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-mist">
-        <nav className="flex gap-0">
-          {TABS.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                tab === t.id
-                  ? 'border-moss text-moss'
-                  : 'border-transparent text-fern/60 hover:text-fern'
-              }`}
-            >
-              {t.label}
-            </button>
+      <div
+        className="fade-up-2"
+        style={{ display: 'flex', gap: 2, borderBottom: `1px solid ${COLORS.mist}`, marginBottom: 24 }}
+      >
+        {TABS.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            style={{
+              padding: '10px 18px', fontSize: 13, fontWeight: tab === t.id ? 600 : 400,
+              color: tab === t.id ? COLORS.forest : COLORS.stone,
+              borderBottom: `2px solid ${tab === t.id ? COLORS.sage : 'transparent'}`,
+              cursor: 'pointer', transition: 'color 0.15s',
+              marginBottom: -1,
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      <div className="fade-up-3">
+        {tab === 'overview'   && <OverviewTab   program={program} onUpdate={onUpdate} />}
+        {tab === 'indicators' && <IndicatorsTab program={program} onUpdate={onUpdate} />}
+        {tab === 'budget'     && <BudgetTab     program={program} onUpdate={onUpdate} />}
+        {tab === 'team'       && <EmptyState icon={<Users size={22} />}    title="No team members assigned" description="Assign team members from the Team view." compact />}
+        {tab === 'activity'   && <EmptyState icon={<Activity size={22} />} title="No activity yet"           description="Activity will appear as the program progresses." compact />}
+      </div>
+    </div>
+  )
+}
+
+// ── Overview tab ──────────────────────────────────────────────────────────────
+
+function OverviewTab({ program, onUpdate }: { program: Program; onUpdate: (p: Program) => void }) {
+  const { success } = useToast()
+  const [progress, setProgress] = useState(program.progress)
+
+  function handleSave() {
+    onUpdate({ ...program, progress })
+    success('Progress updated')
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div className="card" style={{ padding: 20 }}>
+        <h3 style={{ fontFamily: FONTS.heading, fontSize: 15, fontWeight: 600, color: COLORS.forest, marginBottom: 12 }}>Objective</h3>
+        {program.objective
+          ? <p style={{ fontSize: 13, color: COLORS.slate, lineHeight: 1.6 }}>{program.objective}</p>
+          : <p style={{ fontSize: 13, color: COLORS.stone, fontStyle: 'italic' }}>No objective set.</p>
+        }
+      </div>
+
+      <div className="card" style={{ padding: 20 }}>
+        <h3 style={{ fontFamily: FONTS.heading, fontSize: 15, fontWeight: 600, color: COLORS.forest, marginBottom: 12 }}>Overall Progress</h3>
+        <ProgressBar value={progress} showLabel style={{ marginBottom: 16 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <input
+            type="range" min={0} max={100} value={progress}
+            onChange={e => setProgress(Number(e.target.value))}
+            style={{ flex: 1 }}
+          />
+          <span style={{ width: 36, fontSize: 13, fontWeight: 600, color: COLORS.forest }}>{progress}%</span>
+          <button
+            onClick={handleSave}
+            style={{
+              padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+              background: COLORS.moss, color: '#fff', cursor: 'pointer',
+            }}
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Indicators tab ────────────────────────────────────────────────────────────
+
+function IndicatorsTab({ program, onUpdate }: { program: Program; onUpdate: (p: Program) => void }) {
+  const { open } = useModal()
+  const { success } = useToast()
+
+  function openAdd() {
+    open({
+      title: 'Add Indicator',
+      content: <AddIndicatorForm onSave={(ind) => {
+        onUpdate({ ...program, indicators: [...program.indicators, ind] })
+        success(`Indicator "${ind.name}" added`)
+      }} />,
+    })
+  }
+
+  function updateCurrent(id: number, value: number) {
+    const updated = program.indicators.map(i => i.id === id ? { ...i, current: value } : i)
+    onUpdate({ ...program, indicators: updated })
+    success('Indicator updated')
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+        <button
+          onClick={openAdd}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '8px 14px', borderRadius: 8,
+            background: COLORS.moss, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+          }}
+        >
+          <Plus size={13} /> Add Indicator
+        </button>
+      </div>
+
+      {program.indicators.length === 0 ? (
+        <EmptyState icon={<Target size={22} />} title="No indicators yet" description="Add outcome indicators to track program performance." compact />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {program.indicators.map(ind => (
+            <IndicatorRow key={ind.id} indicator={ind} onUpdateCurrent={(v) => updateCurrent(ind.id, v)} />
           ))}
-        </nav>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function IndicatorRow({ indicator: ind, onUpdateCurrent }: {
+  indicator: Indicator; onUpdateCurrent: (v: number) => void
+}) {
+  const { success } = useToast()
+  const [editing, setEditing] = useState(false)
+  const [val, setVal] = useState(ind.current)
+  const progress = pct(ind.current, ind.target)
+
+  return (
+    <div className="card" style={{ padding: '16px 18px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.forest }}>{ind.name}</p>
+        <span style={{ fontSize: 12, color: COLORS.stone }}>{ind.current} / {ind.target} {ind.unit}</span>
+      </div>
+      <ProgressBar value={progress} showLabel style={{ marginBottom: 10 }} />
+      {editing ? (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input
+            type="number" min={0} max={ind.target} value={val}
+            onChange={e => setVal(Number(e.target.value))}
+            style={{
+              width: 80, padding: '5px 8px', borderRadius: 6,
+              border: `1px solid ${COLORS.mist}`, fontSize: 13, color: COLORS.forest,
+            }}
+          />
+          <span style={{ fontSize: 12, color: COLORS.stone }}>{ind.unit}</span>
+          <button
+            onClick={() => { onUpdateCurrent(val); setEditing(false); success('Updated') }}
+            style={{ padding: '5px 12px', borderRadius: 6, background: COLORS.sage, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+          >
+            Save
+          </button>
+          <button onClick={() => { setVal(ind.current); setEditing(false) }} style={{ fontSize: 12, color: COLORS.stone, cursor: 'pointer' }}>
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => setEditing(true)}
+          style={{ fontSize: 11, color: COLORS.sage, cursor: 'pointer', textDecoration: 'underline' }}
+        >
+          Update value
+        </button>
+      )}
+    </div>
+  )
+}
+
+function AddIndicatorForm({ onSave }: { onSave: (i: Indicator) => void }) {
+  const { close } = useModal()
+  const [name,   setName]   = useState('')
+  const [target, setTarget] = useState('')
+  const [unit,   setUnit]   = useState('')
+
+  function handleSave() {
+    if (!name.trim() || !target) return
+    onSave({ id: nextId(), name: name.trim(), target: Number(target), current: 0, unit: unit.trim() || 'units' })
+    close()
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <FormField label="Indicator name" required htmlFor="ai-name">
+        <Input id="ai-name" placeholder="e.g. Beneficiaries reached" value={name} onChange={e => setName(e.target.value)} />
+      </FormField>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <FormField label="Target value" required htmlFor="ai-target">
+          <Input id="ai-target" type="number" min={1} placeholder="1000" value={target} onChange={e => setTarget(e.target.value)} />
+        </FormField>
+        <FormField label="Unit" htmlFor="ai-unit">
+          <Input id="ai-unit" placeholder="e.g. people" value={unit} onChange={e => setUnit(e.target.value)} />
+        </FormField>
+      </div>
+      <ModalFooter>
+        <button onClick={close} style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, color: COLORS.stone, cursor: 'pointer', border: `1px solid ${COLORS.mist}` }}>Cancel</button>
+        <button
+          onClick={handleSave}
+          disabled={!name.trim() || !target}
+          style={{
+            padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+            background: name.trim() && target ? COLORS.moss : COLORS.mist,
+            color: name.trim() && target ? '#fff' : COLORS.stone,
+            cursor: name.trim() && target ? 'pointer' : 'not-allowed',
+          }}
+        >
+          Add Indicator
+        </button>
+      </ModalFooter>
+    </div>
+  )
+}
+
+// ── Budget tab ────────────────────────────────────────────────────────────────
+
+function BudgetTab({ program, onUpdate }: { program: Program; onUpdate: (p: Program) => void }) {
+  const { open } = useModal()
+  const { success } = useToast()
+  const totalAllocated = program.budgetCategories.reduce((s, c) => s + c.allocated, 0)
+  const totalSpent     = program.budgetCategories.reduce((s, c) => s + c.spent, 0)
+
+  function openAdd() {
+    open({
+      title: 'Add Budget Category',
+      content: <AddBudgetForm onSave={(cat) => {
+        onUpdate({ ...program, budgetCategories: [...program.budgetCategories, cat] })
+        success(`Category "${cat.name}" added`)
+      }} />,
+    })
+  }
+
+  return (
+    <div>
+      {program.budget > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 20 }}>
+          <StatPill label="Total Budget"  value={formatCurrency(program.budget, program.currency)} color={COLORS.forest} />
+          <StatPill label="Allocated"     value={formatCurrency(totalAllocated, program.currency)} color={COLORS.fern}   />
+          <StatPill label="Spent"         value={formatCurrency(totalSpent, program.currency)}     color={COLORS.amber}  />
+        </div>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+        <button
+          onClick={openAdd}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '8px 14px', borderRadius: 8,
+            background: COLORS.moss, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+          }}
+        >
+          <Plus size={13} /> Add Category
+        </button>
       </div>
 
-      {/* Tab panes */}
-      <div className="animate-fade-in">
-
-        {/* ── Overview ──────────────────────────────────────────────────────── */}
-        {tab === 'overview' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2 card p-5 space-y-4">
-              <h3 className="font-fraunces text-base font-semibold text-forest">Description</h3>
-              <p className="text-sm text-forest/70 leading-relaxed">{program.description}</p>
-              <div className="pt-3 border-t border-mist space-y-3">
-                <ProgressBar label="Beneficiaries reached" value={benefPct} showPct />
-                <ProgressBar label="Budget utilized" value={budPct} showPct color={budPct > 85 ? 'gold' : 'green'} />
-                <ProgressBar label="Overall completion" value={program.progress} showPct />
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div className="card p-5 space-y-3">
-                <h3 className="font-fraunces text-sm font-semibold text-forest">Sectors</h3>
-                <div className="flex flex-wrap gap-1.5">
-                  {program.sector.map(s => <TagBadge key={s} label={s} />)}
-                </div>
-              </div>
-              <div className="card p-5 space-y-3">
-                <h3 className="font-fraunces text-sm font-semibold text-forest">Program Lead</h3>
-                {leadMember && (
-                  <div className="flex items-center gap-2.5">
-                    <Avatar name={leadMember.name} size="md" />
-                    <div>
-                      <p className="text-sm font-semibold text-forest">{leadMember.name}</p>
-                      <p className="text-xs text-fern/50">{leadMember.role.replace(/-/g, ' ')}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── Indicators ──────────────────────────────────────────────────── */}
-        {tab === 'indicators' && (
-          <div className="space-y-4">
-            <div className="h-52">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={program.indicators.map(i => ({
-                  name: i.label.split(' ').slice(0, 3).join(' '),
-                  Target: i.target, Current: i.current,
-                }))} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#C8EDD8" strokeOpacity={0.6} />
-                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#2E7D52', opacity: 0.7 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: '#2E7D52', opacity: 0.7 }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ background: '#fff', border: '1px solid #C8EDD8', borderRadius: 8, fontSize: 12 }} />
-                  <Bar dataKey="Target"  fill="#C8EDD8" radius={[4,4,0,0]} />
-                  <Bar dataKey="Current" fill="#4CAF78" radius={[4,4,0,0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="card p-0 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-mist bg-snow">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-fern/55 uppercase tracking-wide">Indicator</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-fern/55 uppercase tracking-wide">Type</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-fern/55 uppercase tracking-wide">Baseline</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-fern/55 uppercase tracking-wide">Target</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-fern/55 uppercase tracking-wide">Current</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-fern/55 uppercase tracking-wide">Progress</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {program.indicators.map(ind => (
-                    <tr key={ind.id} className="border-b border-mist/40 hover:bg-foam/50 transition-colors">
-                      <td className="px-4 py-3.5">
-                        <p className="font-medium text-forest text-sm">{ind.label}</p>
-                        <p className="text-xs text-fern/50 mt-0.5">{ind.unit}</p>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${IND_TYPE_COLOR[ind.type]}`}>
-                          {ind.type}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5 text-right font-mono text-xs text-fern/70">{ind.baseline}</td>
-                      <td className="px-4 py-3.5 text-right font-mono text-xs font-semibold text-forest">{ind.target}</td>
-                      <td className="px-4 py-3.5 text-right font-mono text-xs font-semibold text-moss">{ind.current}</td>
-                      <td className="px-4 py-3.5 w-36">
-                        <ProgressBar value={pct(ind.current, ind.target)} size="sm" />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* ── Budget ──────────────────────────────────────────────────────── */}
-        {tab === 'budget' && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: 'Total Budget', value: formatCurrency(program.budget), cls: 'text-forest' },
-                { label: 'Spent',        value: formatCurrency(program.spent),  cls: 'text-moss' },
-                { label: 'Remaining',    value: formatCurrency(program.budget - program.spent), cls: 'text-fern' },
-              ].map(s => (
-                <div key={s.label} className="card p-4 text-center">
-                  <p className={`text-xl font-fraunces font-semibold ${s.cls}`}>{s.value}</p>
-                  <p className="text-xs text-fern/50 mt-0.5">{s.label}</p>
-                </div>
+      {program.budgetCategories.length === 0 ? (
+        <EmptyState icon={<DollarSign size={22} />} title="No budget categories yet" description="Break down your program budget into categories." compact />
+      ) : (
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: COLORS.snow }}>
+                {['Category', 'Allocated', 'Spent', 'Remaining', 'Utilization'].map(h => (
+                  <th key={h} style={{ padding: '10px 16px', fontSize: 11, fontWeight: 700, color: COLORS.stone, textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {program.budgetCategories.map((cat, i) => (
+                <tr key={cat.id} style={{ borderTop: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? '#fff' : COLORS.snow }}>
+                  <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 500, color: COLORS.forest }}>{cat.name}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: COLORS.slate }}>{formatCurrency(cat.allocated, program.currency)}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: COLORS.slate }}>{formatCurrency(cat.spent, program.currency)}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: COLORS.slate }}>{formatCurrency(cat.allocated - cat.spent, program.currency)}</td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <ProgressBar value={pct(cat.spent, cat.allocated)} showLabel />
+                  </td>
+                </tr>
               ))}
-            </div>
-            <div className="card p-0 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-mist bg-snow">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-fern/55 uppercase tracking-wide">Category</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-fern/55 uppercase tracking-wide">Description</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-fern/55 uppercase tracking-wide">Allocated</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-fern/55 uppercase tracking-wide">Spent</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-fern/55 uppercase tracking-wide">Utilization</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {program.budgetLines.map(bl => (
-                    <tr key={bl.id} className="border-b border-mist/40 hover:bg-foam/50 transition-colors">
-                      <td className="px-4 py-3.5 font-semibold text-forest">{bl.category}</td>
-                      <td className="px-4 py-3.5 text-forest/70">{bl.description}</td>
-                      <td className="px-4 py-3.5 text-right font-mono text-xs">{formatCurrency(bl.allocated)}</td>
-                      <td className="px-4 py-3.5 text-right font-mono text-xs font-semibold text-moss">{formatCurrency(bl.spent)}</td>
-                      <td className="px-4 py-3.5 w-36">
-                        <ProgressBar value={pct(bl.spent, bl.allocated)} size="sm" color={pct(bl.spent, bl.allocated) > 90 ? 'gold' : 'green'} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
 
-        {/* ── Team ────────────────────────────────────────────────────────── */}
-        {tab === 'team' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {teamMembers.map(m => (
-              <div key={m.id} className="card p-4 flex items-center gap-3">
-                <Avatar name={m.name} size="md" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-forest truncate">{m.name}</p>
-                  <p className="text-xs text-fern/55 capitalize mt-0.5">{m.role.replace(/-/g, ' ')}</p>
-                  <p className="text-xs text-fern/40 mt-0.5">{m.region}</p>
-                </div>
-                {m.id === program.lead && (
-                  <span className="text-[9px] font-bold uppercase tracking-wide text-gold bg-amber-50 px-1.5 py-0.5 rounded-full flex-shrink-0">
-                    Lead
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+function StatPill({ label, value, color }: { label: string; value: string; color: string }) {
+  return (
+    <div className="card" style={{ padding: '14px 16px' }}>
+      <p style={{ fontSize: 11, color: COLORS.stone, marginBottom: 4 }}>{label}</p>
+      <p style={{ fontSize: 17, fontWeight: 700, color }}>{value}</p>
+    </div>
+  )
+}
 
-        {/* ── Activity ────────────────────────────────────────────────────── */}
-        {tab === 'activity' && (
-          <div className="space-y-2.5">
-            {activity.length === 0 ? (
-              <p className="text-sm text-fern/60 py-8 text-center">No activity recorded yet.</p>
-            ) : (
-              activity.map(ev => (
-                <div key={ev.id} className="card p-4 flex items-start gap-3">
-                  <div className="w-2 h-2 rounded-full bg-sage flex-shrink-0 mt-2" />
-                  <div className="flex-1">
-                    <p className="text-sm text-forest/80">
-                      <span className="font-semibold text-forest">{ev.actor}</span> {ev.message}
-                    </p>
-                    <p className="text-xs text-fern/45 mt-1">{ev.timestamp}</p>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        )}
+function AddBudgetForm({ onSave }: { onSave: (c: BudgetCategory) => void }) {
+  const { close } = useModal()
+  const [name,      setName]      = useState('')
+  const [allocated, setAllocated] = useState('')
+  const [spent,     setSpent]     = useState('')
 
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <FormField label="Category name" required htmlFor="bc-name">
+        <Input id="bc-name" placeholder="e.g. Staff costs" value={name} onChange={e => setName(e.target.value)} />
+      </FormField>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <FormField label="Allocated" required htmlFor="bc-alloc">
+          <Input id="bc-alloc" type="number" min={0} placeholder="0" value={allocated} onChange={e => setAllocated(e.target.value)} />
+        </FormField>
+        <FormField label="Spent" htmlFor="bc-spent">
+          <Input id="bc-spent" type="number" min={0} placeholder="0" value={spent} onChange={e => setSpent(e.target.value)} />
+        </FormField>
       </div>
+      <ModalFooter>
+        <button onClick={close} style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, color: COLORS.stone, cursor: 'pointer', border: `1px solid ${COLORS.mist}` }}>Cancel</button>
+        <button
+          onClick={() => { if (!name.trim() || !allocated) return; onSave({ id: nextId(), name: name.trim(), allocated: Number(allocated), spent: Number(spent) || 0 }); close() }}
+          disabled={!name.trim() || !allocated}
+          style={{
+            padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+            background: name.trim() && allocated ? COLORS.moss : COLORS.mist,
+            color: name.trim() && allocated ? '#fff' : COLORS.stone,
+            cursor: name.trim() && allocated ? 'pointer' : 'not-allowed',
+          }}
+        >
+          Add Category
+        </button>
+      </ModalFooter>
     </div>
   )
 }

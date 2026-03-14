@@ -1,44 +1,55 @@
 import React from 'react'
-import { cn } from '@/lib/utils'
+import { COLORS } from '@/lib/tokens'
 
 interface EmptyStateProps {
-  icon?: React.ReactNode
-  title: string
+  icon?:        React.ReactNode
+  title:        string
   description?: string
-  action?: React.ReactNode
-  compact?: boolean
-  className?: string
+  action?:      React.ReactNode
+  compact?:     boolean
 }
 
-export function EmptyState({ icon, title, description, action, compact = false, className }: EmptyStateProps) {
+export function EmptyState({ icon, title, description, action, compact = false }: EmptyStateProps) {
   return (
     <div
-      className={cn(
-        'flex flex-col items-center justify-center text-center',
-        compact ? 'py-10 px-4' : 'py-20 px-6',
-        className
-      )}
+      style={{
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        textAlign: 'center',
+        padding: compact ? '40px 16px' : '80px 24px',
+      }}
     >
       {icon && (
-        <div className={cn(
-          'rounded-2xl bg-foam flex items-center justify-center text-fern/40 mb-4',
-          compact ? 'w-10 h-10' : 'w-14 h-14'
-        )}>
+        <div
+          style={{
+            width: compact ? 40 : 52,
+            height: compact ? 40 : 52,
+            borderRadius: 16,
+            background: COLORS.foam,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: COLORS.stone,
+            opacity: 0.7,
+            marginBottom: 16,
+          }}
+        >
           {icon}
         </div>
       )}
-      <h3 className={cn(
-        'font-fraunces font-semibold text-forest mb-1',
-        compact ? 'text-sm' : 'text-base'
-      )}>
+      <h3
+        style={{
+          fontFamily: 'var(--font-fraunces), Georgia, serif',
+          fontSize: compact ? 14 : 16,
+          fontWeight: 600,
+          color: COLORS.slate,
+          marginBottom: 4,
+        }}
+      >
         {title}
       </h3>
       {description && (
-        <p className={cn('text-fern/60 max-w-xs', compact ? 'text-xs' : 'text-sm')}>
-          {description}
-        </p>
+        <p style={{ fontSize: 13, color: COLORS.stone, maxWidth: 280 }}>{description}</p>
       )}
-      {action && <div className="mt-4">{action}</div>}
+      {action && <div style={{ marginTop: 16 }}>{action}</div>}
     </div>
   )
 }

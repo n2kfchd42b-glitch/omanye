@@ -2,162 +2,214 @@
 
 import React from 'react'
 import {
-  LayoutDashboard, FolderOpen, Database, BarChart3,
-  FileText, Users, Map, Settings, ChevronRight,
-  Bell, LogOut, ChevronLeft, ChevronRightIcon,
+  LayoutDashboard, FolderOpen, Database, BarChart2,
+  FileText, Users, Map, Settings, ChevronLeft, ChevronRight,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { OmanyeLogo, OmanyeSymbol } from './Logo'
-import type { ViewId } from '@/lib/types'
+import { COLORS, SPACING } from '@/lib/tokens'
+import { OmanyeLogo, OmanyeSymbol } from '@/components/Logo'
+import { Avatar } from '@/components/atoms/Avatar'
+import type { ViewId, User } from '@/lib/types'
 
-// ── Nav definition ────────────────────────────────────────────────────────────
+// ── Nav config ────────────────────────────────────────────────────────────────
 
-interface NavItem {
-  id:       ViewId
-  label:    string
-  Icon:     React.ElementType
-  section:  string
-  badge?:   string | number
-}
+interface NavItem { id: ViewId; label: string; icon: React.ElementType }
 
-const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard',    label: 'Dashboard',      Icon: LayoutDashboard, section: 'ops' },
-  { id: 'programs',     label: 'Programs',        Icon: FolderOpen,      section: 'ops', badge: 6 },
-  { id: 'data-hub',     label: 'Data Hub',        Icon: Database,        section: 'ops' },
-  { id: 'field-map',    label: 'Field Map',       Icon: Map,             section: 'ops' },
-  { id: 'analytics',    label: 'Analytics',       Icon: BarChart3,       section: 'reporting' },
-  { id: 'documents',    label: 'Documents',       Icon: FileText,        section: 'reporting', badge: 'New' },
-  { id: 'team',         label: 'Team',            Icon: Users,           section: 'admin' },
-  { id: 'settings',     label: 'Settings',        Icon: Settings,        section: 'admin' },
+const WORKSPACE_NAV: NavItem[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'programs',  label: 'Programs',  icon: FolderOpen      },
+  { id: 'data-hub',  label: 'Data Hub',  icon: Database        },
+  { id: 'analytics', label: 'Analytics', icon: BarChart2       },
+  { id: 'documents', label: 'Documents', icon: FileText        },
+  { id: 'team',      label: 'Team',      icon: Users           },
+  { id: 'field-map', label: 'Field Map', icon: Map             },
 ]
 
-const SECTIONS = [
-  { key: 'ops',       label: 'Operations' },
-  { key: 'reporting', label: 'Reporting'  },
-  { key: 'admin',     label: 'Admin'      },
+const SYSTEM_NAV: NavItem[] = [
+  { id: 'settings', label: 'Settings', icon: Settings },
 ]
 
-// ── Component ─────────────────────────────────────────────────────────────────
+// ── Sidebar ───────────────────────────────────────────────────────────────────
 
 interface SidebarProps {
-  currentView: ViewId
-  onNavigate:  (view: ViewId) => void
-  collapsed:   boolean
-  onToggle:    () => void
+  view:      ViewId
+  onNav:     (v: ViewId) => void
+  collapsed: boolean
+  onToggle:  () => void
+  user:      User
 }
 
-export function Sidebar({ currentView, onNavigate, collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ view, onNav, collapsed, onToggle, user }: SidebarProps) {
+  const w = collapsed ? SPACING.sidebarWCollapsed : SPACING.sidebarW
+
   return (
     <aside
-      className={cn(
-        'fixed left-0 top-0 h-screen bg-forest flex flex-col z-50 border-r border-canopy transition-[width] duration-300 ease-in-out',
-        collapsed ? 'w-16' : 'w-64'
-      )}
+      style={{
+        width: w,
+        minWidth: w,
+        height: '100vh',
+        background: COLORS.forest,
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'width 0.2s ease, min-width 0.2s ease',
+        overflow: 'hidden',
+        flexShrink: 0,
+      }}
     >
-      {/* Logo / Brand */}
-      <div className={cn(
-        'flex items-center border-b border-canopy flex-shrink-0 h-[60px]',
-        collapsed ? 'justify-center px-0' : 'px-4 gap-3'
-      )}>
+      {/* Logo */}
+      <div
+        style={{
+          height: SPACING.topbarH,
+          display: 'flex',
+          alignItems: 'center',
+          padding: collapsed ? '0 12px' : '0 16px',
+          borderBottom: `1px solid rgba(255,255,255,0.06)`,
+          flexShrink: 0,
+        }}
+      >
         {collapsed
-          ? <OmanyeSymbol size={34} />
-          : <OmanyeLogo size="sm" variant="dark" showTagline />
+          ? <OmanyeSymbol size={32} />
+          : <OmanyeLogo size="sm" showTagline={false} variant="dark" />
         }
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto scrollbar-hidden py-4 space-y-5">
-        {SECTIONS.map(sec => {
-          const items = NAV_ITEMS.filter(i => i.section === sec.key)
-          return (
-            <div key={sec.key} className={cn(collapsed ? 'px-2' : 'px-3')}>
-              {!collapsed && (
-                <p className="px-3 mb-1 text-[10px] font-bold tracking-widest uppercase text-mint/25 select-none">
-                  {sec.label}
-                </p>
-              )}
-              <ul className="space-y-0.5">
-                {items.map(item => {
-                  const active = currentView === item.id
-                  return (
-                    <li key={item.id}>
-                      <button
-                        onClick={() => onNavigate(item.id)}
-                        title={collapsed ? item.label : undefined}
-                        className={cn(
-                          'w-full flex items-center rounded-lg text-sm font-medium transition-all duration-150 select-none',
-                          collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.5',
-                          active
-                            ? 'bg-moss text-white'
-                            : 'text-mint/75 hover:bg-canopy hover:text-mint'
-                        )}
-                      >
-                        <item.Icon className={cn('flex-shrink-0', active ? 'opacity-100' : 'opacity-70', collapsed ? 'w-5 h-5' : 'w-4 h-4')} />
-                        {!collapsed && (
-                          <>
-                            <span className="flex-1 text-left truncate">{item.label}</span>
-                            {item.badge !== undefined && (
-                              <span className={cn(
-                                'px-1.5 py-0.5 rounded-full text-[10px] font-bold leading-none',
-                                item.badge === 'New'
-                                  ? 'bg-gold/20 text-gold'
-                                  : 'bg-white/10 text-mint/70'
-                              )}>
-                                {item.badge}
-                              </span>
-                            )}
-                          </>
-                        )}
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          )
-        })}
+      <nav
+        style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '12px 0' }}
+        className="scrollbar-hidden"
+      >
+        {!collapsed && (
+          <p style={{
+            fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
+            letterSpacing: '0.1em', color: 'rgba(125,212,160,0.40)',
+            padding: '0 16px 8px',
+          }}>
+            Workspace
+          </p>
+        )}
+        {WORKSPACE_NAV.map(item => (
+          <NavLink
+            key={item.id}
+            item={item}
+            active={view === item.id || (view === 'program-detail' && item.id === 'programs')}
+            collapsed={collapsed}
+            onNav={onNav}
+          />
+        ))}
+
+        <div style={{ margin: '12px 0', borderTop: `1px solid rgba(255,255,255,0.06)` }} />
+
+        {!collapsed && (
+          <p style={{
+            fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
+            letterSpacing: '0.1em', color: 'rgba(125,212,160,0.40)',
+            padding: '0 16px 8px',
+          }}>
+            System
+          </p>
+        )}
+        {SYSTEM_NAV.map(item => (
+          <NavLink key={item.id} item={item} active={view === item.id} collapsed={collapsed} onNav={onNav} />
+        ))}
       </nav>
 
-      {/* Collapse toggle */}
-      <div className={cn('px-3 pb-1 flex-shrink-0', collapsed && 'flex justify-center px-0 pb-1')}>
+      {/* Bottom */}
+      <div style={{ borderTop: `1px solid rgba(255,255,255,0.06)`, flexShrink: 0 }}>
+        {/* User card */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: collapsed ? '12px' : '12px 16px',
+          overflow: 'hidden',
+        }}>
+          <Avatar name={user.name} size={30} style={{ flexShrink: 0 }} />
+          {!collapsed && (
+            <div style={{ overflow: 'hidden', flex: 1 }}>
+              <p style={{
+                fontSize: 12, fontWeight: 600, color: '#ffffff',
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
+                {user.name}
+              </p>
+              <p style={{
+                fontSize: 10, color: COLORS.gold,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
+                {user.role}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Collapse toggle */}
         <button
           onClick={onToggle}
-          className="w-full flex items-center justify-center gap-2 p-2 rounded-lg text-mint/40 hover:text-mint hover:bg-canopy transition-colors text-xs"
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          style={{
+            width: '100%',
+            display: 'flex', alignItems: 'center',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            gap: 8,
+            padding: collapsed ? '10px 0' : '10px 16px',
+            color: 'rgba(125,212,160,0.50)',
+            fontSize: 11,
+            cursor: 'pointer',
+            borderTop: `1px solid rgba(255,255,255,0.04)`,
+            transition: 'color 0.15s',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = COLORS.mint)}
+          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(125,212,160,0.50)')}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          {collapsed ? <ChevronRightIcon size={14} /> : (
-            <>
-              <ChevronLeft size={14} />
-              <span>Collapse</span>
-            </>
-          )}
+          {collapsed
+            ? <ChevronRight size={14} />
+            : <><ChevronLeft size={14} /><span>Collapse</span></>
+          }
         </button>
       </div>
-
-      {/* User footer */}
-      <div className={cn('border-t border-canopy flex-shrink-0', collapsed ? 'py-3 flex justify-center' : 'px-3 py-3')}>
-        {collapsed ? (
-          <div className="w-8 h-8 rounded-full bg-moss flex items-center justify-center text-white text-xs font-bold">
-            AO
-          </div>
-        ) : (
-          <div className="flex items-center gap-3 px-2 py-1.5">
-            <div className="w-8 h-8 rounded-full bg-moss flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-              AO
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-mint font-semibold truncate">Amara Osei</p>
-              <p className="text-[10px] text-mint/45 truncate">Coordinator</p>
-            </div>
-            <button className="text-mint/40 hover:text-mint transition-colors" aria-label="Notifications">
-              <Bell size={13} />
-            </button>
-            <button className="text-mint/40 hover:text-red-400 transition-colors" aria-label="Log out">
-              <LogOut size={13} />
-            </button>
-          </div>
-        )}
-      </div>
     </aside>
+  )
+}
+
+// ── NavLink ───────────────────────────────────────────────────────────────────
+
+function NavLink({
+  item, active, collapsed, onNav,
+}: { item: NavItem; active: boolean; collapsed: boolean; onNav: (v: ViewId) => void }) {
+  const Icon = item.icon
+  return (
+    <button
+      onClick={() => onNav(item.id)}
+      title={collapsed ? item.label : undefined}
+      style={{
+        width: '100%',
+        display: 'flex', alignItems: 'center',
+        gap: 10,
+        padding: collapsed ? '9px 0' : '9px 16px',
+        justifyContent: collapsed ? 'center' : 'flex-start',
+        borderLeft: active ? `2px solid ${COLORS.sage}` : '2px solid transparent',
+        background: active ? 'rgba(26,92,58,0.22)' : 'transparent',
+        color: active ? COLORS.mint : 'rgba(125,212,160,0.60)',
+        fontSize: 13,
+        fontWeight: active ? 600 : 400,
+        cursor: 'pointer',
+        transition: 'background 0.15s, color 0.15s',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+      }}
+      onMouseEnter={e => {
+        if (!active) {
+          e.currentTarget.style.background = 'rgba(26,92,58,0.12)'
+          e.currentTarget.style.color = COLORS.mint
+        }
+      }}
+      onMouseLeave={e => {
+        if (!active) {
+          e.currentTarget.style.background = 'transparent'
+          e.currentTarget.style.color = 'rgba(125,212,160,0.60)'
+        }
+      }}
+      aria-current={active ? 'page' : undefined}
+    >
+      <Icon size={16} style={{ flexShrink: 0 }} />
+      {!collapsed && <span>{item.label}</span>}
+    </button>
   )
 }

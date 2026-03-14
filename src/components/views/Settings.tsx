@@ -1,201 +1,264 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Save } from 'lucide-react'
-import { FormField, Input, Select, Textarea } from '../atoms/FormField'
-import { useToast } from '../Toast'
+import { User as UserIcon, Building2, Bell, Shield, CreditCard } from 'lucide-react'
+import { COLORS, FONTS } from '@/lib/tokens'
+import { FormField, Input, Select } from '@/components/atoms/FormField'
+import { EmptyState } from '@/components/atoms/EmptyState'
+import { useToast } from '@/components/Toast'
+import type { User, UserRole, NotifPrefs } from '@/lib/types'
 
-// ── Toggle ────────────────────────────────────────────────────────────────────
+// ── Nav sidebar ───────────────────────────────────────────────────────────────
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+type SettingsSection = 'profile' | 'organisation' | 'notifications' | 'security' | 'billing'
+
+interface SectionDef { id: SettingsSection; label: string; icon: React.ElementType }
+
+const SECTIONS: SectionDef[] = [
+  { id: 'profile',       label: 'Profile',       icon: UserIcon   },
+  { id: 'organisation',  label: 'Organisation',  icon: Building2  },
+  { id: 'notifications', label: 'Notifications', icon: Bell       },
+  { id: 'security',      label: 'Security',      icon: Shield     },
+  { id: 'billing',       label: 'Billing',       icon: CreditCard },
+]
+
+const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
+  { value: 'Project Lead', label: 'Project Lead' },
+  { value: 'M&E Officer',  label: 'M&E Officer'  },
+  { value: 'Field Staff',  label: 'Field Staff'  },
+  { value: 'Supervisor',   label: 'Supervisor'   },
+  { value: 'Donor',        label: 'Donor'        },
+  { value: 'Admin',        label: 'Admin'        },
+  { value: 'Viewer',       label: 'Viewer'       },
+]
+
+// ── Settings view ─────────────────────────────────────────────────────────────
+
+interface SettingsProps {
+  user:    User
+  setUser: (u: User) => void
+}
+
+export function Settings({ user, setUser }: SettingsProps) {
+  const [section, setSection] = useState<SettingsSection>('profile')
+
+  return (
+    <div style={{ maxWidth: 860, margin: '0 auto' }}>
+      <div className="fade-up" style={{ marginBottom: 24 }}>
+        <h2 style={{ fontFamily: FONTS.heading, fontSize: 22, fontWeight: 600, color: COLORS.forest }}>Settings</h2>
+        <p style={{ fontSize: 12, color: COLORS.stone, marginTop: 2 }}>Manage your workspace preferences</p>
+      </div>
+
+      <div className="fade-up-1" style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 24, alignItems: 'start' }}>
+        {/* Nav sidebar */}
+        <div className="card" style={{ padding: 8, overflow: 'hidden' }}>
+          {SECTIONS.map(s => {
+            const Icon = s.icon
+            const active = section === s.id
+            return (
+              <button
+                key={s.id}
+                onClick={() => setSection(s.id)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '9px 12px', borderRadius: 8, textAlign: 'left',
+                  background: active ? COLORS.foam : 'transparent',
+                  color: active ? COLORS.forest : COLORS.stone,
+                  fontSize: 13, fontWeight: active ? 600 : 400,
+                  cursor: 'pointer', transition: 'all 0.15s',
+                }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = COLORS.snow }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
+              >
+                <Icon size={14} style={{ flexShrink: 0, color: active ? COLORS.fern : COLORS.stone }} />
+                {s.label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Content */}
+        <div className="card" style={{ padding: 28 }}>
+          {section === 'profile'       && <ProfileSection       user={user} setUser={setUser} />}
+          {section === 'organisation'  && <OrganisationSection  user={user} />}
+          {section === 'notifications' && <NotificationsSection />}
+          {section === 'security'      && <ComingSoonSection label="Security" />}
+          {section === 'billing'       && <ComingSoonSection label="Billing" />}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Profile section ───────────────────────────────────────────────────────────
+
+function ProfileSection({ user, setUser }: { user: User; setUser: (u: User) => void }) {
+  const { success } = useToast()
+  const [name,  setName]  = useState(user.name)
+  const [email, setEmail] = useState(user.email)
+  const [role,  setRole]  = useState<UserRole>(user.role)
+
+  function handleSave() {
+    setUser({ ...user, name: name.trim() || user.name, email: email.trim() || user.email, role })
+    success('Profile updated')
+  }
+
+  const dirty = name !== user.name || email !== user.email || role !== user.role
+
+  return (
+    <div>
+      <h3 style={{ fontFamily: FONTS.heading, fontSize: 16, fontWeight: 600, color: COLORS.forest, marginBottom: 20 }}>Profile</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <FormField label="Full name" required htmlFor="sp-name">
+          <Input id="sp-name" value={name} onChange={e => setName(e.target.value)} />
+        </FormField>
+        <FormField label="Email address" required htmlFor="sp-email">
+          <Input id="sp-email" type="email" value={email} onChange={e => setEmail(e.target.value)} />
+        </FormField>
+        <FormField label="Role" htmlFor="sp-role">
+          <Select id="sp-role" options={ROLE_OPTIONS} value={role} onChange={e => setRole(e.target.value as UserRole)} />
+        </FormField>
+        <div style={{ paddingTop: 8 }}>
+          <button
+            onClick={handleSave}
+            disabled={!dirty}
+            style={{
+              padding: '9px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+              background: dirty ? COLORS.moss : COLORS.mist,
+              color: dirty ? '#fff' : COLORS.stone,
+              cursor: dirty ? 'pointer' : 'not-allowed',
+              transition: 'all 0.15s',
+            }}
+          >
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Organisation section ──────────────────────────────────────────────────────
+
+function OrganisationSection({ user }: { user: User }) {
+  const { success } = useToast()
+  const [org, setOrg] = useState(user.org)
+
+  return (
+    <div>
+      <h3 style={{ fontFamily: FONTS.heading, fontSize: 16, fontWeight: 600, color: COLORS.forest, marginBottom: 20 }}>Organisation</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <FormField label="Organisation name" required htmlFor="so-org">
+          <Input id="so-org" value={org} onChange={e => setOrg(e.target.value)} />
+        </FormField>
+        <div style={{ paddingTop: 8 }}>
+          <button
+            onClick={() => success('Organisation updated')}
+            style={{
+              padding: '9px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+              background: COLORS.moss, color: '#fff', cursor: 'pointer',
+            }}
+          >
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Notifications section ─────────────────────────────────────────────────────
+
+function NotificationsSection() {
+  const { success } = useToast()
+  const [prefs, setPrefs] = useState<NotifPrefs>({
+    submissions:   true,
+    weeklyDigest:  true,
+    milestones:    true,
+    teamActivity:  false,
+    donorReports:  false,
+  })
+
+  const TOGGLES: { key: keyof NotifPrefs; label: string; desc: string }[] = [
+    { key: 'submissions',  label: 'Data Submissions',   desc: 'Notify when new form submissions arrive'     },
+    { key: 'weeklyDigest', label: 'Weekly Digest',      desc: 'Summary of program activity each Monday'     },
+    { key: 'milestones',   label: 'Program Milestones', desc: 'Alerts for deadline and budget milestones'   },
+    { key: 'teamActivity', label: 'Team Activity',      desc: 'When team members join or update records'    },
+    { key: 'donorReports', label: 'Donor Reports Due',  desc: 'Reminders 7 days before report deadlines'   },
+  ]
+
+  function toggle(key: keyof NotifPrefs) {
+    setPrefs(p => ({ ...p, [key]: !p[key] }))
+  }
+
+  return (
+    <div>
+      <h3 style={{ fontFamily: FONTS.heading, fontSize: 16, fontWeight: 600, color: COLORS.forest, marginBottom: 20 }}>Notifications</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+        {TOGGLES.map((t, i) => (
+          <div
+            key={t.key}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '14px 0',
+              borderTop: i > 0 ? `1px solid ${COLORS.mist}` : 'none',
+            }}
+          >
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 500, color: COLORS.forest }}>{t.label}</p>
+              <p style={{ fontSize: 12, color: COLORS.stone, marginTop: 2 }}>{t.desc}</p>
+            </div>
+            <Toggle checked={prefs[t.key]} onChange={() => toggle(t.key)} />
+          </div>
+        ))}
+      </div>
+      <div style={{ paddingTop: 20 }}>
+        <button
+          onClick={() => success('Notification preferences saved')}
+          style={{
+            padding: '9px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+            background: COLORS.moss, color: '#fff', cursor: 'pointer',
+          }}
+        >
+          Save Preferences
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
   return (
     <button
+      onClick={onChange}
       role="switch"
       aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex w-9 h-5 rounded-full transition-colors cursor-pointer flex-shrink-0 ${
-        checked ? 'bg-moss' : 'bg-mist'
-      }`}
+      style={{
+        width: 40, height: 22, borderRadius: 11, padding: 2,
+        background: checked ? COLORS.sage : COLORS.mist,
+        display: 'flex', alignItems: 'center',
+        cursor: 'pointer', transition: 'background 0.2s',
+        flexShrink: 0,
+      }}
     >
-      <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
-        checked ? 'translate-x-4' : 'translate-x-0'
-      }`} />
+      <div style={{
+        width: 18, height: 18, borderRadius: '50%',
+        background: '#fff',
+        transform: checked ? 'translateX(18px)' : 'translateX(0)',
+        transition: 'transform 0.2s',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+      }} />
     </button>
   )
 }
 
-// ── Setting row ───────────────────────────────────────────────────────────────
+// ── Coming soon ───────────────────────────────────────────────────────────────
 
-function SettingRow({
-  label, description, children,
-}: { label: string; description?: string; children: React.ReactNode }) {
+function ComingSoonSection({ label }: { label: string }) {
   return (
-    <div className="flex items-center justify-between py-4 border-b border-mist/60 last:border-0 gap-6">
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-forest">{label}</p>
-        {description && <p className="text-xs text-fern/55 mt-0.5">{description}</p>}
-      </div>
-      <div className="flex-shrink-0">{children}</div>
-    </div>
-  )
-}
-
-// ── Section card ──────────────────────────────────────────────────────────────
-
-function SettingsCard({
-  title, subtitle, children,
-}: { title: string; subtitle?: string; children: React.ReactNode }) {
-  return (
-    <div className="card p-5">
-      <div className="mb-4">
-        <h3 className="font-fraunces text-base font-semibold text-forest">{title}</h3>
-        {subtitle && <p className="text-xs text-fern/55 mt-0.5">{subtitle}</p>}
-      </div>
-      {children}
-    </div>
-  )
-}
-
-// ── Settings view ─────────────────────────────────────────────────────────────
-
-const NOTIF_DEFAULTS = {
-  submissions: true,
-  flaggedData: true,
-  reportPublished: false,
-  donorDisbursements: true,
-  weeklyDigest: true,
-  milestones: false,
-}
-
-const DATA_DEFAULTS = {
-  anonymizeExports: true,
-  require2FA: false,
-  autoArchive: true,
-  auditLog: true,
-}
-
-export function Settings() {
-  const { success } = useToast()
-  const [notif, setNotif] = useState(NOTIF_DEFAULTS)
-  const [data,  setData]  = useState(DATA_DEFAULTS)
-  const [orgName,    setOrgName]    = useState('OMANYE Field Office')
-  const [country,    setCountry]    = useState('GH')
-  const [currency,   setCurrency]   = useState('USD')
-  const [fiscalYear, setFiscalYear] = useState('January')
-  const [saved, setSaved] = useState(false)
-
-  const saveAll = () => {
-    setSaved(true)
-    success('Settings saved', 'Your workspace preferences have been updated.')
-    setTimeout(() => setSaved(false), 2000)
-  }
-
-  return (
-    <div className="max-w-2xl space-y-5">
-      <div>
-        <h2 className="font-fraunces text-2xl font-semibold text-forest">Settings</h2>
-        <p className="text-sm text-fern/60 mt-0.5">Manage your OMANYE workspace preferences</p>
-      </div>
-
-      {/* Workspace */}
-      <SettingsCard title="Workspace" subtitle="General organisation settings">
-        <div className="space-y-4">
-          <FormField label="Organisation name" htmlFor="s-orgname">
-            <Input id="s-orgname" value={orgName} onChange={e => setOrgName(e.target.value)} />
-          </FormField>
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label="Country" htmlFor="s-country">
-              <Select id="s-country" value={country} onChange={e => setCountry(e.target.value)}
-                options={[
-                  { value: 'GH', label: 'Ghana' }, { value: 'NG', label: 'Nigeria' },
-                  { value: 'KE', label: 'Kenya' }, { value: 'ET', label: 'Ethiopia' },
-                ]} />
-            </FormField>
-            <FormField label="Currency" htmlFor="s-currency">
-              <Select id="s-currency" value={currency} onChange={e => setCurrency(e.target.value)}
-                options={[
-                  { value: 'USD', label: 'USD ($)' }, { value: 'GHS', label: 'GHS (₵)' },
-                  { value: 'EUR', label: 'EUR (€)' }, { value: 'GBP', label: 'GBP (£)' },
-                ]} />
-            </FormField>
-          </div>
-          <FormField label="Fiscal year start" htmlFor="s-fiscal">
-            <Select id="s-fiscal" value={fiscalYear} onChange={e => setFiscalYear(e.target.value)}
-              options={['January','April','July','October'].map(m => ({ value: m, label: m }))} />
-          </FormField>
-        </div>
-      </SettingsCard>
-
-      {/* Notifications */}
-      <SettingsCard title="Notifications" subtitle="Control what alerts you receive">
-        <SettingRow label="Field submission alerts" description="Notify when new data is submitted">
-          <Toggle checked={notif.submissions} onChange={v => setNotif(n => ({ ...n, submissions: v }))} />
-        </SettingRow>
-        <SettingRow label="Flagged data warnings" description="Alert when data quality issues are detected">
-          <Toggle checked={notif.flaggedData} onChange={v => setNotif(n => ({ ...n, flaggedData: v }))} />
-        </SettingRow>
-        <SettingRow label="Report published" description="Notify team when reports are published">
-          <Toggle checked={notif.reportPublished} onChange={v => setNotif(n => ({ ...n, reportPublished: v }))} />
-        </SettingRow>
-        <SettingRow label="Donor disbursements" description="Alert on new donor payments received">
-          <Toggle checked={notif.donorDisbursements} onChange={v => setNotif(n => ({ ...n, donorDisbursements: v }))} />
-        </SettingRow>
-        <SettingRow label="Weekly digest" description="Summary email every Monday morning">
-          <Toggle checked={notif.weeklyDigest} onChange={v => setNotif(n => ({ ...n, weeklyDigest: v }))} />
-        </SettingRow>
-        <SettingRow label="Program milestones" description="Notify when a program reaches key targets">
-          <Toggle checked={notif.milestones} onChange={v => setNotif(n => ({ ...n, milestones: v }))} />
-        </SettingRow>
-      </SettingsCard>
-
-      {/* Data & Privacy */}
-      <SettingsCard title="Data & Privacy" subtitle="Manage beneficiary data handling and security">
-        <SettingRow label="Anonymize beneficiary exports" description="Remove PII from all exported reports">
-          <Toggle checked={data.anonymizeExports} onChange={v => setData(d => ({ ...d, anonymizeExports: v }))} />
-        </SettingRow>
-        <SettingRow label="Require 2FA for field officers" description="Enforce two-factor authentication on login">
-          <Toggle checked={data.require2FA} onChange={v => setData(d => ({ ...d, require2FA: v }))} />
-        </SettingRow>
-        <SettingRow label="Auto-archive completed programs" description="Move closed programs to archive after 6 months">
-          <Toggle checked={data.autoArchive} onChange={v => setData(d => ({ ...d, autoArchive: v }))} />
-        </SettingRow>
-        <SettingRow label="Enable audit log" description="Track all data changes for compliance">
-          <Toggle checked={data.auditLog} onChange={v => setData(d => ({ ...d, auditLog: v }))} />
-        </SettingRow>
-      </SettingsCard>
-
-      {/* Danger zone */}
-      <SettingsCard title="Danger Zone" subtitle="Irreversible workspace actions">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between py-3 px-4 rounded-lg border border-red-200 bg-red-50/30">
-            <div>
-              <p className="text-sm font-medium text-red-700">Export all workspace data</p>
-              <p className="text-xs text-red-500/70 mt-0.5">Download a full archive of all programs, submissions, and documents.</p>
-            </div>
-            <button className="px-3 py-1.5 rounded-lg border border-red-300 text-red-600 text-xs font-semibold hover:bg-red-50 transition-colors flex-shrink-0 ml-4">
-              Export
-            </button>
-          </div>
-          <div className="flex items-center justify-between py-3 px-4 rounded-lg border border-red-200 bg-red-50/30">
-            <div>
-              <p className="text-sm font-medium text-red-700">Delete workspace</p>
-              <p className="text-xs text-red-500/70 mt-0.5">Permanently delete all data. This action cannot be undone.</p>
-            </div>
-            <button className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition-colors flex-shrink-0 ml-4">
-              Delete
-            </button>
-          </div>
-        </div>
-      </SettingsCard>
-
-      {/* Save */}
-      <div className="flex justify-end gap-2">
-        <button onClick={saveAll}
-          className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-moss text-white text-sm font-semibold hover:bg-fern transition-colors">
-          <Save size={14} />
-          {saved ? 'Saved!' : 'Save Changes'}
-        </button>
-      </div>
+    <div>
+      <h3 style={{ fontFamily: FONTS.heading, fontSize: 16, fontWeight: 600, color: COLORS.forest, marginBottom: 20 }}>{label}</h3>
+      <EmptyState title="Coming soon" description={`${label} settings will be available in a future update.`} compact />
     </div>
   )
 }

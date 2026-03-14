@@ -1,93 +1,213 @@
 'use client'
 
-import React, { useState } from 'react'
-import { Search, Bell, Plus, Menu } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import type { ViewId } from '@/lib/types'
+import React, { useState, useRef, useEffect } from 'react'
+import { Search, Bell, ChevronDown, User, Shield, LogOut } from 'lucide-react'
+import { COLORS, SPACING, FONTS } from '@/lib/tokens'
+import { Avatar } from '@/components/atoms/Avatar'
+import type { ViewId, User as UserType } from '@/lib/types'
 
-const VIEW_META: Record<ViewId, { title: string; subtitle: string }> = {
-  dashboard:      { title: 'Dashboard',       subtitle: 'Overview of your NGO operations' },
-  programs:       { title: 'Programs',         subtitle: 'Manage field programs and activities' },
-  'program-detail':{ title: 'Program Detail',  subtitle: 'Indicators, budget, team, and activity' },
-  'data-hub':     { title: 'Data Hub',         subtitle: 'Collect and validate field submissions' },
-  analytics:      { title: 'Analytics',        subtitle: 'Visualize impact trends and financials' },
-  documents:      { title: 'Documents',        subtitle: 'Reports, proposals, and agreements' },
-  team:           { title: 'Team',             subtitle: 'Manage members and permissions' },
-  'field-map':    { title: 'Field Map',        subtitle: 'Geographic view of program activities' },
-  settings:       { title: 'Settings',         subtitle: 'Configure your workspace' },
+// ── View titles ───────────────────────────────────────────────────────────────
+
+const VIEW_TITLE: Record<ViewId, string> = {
+  dashboard:        'Dashboard',
+  programs:         'Programs',
+  'program-detail': 'Program Detail',
+  'data-hub':       'Data Hub',
+  analytics:        'Analytics',
+  documents:        'Documents',
+  team:             'Team',
+  'field-map':      'Field Map',
+  settings:         'Settings',
 }
+
+// ── Topbar ────────────────────────────────────────────────────────────────────
 
 interface TopbarProps {
-  currentView:    ViewId
-  sidebarW:       number      // px, for left offset
-  onNewAction?:   () => void
-  onMobileMenu?:  () => void
+  view:       ViewId
+  sidebarW:   number
+  user:       UserType
+  onSettings: () => void
+  onSignOut:  () => void
 }
 
-export function Topbar({ currentView, sidebarW, onNewAction, onMobileMenu }: TopbarProps) {
-  const [query, setQuery] = useState('')
-  const meta = VIEW_META[currentView]
+export function Topbar({ view, sidebarW, user, onSettings, onSignOut }: TopbarProps) {
+  const [query,       setQuery]       = useState('')
+  const [dropOpen,    setDropOpen]    = useState(false)
+  const dropRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) {
+        setDropOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [])
 
   return (
     <header
-      className="fixed top-0 right-0 bg-white/92 backdrop-blur-sm border-b border-mist z-40 flex items-center justify-between px-5 transition-[left] duration-300"
-      style={{ left: sidebarW, height: 60 }}
+      style={{
+        position: 'fixed',
+        top: 0,
+        right: 0,
+        left: sidebarW,
+        height: SPACING.topbarH,
+        background: 'rgba(255,255,255,0.96)',
+        backdropFilter: 'blur(8px)',
+        borderBottom: `1px solid ${COLORS.mist}`,
+        zIndex: 40,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 24px',
+        transition: 'left 0.2s ease',
+      }}
     >
-      {/* Mobile menu button */}
-      <button
-        className="lg:hidden mr-3 w-8 h-8 rounded-lg flex items-center justify-center text-fern/60 hover:bg-foam transition-colors"
-        onClick={onMobileMenu}
-        aria-label="Open menu"
-      >
-        <Menu size={17} />
-      </button>
-
-      {/* Title */}
-      <div className="flex-1 min-w-0">
-        <h1 className="font-fraunces text-[17px] font-semibold text-forest leading-tight truncate">
-          {meta.title}
-        </h1>
-        <p className="text-[11px] text-fern/55 mt-0.5 hidden sm:block">{meta.subtitle}</p>
-      </div>
+      {/* Page title */}
+      <h1 style={{
+        fontFamily: FONTS.heading,
+        fontSize: 18,
+        fontWeight: 600,
+        color: COLORS.forest,
+        lineHeight: 1,
+      }}>
+        {VIEW_TITLE[view]}
+      </h1>
 
       {/* Right side */}
-      <div className="flex items-center gap-2.5">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         {/* Search */}
-        <div className="relative hidden md:flex items-center">
-          <Search size={13} className="absolute left-3 text-fern/35 pointer-events-none" />
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <Search size={13} style={{
+            position: 'absolute', left: 10, color: COLORS.stone, pointerEvents: 'none',
+          }} />
           <input
             type="text"
             placeholder="Search…"
             value={query}
             onChange={e => setQuery(e.target.value)}
-            className={cn(
-              'pl-8 pr-3 py-1.5 text-sm rounded-lg border border-mist bg-snow text-forest',
-              'placeholder:text-forest/35 focus:outline-none focus:ring-2 focus:ring-moss/25 focus:border-moss',
-              'transition-all w-44 focus:w-56'
-            )}
+            style={{
+              paddingLeft: 30, paddingRight: 12, paddingTop: 7, paddingBottom: 7,
+              fontSize: 13,
+              borderRadius: 8,
+              border: `1px solid ${COLORS.mist}`,
+              background: COLORS.snow,
+              color: COLORS.forest,
+              outline: 'none',
+              width: 160,
+              fontFamily: FONTS.body,
+            }}
+            onFocus={e => {
+              e.target.style.width = '200px'
+              e.target.style.borderColor = COLORS.sage
+              e.target.style.boxShadow = `0 0 0 3px rgba(74,207,120,0.14)`
+            }}
+            onBlur={e => {
+              e.target.style.width = '160px'
+              e.target.style.borderColor = COLORS.mist
+              e.target.style.boxShadow = 'none'
+            }}
           />
         </div>
 
-        {/* Notifications */}
+        {/* Bell */}
         <button
-          className="relative w-8 h-8 rounded-lg flex items-center justify-center text-fern/50 hover:bg-foam hover:text-fern transition-colors"
+          style={{
+            position: 'relative',
+            width: 34, height: 34,
+            borderRadius: 8,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: COLORS.stone,
+            cursor: 'pointer',
+            transition: 'background 0.15s',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = COLORS.foam)}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           aria-label="Notifications"
         >
           <Bell size={15} />
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-sage border border-white" />
+          {/* red dot */}
+          <span style={{
+            position: 'absolute', top: 8, right: 8,
+            width: 6, height: 6, borderRadius: '50%',
+            background: COLORS.crimson,
+            border: '1.5px solid #ffffff',
+          }} />
         </button>
 
-        {/* Quick action */}
-        {onNewAction && (
+        {/* Avatar + dropdown */}
+        <div style={{ position: 'relative' }} ref={dropRef}>
           <button
-            onClick={onNewAction}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-moss text-white text-xs font-semibold hover:bg-fern transition-colors"
+            onClick={() => setDropOpen(o => !o)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '4px 8px',
+              borderRadius: 8,
+              cursor: 'pointer',
+              transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = COLORS.foam)}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            aria-haspopup="true"
+            aria-expanded={dropOpen}
           >
-            <Plus size={13} />
-            <span className="hidden sm:inline">New</span>
+            <Avatar name={user.name} size={28} />
+            <ChevronDown size={12} style={{ color: COLORS.stone }} />
           </button>
-        )}
+
+          {dropOpen && (
+            <div style={{
+              position: 'absolute', top: 'calc(100% + 4px)', right: 0,
+              background: '#ffffff',
+              borderRadius: 10,
+              border: `1px solid ${COLORS.mist}`,
+              boxShadow: '0 8px 32px rgba(13,43,30,0.12)',
+              minWidth: 180,
+              zIndex: 50,
+              overflow: 'hidden',
+            }}>
+              {/* User info */}
+              <div style={{ padding: '12px 14px', borderBottom: `1px solid ${COLORS.mist}` }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.forest }}>{user.name}</p>
+                <p style={{ fontSize: 11, color: COLORS.stone, marginTop: 2 }}>{user.email}</p>
+              </div>
+
+              {/* Actions */}
+              <DropItem icon={User} label="Account Settings" onClick={() => { setDropOpen(false); onSettings() }} />
+              <DropItem icon={Shield} label="Permissions" onClick={() => { setDropOpen(false); onSettings() }} />
+              <div style={{ margin: '4px 0', borderTop: `1px solid ${COLORS.mist}` }} />
+              <DropItem icon={LogOut} label="Sign Out" onClick={() => { setDropOpen(false); onSignOut() }} danger />
+            </div>
+          )}
+        </div>
       </div>
     </header>
+  )
+}
+
+// ── DropItem ──────────────────────────────────────────────────────────────────
+
+function DropItem({ icon: Icon, label, onClick, danger }: {
+  icon: React.ElementType; label: string; onClick: () => void; danger?: boolean
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+        padding: '9px 14px',
+        fontSize: 13,
+        color: danger ? COLORS.crimson : COLORS.slate,
+        cursor: 'pointer',
+        transition: 'background 0.12s',
+      }}
+      onMouseEnter={e => (e.currentTarget.style.background = COLORS.foam)}
+      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+    >
+      <Icon size={14} />
+      {label}
+    </button>
   )
 }

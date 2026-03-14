@@ -1,155 +1,245 @@
 'use client'
 
 import React, { useState } from 'react'
-import { UserPlus, Search, Mail } from 'lucide-react'
-import { RoleBadge, StatusBadge } from '../atoms/Badge'
-import { Avatar }    from '../atoms/Avatar'
-import { useModal }  from '../Modal'
-import { useToast }  from '../Toast'
-import { FormField, Input, Select } from '../atoms/FormField'
-import { TEAM }      from '@/lib/mock'
-import { formatDate } from '@/lib/utils'
-import type { UserRole } from '@/lib/types'
+import { Plus, Users, Mail, CheckCircle2, Clock } from 'lucide-react'
+import { COLORS, FONTS } from '@/lib/tokens'
+import { RoleBadge }  from '@/components/atoms/Badge'
+import { Avatar }     from '@/components/atoms/Avatar'
+import { EmptyState } from '@/components/atoms/EmptyState'
+import { FormField, Input, Select } from '@/components/atoms/FormField'
+import { useModal, ModalFooter } from '@/components/Modal'
+import { useToast } from '@/components/Toast'
+import { nextId, todayISO } from '@/lib/utils'
+import type { TeamMember, UserRole } from '@/lib/types'
 
-const ROLE_OPTS: { value: UserRole; label: string }[] = [
-  { value: 'admin',          label: 'Admin' },
-  { value: 'coordinator',    label: 'Coordinator' },
-  { value: 'field-officer',  label: 'Field Officer' },
-  { value: 'm-and-e',        label: 'M&E Officer' },
-  { value: 'viewer',         label: 'Viewer' },
+// ── Invite form ───────────────────────────────────────────────────────────────
+
+const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
+  { value: 'Project Lead', label: 'Project Lead' },
+  { value: 'M&E Officer',  label: 'M&E Officer'  },
+  { value: 'Field Staff',  label: 'Field Staff'  },
+  { value: 'Supervisor',   label: 'Supervisor'   },
+  { value: 'Donor',        label: 'Donor'        },
+  { value: 'Viewer',       label: 'Viewer'       },
+  { value: 'Admin',        label: 'Admin'        },
 ]
 
-function InviteForm({ onClose }: { onClose: () => void }) {
-  const { success } = useToast()
+function InviteForm({ onSave }: { onSave: (m: TeamMember) => void }) {
+  const { close } = useModal()
+  const [name,  setName]  = useState('')
   const [email, setEmail] = useState('')
+  const [role,  setRole]  = useState<UserRole>('Field Staff')
+  const [org,   setOrg]   = useState('')
+
+  function handleInvite() {
+    if (!name.trim() || !email.trim()) return
+    onSave({
+      id: nextId(),
+      name: name.trim(),
+      email: email.trim(),
+      role,
+      org: org.trim(),
+      status: 'pending',
+      joined: todayISO(),
+    })
+    close()
+  }
+
   return (
-    <div className="space-y-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <FormField label="Full name" required htmlFor="inv-name">
+        <Input id="inv-name" placeholder="e.g. Kofi Mensah" value={name} onChange={e => setName(e.target.value)} />
+      </FormField>
       <FormField label="Email address" required htmlFor="inv-email">
-        <Input id="inv-email" type="email" placeholder="colleague@organization.org"
-          value={email} onChange={e => setEmail(e.target.value)} />
+        <Input id="inv-email" type="email" placeholder="kofi@org.org" value={email} onChange={e => setEmail(e.target.value)} />
       </FormField>
       <FormField label="Role" htmlFor="inv-role">
-        <Select id="inv-role" options={ROLE_OPTS} placeholder="Select role…" />
+        <Select id="inv-role" options={ROLE_OPTIONS} value={role} onChange={e => setRole(e.target.value as UserRole)} />
       </FormField>
-      <FormField label="Region" htmlFor="inv-region">
-        <Select id="inv-region" options={[
-          { value: 'Volta', label: 'Volta' }, { value: 'Northern', label: 'Northern' },
-          { value: 'Ashanti', label: 'Ashanti' }, { value: 'Accra', label: 'Greater Accra' },
-          { value: 'HQ', label: 'HQ / Accra' },
-        ]} placeholder="Select region…" />
+      <FormField label="Organisation" htmlFor="inv-org">
+        <Input id="inv-org" placeholder="Their organisation (optional)" value={org} onChange={e => setOrg(e.target.value)} />
       </FormField>
-      <div className="flex justify-end gap-2 pt-2 border-t border-mist">
-        <button onClick={onClose} className="px-4 py-2 rounded-lg border border-mist text-sm text-fern hover:bg-foam transition-colors">Cancel</button>
-        <button onClick={() => { success('Invitation sent', `Invite sent to ${email || 'team member'}.`); onClose() }}
-          className="px-4 py-2 rounded-lg bg-moss text-white text-sm font-semibold hover:bg-fern transition-colors">
+      <ModalFooter>
+        <button onClick={close} style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, color: COLORS.stone, cursor: 'pointer', border: `1px solid ${COLORS.mist}` }}>Cancel</button>
+        <button
+          onClick={handleInvite}
+          disabled={!name.trim() || !email.trim()}
+          style={{
+            padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+            background: name.trim() && email.trim() ? COLORS.moss : COLORS.mist,
+            color: name.trim() && email.trim() ? '#fff' : COLORS.stone,
+            cursor: name.trim() && email.trim() ? 'pointer' : 'not-allowed',
+          }}
+        >
           Send Invite
         </button>
-      </div>
+      </ModalFooter>
     </div>
   )
 }
 
-export function Team() {
-  const { open, close } = useModal()
-  const [search, setSearch]     = useState('')
-  const [roleFilter, setRoleFilter] = useState<string>('all')
+// ── Role permissions legend ───────────────────────────────────────────────────
 
-  const filtered = TEAM.filter(m => {
-    const matchRole   = roleFilter === 'all' || m.role === roleFilter
-    const matchSearch = !search ||
-      m.name.toLowerCase().includes(search.toLowerCase()) ||
-      m.region.toLowerCase().includes(search.toLowerCase())
-    return matchRole && matchSearch
-  })
+const ROLE_PERMISSIONS: { role: UserRole; read: boolean; write: boolean; manage: boolean }[] = [
+  { role: 'Admin',        read: true,  write: true,  manage: true  },
+  { role: 'Project Lead', read: true,  write: true,  manage: true  },
+  { role: 'M&E Officer',  read: true,  write: true,  manage: false },
+  { role: 'Supervisor',   read: true,  write: true,  manage: false },
+  { role: 'Field Staff',  read: true,  write: true,  manage: false },
+  { role: 'Donor',        read: true,  write: false, manage: false },
+  { role: 'Viewer',       read: true,  write: false, manage: false },
+]
 
-  const roles = ['all', ...Array.from(new Set(TEAM.map(m => m.role)))]
+function PermissionDot({ has }: { has: boolean }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      width: 20, height: 20, borderRadius: '50%',
+      background: has ? COLORS.foam : 'transparent',
+    }}>
+      {has
+        ? <CheckCircle2 size={13} style={{ color: COLORS.sage }} />
+        : <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS.mist, display: 'block' }} />
+      }
+    </span>
+  )
+}
 
-  const ROLE_LABELS: Record<string, string> = {
-    all:            'All',
-    admin:          'Admin',
-    coordinator:    'Coordinator',
-    'field-officer':'Field Officer',
-    'm-and-e':      'M&E',
-    viewer:         'Viewer',
+// ── Team view ─────────────────────────────────────────────────────────────────
+
+interface TeamProps {
+  team:    TeamMember[]
+  setTeam: React.Dispatch<React.SetStateAction<TeamMember[]>>
+}
+
+export function Team({ team, setTeam }: TeamProps) {
+  const { open }    = useModal()
+  const { success } = useToast()
+
+  function openInvite() {
+    open({
+      title: 'Invite Team Member',
+      content: (
+        <InviteForm
+          onSave={(m) => {
+            setTeam(prev => [...prev, m])
+            success(`Invite sent to ${m.email}`)
+          }}
+        />
+      ),
+    })
   }
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
+    <div style={{ maxWidth: 960, margin: '0 auto' }}>
+      {/* Header */}
+      <div className="fade-up" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
         <div>
-          <h2 className="font-fraunces text-2xl font-semibold text-forest">Team</h2>
-          <p className="text-sm text-fern/60 mt-0.5">
-            {TEAM.length} members · {TEAM.filter(t => t.status === 'active').length} active
-          </p>
+          <h2 style={{ fontFamily: FONTS.heading, fontSize: 22, fontWeight: 600, color: COLORS.forest }}>Team</h2>
+          <p style={{ fontSize: 12, color: COLORS.stone, marginTop: 2 }}>{team.length} member{team.length !== 1 ? 's' : ''}</p>
         </div>
         <button
-          onClick={() => open({ title: 'Invite Team Member', content: <InviteForm onClose={close} />, size: 'sm' })}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-moss text-white text-sm font-semibold hover:bg-fern transition-colors"
+          onClick={openInvite}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '9px 16px', borderRadius: 8,
+            background: COLORS.moss, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+          }}
         >
-          <UserPlus size={14} /> Invite Member
+          <Plus size={14} /> Invite Member
         </button>
       </div>
 
-      {/* Controls */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-fern/40 pointer-events-none" />
-          <input type="text" placeholder="Search team…" value={search} onChange={e => setSearch(e.target.value)}
-            className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-mist bg-white text-forest placeholder:text-forest/35 focus:outline-none focus:ring-2 focus:ring-moss/25 focus:border-moss w-52" />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
+        {/* Members */}
+        <div className="fade-up-1">
+          {team.length === 0 ? (
+            <div className="card" style={{ padding: 0 }}>
+              <EmptyState
+                icon={<Users size={24} />}
+                title="No team members yet"
+                description="Invite colleagues to collaborate on programs, data, and documents."
+                action={
+                  <button
+                    onClick={openInvite}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      padding: '9px 18px', borderRadius: 8,
+                      background: COLORS.moss, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    <Plus size={14} /> Invite First Member
+                  </button>
+                }
+              />
+            </div>
+          ) : (
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: COLORS.snow }}>
+                    {['Member', 'Role', 'Status', 'Joined'].map(h => (
+                      <th key={h} style={{ padding: '10px 16px', fontSize: 11, fontWeight: 700, color: COLORS.stone, textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {team.map((m, i) => (
+                    <tr key={m.id} style={{ borderTop: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? '#fff' : COLORS.snow }}>
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <Avatar name={m.name} size={32} />
+                          <div>
+                            <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.forest }}>{m.name}</p>
+                            <p style={{ fontSize: 11, color: COLORS.stone }}>{m.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px 16px' }}><RoleBadge role={m.role} /></td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                          {m.status === 'active'
+                            ? <><CheckCircle2 size={12} style={{ color: COLORS.sage }} /><span style={{ color: COLORS.fern }}>Active</span></>
+                            : <><Clock size={12} style={{ color: COLORS.amber }} /><span style={{ color: COLORS.amber }}>Pending</span></>
+                          }
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px', fontSize: 12, color: COLORS.stone }}>{m.joined}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-        <div className="flex gap-1 bg-foam rounded-lg p-1 border border-mist/60">
-          {roles.map(r => (
-            <button key={r} onClick={() => setRoleFilter(r)}
-              className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                roleFilter === r ? 'bg-white text-forest shadow-sm' : 'text-fern/60 hover:text-fern'
-              }`}>
-              {ROLE_LABELS[r] ?? r}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {/* Table */}
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-mist bg-snow">
-                {['Member', 'Role', 'Region', 'Programs', 'Joined', 'Status', ''].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-fern/55 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(m => (
-                <tr key={m.id} className="border-b border-mist/40 hover:bg-foam/50 transition-colors">
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-3">
-                      <Avatar name={m.name} size="sm" />
-                      <div>
-                        <p className="font-semibold text-forest">{m.name}</p>
-                        <p className="text-xs text-fern/50">{m.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <RoleBadge role={m.role} />
-                  </td>
-                  <td className="px-4 py-3.5 text-fern/70">{m.region}</td>
-                  <td className="px-4 py-3.5 font-mono text-xs text-forest">{m.programs.length}</td>
-                  <td className="px-4 py-3.5 font-mono text-xs text-fern/60">{formatDate(m.joinedAt)}</td>
-                  <td className="px-4 py-3.5">
-                    <StatusBadge status={m.status} />
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <button className="inline-flex items-center gap-1 text-xs text-fern hover:text-moss transition-colors">
-                      <Mail size={11} /> Message
-                    </button>
-                  </td>
+        {/* Role permissions legend */}
+        <div className="card fade-up-2" style={{ padding: 20 }}>
+          <h3 style={{ fontFamily: FONTS.heading, fontSize: 14, fontWeight: 600, color: COLORS.forest, marginBottom: 14 }}>
+            Role Permissions
+          </h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={{ fontSize: 10, fontWeight: 700, color: COLORS.stone, textAlign: 'left', paddingBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Role</th>
+                  <th style={{ fontSize: 10, fontWeight: 700, color: COLORS.stone, textAlign: 'center', paddingBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Read</th>
+                  <th style={{ fontSize: 10, fontWeight: 700, color: COLORS.stone, textAlign: 'center', paddingBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Write</th>
+                  <th style={{ fontSize: 10, fontWeight: 700, color: COLORS.stone, textAlign: 'center', paddingBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Manage</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {ROLE_PERMISSIONS.map(rp => (
+                  <tr key={rp.role} style={{ borderTop: `1px solid ${COLORS.mist}` }}>
+                    <td style={{ padding: '8px 0', fontSize: 12, fontWeight: 500, color: COLORS.slate }}>{rp.role}</td>
+                    <td style={{ padding: '8px 0', textAlign: 'center' }}><PermissionDot has={rp.read} /></td>
+                    <td style={{ padding: '8px 0', textAlign: 'center' }}><PermissionDot has={rp.write} /></td>
+                    <td style={{ padding: '8px 0', textAlign: 'center' }}><PermissionDot has={rp.manage} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

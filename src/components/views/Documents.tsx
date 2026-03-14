@@ -1,160 +1,335 @@
 'use client'
 
-import React, { useState } from 'react'
-import { FileText, Plus, Download, Search } from 'lucide-react'
-import { StatusBadge } from '../atoms/Badge'
-import { Avatar }      from '../atoms/Avatar'
-import { EmptyState }  from '../atoms/EmptyState'
-import { useModal }    from '../Modal'
-import { useToast }    from '../Toast'
-import { FormField, Input, Select } from '../atoms/FormField'
-import { DOCUMENTS }   from '@/lib/mock'
-import { formatDate }  from '@/lib/utils'
-import type { Document } from '@/lib/types'
+import React, { useState, useRef, useEffect } from 'react'
+import { Plus, FileText, Send, MessageSquare } from 'lucide-react'
+import { COLORS, FONTS } from '@/lib/tokens'
+import { StatusBadge, DocTypeBadge } from '@/components/atoms/Badge'
+import { EmptyState } from '@/components/atoms/EmptyState'
+import { Avatar }     from '@/components/atoms/Avatar'
+import { FormField, Input, Select } from '@/components/atoms/FormField'
+import { useModal, ModalFooter } from '@/components/Modal'
+import { useToast } from '@/components/Toast'
+import { nextId, todayISO } from '@/lib/utils'
+import type { Document, DocumentType, DocumentStatus, Comment, User, Program } from '@/lib/types'
 
-const TYPE_LABELS: Record<string, string> = {
-  report:     'Report',
-  proposal:   'Proposal',
-  mou:        'MOU',
-  budget:     'Budget',
-  assessment: 'Assessment',
-  other:      'Other',
-}
+// ── New document form ─────────────────────────────────────────────────────────
 
-const FORMAT_CLS: Record<string, string> = {
-  PDF:  'bg-red-50 text-red-600',
-  XLSX: 'bg-green-50 text-green-700',
-  DOCX: 'bg-blue-50 text-blue-600',
-  CSV:  'bg-amber-50 text-amber-700',
-}
+const DOC_TYPE_OPTIONS: { value: DocumentType; label: string }[] = [
+  { value: 'logframe',  label: 'Logframe'   },
+  { value: 'report',    label: 'Report'     },
+  { value: 'framework', label: 'Framework'  },
+  { value: 'manual',    label: 'Manual'     },
+  { value: 'proposal',  label: 'Proposal'   },
+  { value: 'other',     label: 'Other'      },
+]
 
-function fmtKb(kb: number): string {
-  if (kb >= 1024) return `${(kb / 1024).toFixed(1)} MB`
-  return `${kb} KB`
-}
+const DOC_STATUS_OPTIONS: { value: DocumentStatus; label: string }[] = [
+  { value: 'draft',     label: 'Draft'    },
+  { value: 'in_review', label: 'In Review'},
+  { value: 'approved',  label: 'Approved' },
+  { value: 'submitted', label: 'Submitted'},
+]
 
-function UploadForm({ onClose }: { onClose: () => void }) {
-  const { success } = useToast()
-  const [title, setTitle] = useState('')
+function NewDocForm({ programs, onSave }: { programs: Program[]; onSave: (d: Document) => void }) {
+  const { close } = useModal()
+  const [name,    setName]    = useState('')
+  const [type,    setType]    = useState<DocumentType>('report')
+  const [status,  setStatus]  = useState<DocumentStatus>('draft')
+  const [program, setProgram] = useState('')
+
+  function handleSave() {
+    if (!name.trim()) return
+    const progName = programs.find(p => String(p.id) === program)?.name ?? ''
+    onSave({
+      id: nextId(),
+      name: name.trim(),
+      type,
+      status,
+      program: progName,
+      updated: todayISO(),
+      sections: [],
+    })
+    close()
+  }
+
   return (
-    <div className="space-y-4">
-      <FormField label="Document title" required htmlFor="doc-title">
-        <Input id="doc-title" placeholder="e.g. Q2 Impact Report" value={title} onChange={e => setTitle(e.target.value)} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <FormField label="Document name" required htmlFor="nd-name">
+        <Input id="nd-name" placeholder="e.g. Q2 Progress Report" value={name} onChange={e => setName(e.target.value)} />
       </FormField>
-      <FormField label="Document type" htmlFor="doc-type">
-        <Select id="doc-type" options={Object.entries(TYPE_LABELS).map(([v, l]) => ({ value: v, label: l }))} placeholder="Select type…" />
-      </FormField>
-      <FormField label="Related program" htmlFor="doc-prog">
-        <Select id="doc-prog" options={[
-          { value: '', label: 'Organisation-wide' },
-          { value: 'p1', label: 'Clean Water Initiative' },
-          { value: 'p2', label: "Girls' Education Access" },
-          { value: 'p3', label: 'Community Health Workers' },
-        ]} placeholder="Select program…" />
-      </FormField>
-      <div className="rounded-xl border-2 border-dashed border-mist bg-foam/40 p-6 text-center">
-        <p className="text-sm text-fern/60">Drag & drop or <span className="text-fern font-semibold underline cursor-pointer">browse</span></p>
-        <p className="text-xs text-fern/40 mt-1">PDF, XLSX, DOCX · max 10 MB</p>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <FormField label="Type" htmlFor="nd-type">
+          <Select id="nd-type" options={DOC_TYPE_OPTIONS} value={type} onChange={e => setType(e.target.value as DocumentType)} />
+        </FormField>
+        <FormField label="Status" htmlFor="nd-status">
+          <Select id="nd-status" options={DOC_STATUS_OPTIONS} value={status} onChange={e => setStatus(e.target.value as DocumentStatus)} />
+        </FormField>
       </div>
-      <div className="flex justify-end gap-2 pt-2 border-t border-mist">
-        <button onClick={onClose} className="px-4 py-2 rounded-lg border border-mist text-sm text-fern hover:bg-foam transition-colors">Cancel</button>
-        <button onClick={() => { success('Document uploaded', `"${title || 'Document'}" added successfully.`); onClose() }}
-          className="px-4 py-2 rounded-lg bg-moss text-white text-sm font-semibold hover:bg-fern transition-colors">
-          Upload
+      {programs.length > 0 && (
+        <FormField label="Related program" htmlFor="nd-prog">
+          <Select
+            id="nd-prog"
+            placeholder="No program link"
+            options={programs.map(p => ({ value: String(p.id), label: p.name }))}
+            value={program}
+            onChange={e => setProgram(e.target.value)}
+          />
+        </FormField>
+      )}
+      <ModalFooter>
+        <button onClick={close} style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, color: COLORS.stone, cursor: 'pointer', border: `1px solid ${COLORS.mist}` }}>Cancel</button>
+        <button
+          onClick={handleSave}
+          disabled={!name.trim()}
+          style={{
+            padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+            background: name.trim() ? COLORS.moss : COLORS.mist,
+            color: name.trim() ? '#fff' : COLORS.stone,
+            cursor: name.trim() ? 'pointer' : 'not-allowed',
+          }}
+        >
+          Create Document
         </button>
-      </div>
+      </ModalFooter>
     </div>
   )
 }
 
-export function Documents() {
-  const { open, close } = useModal()
-  const [search,   setSearch]   = useState('')
-  const [typeFilter, setTypeFilter] = useState('all')
+// ── Documents view ────────────────────────────────────────────────────────────
 
-  const filtered = DOCUMENTS.filter(d => {
-    const matchType   = typeFilter === 'all' || d.type === typeFilter
-    const matchSearch = !search || d.title.toLowerCase().includes(search.toLowerCase())
-    return matchType && matchSearch
-  })
+interface DocumentsProps {
+  documents:    Document[]
+  setDocuments: React.Dispatch<React.SetStateAction<Document[]>>
+  programs:     Program[]
+  user:         User
+}
 
-  const types = ['all', ...Array.from(new Set(DOCUMENTS.map(d => d.type)))]
+export function Documents({ documents, setDocuments, programs, user }: DocumentsProps) {
+  const { open }    = useModal()
+  const { success } = useToast()
+  const [selected, setSelected] = useState<Document | null>(null)
+  const [comments, setComments] = useState<Comment[]>([])
+  const [message,  setMessage]  = useState('')
+  const chatRef = useRef<HTMLDivElement>(null)
+
+  // Update selected when documents change
+  useEffect(() => {
+    if (selected) {
+      const updated = documents.find(d => d.id === selected.id)
+      if (updated) setSelected(updated)
+    }
+  }, [documents])
+
+  // Scroll to bottom of chat
+  useEffect(() => {
+    if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight
+  }, [comments])
+
+  function openCreate() {
+    open({
+      title: 'New Document',
+      content: (
+        <NewDocForm
+          programs={programs}
+          onSave={(doc) => {
+            setDocuments(prev => [...prev, doc])
+            success(`"${doc.name}" created`)
+          }}
+        />
+      ),
+    })
+  }
+
+  function sendComment() {
+    const text = message.trim()
+    if (!text || !selected) return
+    const c: Comment = {
+      id: nextId(),
+      author: user.name,
+      role: user.role,
+      text,
+      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    }
+    setComments(prev => [...prev, c])
+    setMessage('')
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendComment() }
+  }
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
+    <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+      {/* Header */}
+      <div className="fade-up" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
-          <h2 className="font-fraunces text-2xl font-semibold text-forest">Documents</h2>
-          <p className="text-sm text-fern/60 mt-0.5">{DOCUMENTS.length} documents</p>
+          <h2 style={{ fontFamily: FONTS.heading, fontSize: 22, fontWeight: 600, color: COLORS.forest }}>Documents</h2>
+          <p style={{ fontSize: 12, color: COLORS.stone, marginTop: 2 }}>{documents.length} document{documents.length !== 1 ? 's' : ''}</p>
         </div>
         <button
-          onClick={() => open({ title: 'Upload Document', content: <UploadForm onClose={close} />, size: 'sm' })}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-moss text-white text-sm font-semibold hover:bg-fern transition-colors"
+          onClick={openCreate}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '9px 16px', borderRadius: 8,
+            background: COLORS.moss, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+          }}
         >
-          <Plus size={14} /> Upload
+          <Plus size={14} /> New Document
         </button>
       </div>
 
-      {/* Controls */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-fern/40 pointer-events-none" />
-          <input type="text" placeholder="Search documents…" value={search} onChange={e => setSearch(e.target.value)}
-            className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-mist bg-white text-forest placeholder:text-forest/35 focus:outline-none focus:ring-2 focus:ring-moss/25 focus:border-moss w-52" />
+      <div className="fade-up-1" style={{ display: 'grid', gridTemplateColumns: selected ? '320px 1fr' : '1fr', gap: 20, alignItems: 'start' }}>
+        {/* Document list */}
+        <div>
+          {documents.length === 0 ? (
+            <div className="card" style={{ padding: 0 }}>
+              <EmptyState
+                icon={<FileText size={24} />}
+                title="No documents yet"
+                description="Create your first document — reports, logframes, proposals."
+                action={
+                  <button
+                    onClick={openCreate}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      padding: '9px 18px', borderRadius: 8,
+                      background: COLORS.moss, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    <Plus size={14} /> Create Document
+                  </button>
+                }
+              />
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {documents.map(doc => (
+                <button
+                  key={doc.id}
+                  onClick={() => { setSelected(doc); setComments([]) }}
+                  style={{
+                    display: 'flex', flexDirection: 'column', gap: 6,
+                    padding: '14px 16px', borderRadius: 10,
+                    background: selected?.id === doc.id ? COLORS.foam : '#fff',
+                    border: `1px solid ${selected?.id === doc.id ? COLORS.sage : COLORS.mist}`,
+                    cursor: 'pointer', textAlign: 'left',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.forest, lineHeight: 1.3 }}>{doc.name}</p>
+                    <StatusBadge status={doc.status} />
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <DocTypeBadge type={doc.type} />
+                    {doc.program && <span style={{ fontSize: 11, color: COLORS.stone }}>{doc.program}</span>}
+                  </div>
+                  <p style={{ fontSize: 11, color: COLORS.stone }}>Updated {doc.updated}</p>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-        <div className="flex gap-1 bg-foam rounded-lg p-1 border border-mist/60">
-          {types.map(t => (
-            <button key={t} onClick={() => setTypeFilter(t)}
-              className={`px-3 py-1 rounded-md text-xs font-semibold capitalize transition-all ${
-                typeFilter === t ? 'bg-white text-forest shadow-sm' : 'text-fern/60 hover:text-fern'
-              }`}>
-              {t === 'all' ? 'All' : TYPE_LABELS[t] ?? t}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {filtered.length === 0 ? (
-        <EmptyState icon={<FileText size={22} />} title="No documents found" description="Upload a new document or adjust your filters." />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map(d => (
-            <div key={d.id} className="card card-hover p-5 flex flex-col gap-3">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-foam flex items-center justify-center flex-shrink-0 text-fern">
-                  <FileText size={18} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-fraunces text-sm font-semibold text-forest line-clamp-2 leading-snug">{d.title}</h3>
-                  <p className="text-xs text-fern/50 mt-0.5">{TYPE_LABELS[d.type]} · {fmtKb(d.sizeKb)}</p>
-                </div>
+        {/* Detail panel */}
+        {selected && (
+          <div className="card fade-up" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '70vh' }}>
+            {/* Doc header */}
+            <div style={{ padding: '18px 20px', borderBottom: `1px solid ${COLORS.mist}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <h3 style={{ fontFamily: FONTS.heading, fontSize: 16, fontWeight: 600, color: COLORS.forest }}>{selected.name}</h3>
+                <button onClick={() => setSelected(null)} style={{ fontSize: 11, color: COLORS.stone, cursor: 'pointer' }}>Close</button>
               </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                <StatusBadge status={d.status} />
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${FORMAT_CLS[d.format] ?? 'bg-gray-100 text-gray-600'}`}>
-                  {d.format}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between pt-2 border-t border-mist/60">
-                <div className="flex items-center gap-1.5">
-                  <Avatar name={d.author} size="xs" />
-                  <span className="text-xs text-fern/60">{d.author}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono text-fern/50">{formatDate(d.updatedAt)}</span>
-                  {d.status === 'published' && (
-                    <button className="text-fern hover:text-moss transition-colors" aria-label="Download">
-                      <Download size={13} />
-                    </button>
-                  )}
-                </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <DocTypeBadge type={selected.type} />
+                <StatusBadge status={selected.status} />
               </div>
             </div>
-          ))}
-        </div>
-      )}
+
+            {/* Content placeholder */}
+            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${COLORS.mist}`, flex: 1, overflowY: 'auto' }}>
+              {selected.sections.length === 0 ? (
+                <p style={{ fontSize: 13, color: COLORS.stone, fontStyle: 'italic' }}>No sections added yet.</p>
+              ) : (
+                selected.sections.map(s => (
+                  <div key={s.id} style={{ marginBottom: 12 }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.forest }}>{s.title}</p>
+                    <p style={{ fontSize: 11, color: COLORS.stone }}>by {s.author}</p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Comment thread */}
+            <div style={{ borderTop: `1px solid ${COLORS.mist}` }}>
+              <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <MessageSquare size={13} style={{ color: COLORS.stone }} />
+                <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.slate }}>Comments</span>
+              </div>
+
+              <div
+                ref={chatRef}
+                style={{
+                  maxHeight: 200, overflowY: 'auto',
+                  padding: '0 16px 8px',
+                  display: 'flex', flexDirection: 'column', gap: 10,
+                }}
+                className="scrollbar-hidden"
+              >
+                {comments.length === 0 ? (
+                  <p style={{ fontSize: 12, color: COLORS.stone, fontStyle: 'italic', padding: '8px 0' }}>No comments yet. Start the conversation.</p>
+                ) : (
+                  comments.map(c => (
+                    <div key={c.id} style={{ display: 'flex', gap: 10 }}>
+                      <Avatar name={c.author} size={26} style={{ flexShrink: 0, marginTop: 2 }} />
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 2 }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.forest }}>{c.author}</span>
+                          <span style={{ fontSize: 10, color: COLORS.stone }}>{c.role}</span>
+                          <span style={{ fontSize: 10, color: COLORS.stone }}>{c.time}</span>
+                        </div>
+                        <p style={{ fontSize: 12, color: COLORS.slate, lineHeight: 1.4 }}>{c.text}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div style={{ padding: '8px 16px 14px', display: 'flex', gap: 8 }}>
+                <input
+                  type="text"
+                  placeholder="Add a comment… (Enter to send)"
+                  value={message}
+                  onChange={e => setMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  style={{
+                    flex: 1, padding: '8px 12px', borderRadius: 8,
+                    border: `1px solid ${COLORS.mist}`,
+                    fontSize: 12, color: COLORS.forest,
+                    background: COLORS.snow, outline: 'none',
+                  }}
+                  onFocus={e => { e.target.style.borderColor = COLORS.sage }}
+                  onBlur={e  => { e.target.style.borderColor = COLORS.mist }}
+                />
+                <button
+                  onClick={sendComment}
+                  disabled={!message.trim()}
+                  style={{
+                    width: 34, height: 34, borderRadius: 8,
+                    background: message.trim() ? COLORS.sage : COLORS.mist,
+                    color: message.trim() ? '#fff' : COLORS.stone,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: message.trim() ? 'pointer' : 'not-allowed',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Send size={13} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
