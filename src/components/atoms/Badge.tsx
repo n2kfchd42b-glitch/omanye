@@ -1,25 +1,17 @@
 import React from 'react'
-import { cn } from '@/lib/utils'
-import { STATUS_COLORS, ROLE_COLORS, SOURCE_COLORS } from '@/lib/tokens'
-import type { ProgramStatus, UserRole, SourceType } from '@/lib/types'
+import { STATUS_MAP, ROLE_MAP, SOURCE_MAP, DOCTYPE_MAP } from '@/lib/tokens'
 
-// ── Generic Badge ─────────────────────────────────────────────────────────────
+// ── Base pill ─────────────────────────────────────────────────────────────────
 
-interface BadgeBaseProps {
-  children: React.ReactNode
-  dot?: boolean
-  className?: string
-}
-
-function BadgeBase({
-  children, dot, bg, text, dotColor, className,
-}: BadgeBaseProps & { bg: string; text: string; dotColor?: string }) {
+function Pill({
+  bg, text, dot, dotColor, children, className = '',
+}: {
+  bg: string; text: string; dot?: boolean; dotColor?: string
+  children: React.ReactNode; className?: string
+}) {
   return (
     <span
-      className={cn(
-        'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold leading-none whitespace-nowrap',
-        className
-      )}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold leading-none whitespace-nowrap ${className}`}
       style={{ backgroundColor: bg, color: text }}
     >
       {dot && dotColor && (
@@ -32,76 +24,38 @@ function BadgeBase({
 
 // ── StatusBadge ───────────────────────────────────────────────────────────────
 
-interface StatusBadgeProps {
-  status: string
-  dot?: boolean
-  className?: string
-}
-
-export function StatusBadge({ status, dot = true, className }: StatusBadgeProps) {
-  const c = STATUS_COLORS[status] ?? STATUS_COLORS['draft']
-  const label = status.replace(/-/g, ' ')
-  return (
-    <BadgeBase bg={c.bg} text={c.text} dotColor={c.dot} dot={dot} className={className}>
-      {label.charAt(0).toUpperCase() + label.slice(1)}
-    </BadgeBase>
-  )
+export function StatusBadge({ status, dot = true }: { status: string; dot?: boolean }) {
+  const c = STATUS_MAP[status] ?? STATUS_MAP.draft
+  const label = status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+  return <Pill bg={c.bg} text={c.text} dot={dot} dotColor={c.dot}>{label}</Pill>
 }
 
 // ── RoleBadge ─────────────────────────────────────────────────────────────────
 
-interface RoleBadgeProps {
-  role: UserRole
-  className?: string
-}
-
-const ROLE_LABELS: Record<UserRole, string> = {
-  admin:          'Admin',
-  coordinator:    'Coordinator',
-  'field-officer':'Field Officer',
-  'm-and-e':      'M&E',
-  viewer:         'Viewer',
-}
-
-export function RoleBadge({ role, className }: RoleBadgeProps) {
-  const c = ROLE_COLORS[role] ?? { bg: '#F3F4F6', text: '#374151' }
-  return (
-    <BadgeBase bg={c.bg} text={c.text} className={className}>
-      {ROLE_LABELS[role]}
-    </BadgeBase>
-  )
+export function RoleBadge({ role }: { role: string }) {
+  const c = ROLE_MAP[role] ?? { bg: '#F1F5F9', text: '#475569' }
+  return <Pill bg={c.bg} text={c.text}>{role}</Pill>
 }
 
 // ── SourceBadge ───────────────────────────────────────────────────────────────
 
-interface SourceBadgeProps {
-  type: SourceType
-  className?: string
+export function SourceBadge({ source }: { source: string }) {
+  const c = SOURCE_MAP[source] ?? { bg: '#F1F5F9', text: '#475569' }
+  return <Pill bg={c.bg} text={c.text}>{source}</Pill>
 }
 
-const SOURCE_LABELS: Record<SourceType, string> = {
-  foundation: 'Foundation',
-  government: 'Government',
-  individual: 'Individual',
-  corporate:  'Corporate',
-  earned:     'Earned',
+// ── DocTypeBadge ──────────────────────────────────────────────────────────────
+
+export function DocTypeBadge({ type }: { type: string }) {
+  const c = DOCTYPE_MAP[type] ?? { bg: '#F1F5F9', text: '#64748B' }
+  const label = type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+  return <Pill bg={c.bg} text={c.text}>{label}</Pill>
 }
 
-export function SourceBadge({ type, className }: SourceBadgeProps) {
-  const c = SOURCE_COLORS[type] ?? { bg: '#F3F4F6', text: '#374151' }
-  return (
-    <BadgeBase bg={c.bg} text={c.text} className={className}>
-      {SOURCE_LABELS[type]}
-    </BadgeBase>
-  )
-}
+// ── GenericBadge (custom bg/text) ─────────────────────────────────────────────
 
-// ── TagBadge (generic pill) ───────────────────────────────────────────────────
-
-export function TagBadge({ label, className }: { label: string; className?: string }) {
-  return (
-    <BadgeBase bg="#EAF7EE" text="#1A5C3A" className={className}>
-      {label}
-    </BadgeBase>
-  )
+export function GenericBadge({
+  label, bg, text, style,
+}: { label: string; bg: string; text: string; style?: React.CSSProperties }) {
+  return <span style={style}><Pill bg={bg} text={text}>{label}</Pill></span>
 }

@@ -1,274 +1,295 @@
 'use client'
 
 import React, { useState } from 'react'
-import { ChevronRight, ChevronLeft, Check, Leaf } from 'lucide-react'
-import { OmanyeLogo } from '../Logo'
-import { FormField, Input, Select, Textarea } from '../atoms/FormField'
-import { useToast } from '../Toast'
-import { cn } from '@/lib/utils'
-import type { OnboardingData } from '@/lib/types'
+import { ChevronRight, ChevronLeft, Database, BarChart2, FileText, Map } from 'lucide-react'
+import { COLORS, FONTS } from '@/lib/tokens'
+import { OmanyeLogo } from '@/components/Logo'
+import { FormField, Input, Select } from '@/components/atoms/FormField'
+import type { User, UserRole } from '@/lib/types'
 
-const COUNTRIES = [
-  { value: 'GH', label: 'Ghana' }, { value: 'NG', label: 'Nigeria' },
-  { value: 'KE', label: 'Kenya' }, { value: 'ET', label: 'Ethiopia' },
-  { value: 'UG', label: 'Uganda' }, { value: 'TZ', label: 'Tanzania' },
-  { value: 'SN', label: 'Senegal' }, { value: 'CI', label: 'Côte d\'Ivoire' },
-  { value: 'ZA', label: 'South Africa' }, { value: 'OTHER', label: 'Other' },
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const ROLES: { value: UserRole; label: string }[] = [
+  { value: 'Project Lead', label: 'Project Lead'  },
+  { value: 'M&E Officer',  label: 'M&E Officer'   },
+  { value: 'Field Staff',  label: 'Field Staff'   },
+  { value: 'Supervisor',   label: 'Supervisor'    },
+  { value: 'Donor',        label: 'Donor'         },
+  { value: 'Admin',        label: 'Admin'         },
+  { value: 'Viewer',       label: 'Viewer'        },
 ]
 
-const SECTORS = [
-  { value: 'health',      label: 'Health & Nutrition' },
-  { value: 'education',   label: 'Education' },
-  { value: 'wash',        label: 'WASH' },
-  { value: 'livelihoods', label: 'Livelihoods & Agriculture' },
-  { value: 'protection',  label: 'Protection & Legal' },
-  { value: 'emergency',   label: 'Emergency Response' },
-  { value: 'environment', label: 'Environment & Climate' },
-  { value: 'governance',  label: 'Governance & Rights' },
-  { value: 'other',       label: 'Other' },
+const FEATURES = [
+  {
+    icon: Database,
+    title: 'Data Collection',
+    description: 'Connect KoBoToolbox, REDCap, ODK Central, or upload CSV datasets.',
+  },
+  {
+    icon: BarChart2,
+    title: 'Analytics',
+    description: 'Run descriptive, trend, and impact analyses on your program data.',
+  },
+  {
+    icon: FileText,
+    title: 'Documents',
+    description: 'Manage logframes, reports, proposals, and share with your team.',
+  },
+  {
+    icon: Map,
+    title: 'Field Map',
+    description: 'Visualize program activities and beneficiary coverage geographically.',
+  },
 ]
 
-const REGIONS_GH = [
-  { value: 'Greater Accra', label: 'Greater Accra' },
-  { value: 'Ashanti',       label: 'Ashanti' },
-  { value: 'Northern',      label: 'Northern' },
-  { value: 'Volta',         label: 'Volta' },
-  { value: 'Eastern',       label: 'Eastern' },
-  { value: 'Western',       label: 'Western' },
-  { value: 'Brong-Ahafo',   label: 'Brong-Ahafo' },
-  { value: 'Central',       label: 'Central' },
-  { value: 'Upper East',    label: 'Upper East' },
-  { value: 'Upper West',    label: 'Upper West' },
-]
+// ── Dot-grid SVG background ───────────────────────────────────────────────────
 
-const STEPS = ['Organisation', 'First Program', 'Invite Team']
-
-interface OnboardingProps {
-  onComplete: () => void
+function DotGrid() {
+  return (
+    <svg
+      style={{
+        position: 'absolute', inset: 0, width: '100%', height: '100%',
+        pointerEvents: 'none',
+      }}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <defs>
+        <pattern id="dots" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
+          <circle cx="1.5" cy="1.5" r="1.5" fill="rgba(125,212,160,0.10)" />
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#dots)" />
+    </svg>
+  )
 }
 
-type StepData = Partial<OnboardingData>
+// ── Step pill indicator ───────────────────────────────────────────────────────
+
+function StepPills({ step }: { step: number }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', marginBottom: 32 }}>
+      {[0, 1, 2].map(i => (
+        <div
+          key={i}
+          style={{
+            height: 6,
+            borderRadius: 99,
+            transition: 'width 0.25s ease, background 0.2s',
+            width: i === step ? 28 : 8,
+            background: i === step ? COLORS.sage : 'rgba(125,212,160,0.25)',
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+// ── Onboarding ────────────────────────────────────────────────────────────────
+
+interface OnboardingProps {
+  onComplete: (user: User) => void
+}
 
 export function Onboarding({ onComplete }: OnboardingProps) {
-  const { success } = useToast()
-  const [step,    setStep]    = useState(0)
-  const [data,    setData]    = useState<StepData>({})
-  const [loading, setLoading] = useState(false)
-  const [invite,  setInvite]  = useState('')
+  const [step, setStep] = useState(0)
 
-  const set = (key: keyof OnboardingData, val: string) =>
-    setData(d => ({ ...d, [key]: val }))
+  // Step 1 fields
+  const [name,  setName]  = useState('')
+  const [email, setEmail] = useState('')
 
-  const canAdvance = () => {
-    if (step === 0) return !!(data.orgName && data.country && data.sector)
-    if (step === 1) return !!(data.progName && data.progRegion)
-    return true
-  }
+  // Step 2 fields
+  const [org,  setOrg]  = useState('')
+  const [role, setRole] = useState<UserRole>('Project Lead')
 
-  const advance = () => {
+  const canNext = step === 0
+    ? name.trim().length > 0 && email.includes('@')
+    : step === 1
+      ? org.trim().length > 0
+      : true
+
+  function handleNext() {
     if (step < 2) { setStep(s => s + 1); return }
-    setLoading(true)
-    setTimeout(() => {
-      success('Workspace ready!', `Welcome to OMANYE, ${data.orgName ?? 'your organization'}.`)
-      onComplete()
-    }, 1200)
+    onComplete({ name: name.trim(), email: email.trim(), org: org.trim(), role })
   }
 
   return (
-    <div className="min-h-screen bg-snow flex flex-col items-center justify-center px-4">
-      {/* Logo */}
-      <OmanyeLogo size="lg" variant="light" showTagline className="mb-10" />
+    <div
+      style={{
+        minHeight: '100vh',
+        background: COLORS.forest,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px 16px',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      <DotGrid />
 
-      {/* Card */}
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-card-md border border-mist/60">
-        {/* Progress stepper */}
-        <div className="flex items-center px-6 pt-6 pb-5 border-b border-mist gap-0">
-          {STEPS.map((label, i) => (
-            <React.Fragment key={i}>
-              <div className="flex flex-col items-center gap-1">
-                <div className={cn(
-                  'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all',
-                  i < step  ? 'bg-moss text-white' :
-                  i === step ? 'bg-moss text-white ring-4 ring-moss/20' :
-                               'bg-mist text-fern/50'
-                )}>
-                  {i < step ? <Check size={14} /> : i + 1}
-                </div>
-                <span className={cn(
-                  'text-[10px] font-medium whitespace-nowrap',
-                  i === step ? 'text-moss' : 'text-fern/40'
-                )}>
-                  {label}
-                </span>
-              </div>
-              {i < STEPS.length - 1 && (
-                <div className={cn(
-                  'flex-1 h-0.5 mx-2 mb-4 transition-colors',
-                  i < step ? 'bg-moss' : 'bg-mist'
-                )} />
-              )}
-            </React.Fragment>
-          ))}
+      <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 480 }}>
+        {/* Logo */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 40 }}>
+          <OmanyeLogo size="md" variant="dark" showTagline />
         </div>
 
-        {/* Step content */}
-        <div className="px-6 py-6 space-y-4">
+        {/* Step pills */}
+        <StepPills step={step} />
+
+        {/* Card */}
+        <div
+          style={{
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(125,212,160,0.15)',
+            borderRadius: 20,
+            padding: '32px 32px',
+            backdropFilter: 'blur(12px)',
+          }}
+        >
+          {/* Step 1: Name + Email */}
           {step === 0 && (
-            <>
-              <div>
-                <h2 className="font-fraunces text-xl font-semibold text-forest mb-1">
-                  Set up your workspace
-                </h2>
-                <p className="text-sm text-fern/60">Tell us about your organisation to get started.</p>
+            <div className="fade-up">
+              <h2 style={{
+                fontFamily: FONTS.heading, fontSize: 22, fontWeight: 600,
+                color: '#ffffff', marginBottom: 6,
+              }}>
+                Welcome to OMANYE
+              </h2>
+              <p style={{ fontSize: 13, color: 'rgba(125,212,160,0.65)', marginBottom: 24, lineHeight: 1.5 }}>
+                Let's set up your workspace. Start with your personal details.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <FormField label="Full name" required htmlFor="ob-name">
+                  <Input
+                    id="ob-name"
+                    placeholder="e.g. Amara Osei"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                  />
+                </FormField>
+                <FormField label="Work email" required htmlFor="ob-email">
+                  <Input
+                    id="ob-email"
+                    type="email"
+                    placeholder="you@organisation.org"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                  />
+                </FormField>
               </div>
-              <FormField label="Organisation name" required htmlFor="orgName">
-                <Input
-                  id="orgName"
-                  placeholder="e.g. OMANYE Field Office"
-                  value={data.orgName ?? ''}
-                  onChange={e => set('orgName', e.target.value)}
-                />
-              </FormField>
-              <FormField label="Primary country of operation" required htmlFor="country">
-                <Select
-                  id="country"
-                  options={COUNTRIES}
-                  placeholder="Select country…"
-                  value={data.country ?? ''}
-                  onChange={e => set('country', e.target.value)}
-                />
-              </FormField>
-              <FormField label="Primary sector" required htmlFor="sector">
-                <Select
-                  id="sector"
-                  options={SECTORS}
-                  placeholder="Select sector…"
-                  value={data.sector ?? ''}
-                  onChange={e => set('sector', e.target.value)}
-                />
-              </FormField>
-            </>
+            </div>
           )}
 
+          {/* Step 2: Org + Role */}
           {step === 1 && (
-            <>
-              <div>
-                <h2 className="font-fraunces text-xl font-semibold text-forest mb-1">
-                  Create your first program
-                </h2>
-                <p className="text-sm text-fern/60">You can add more programs after setup.</p>
+            <div className="fade-up">
+              <h2 style={{
+                fontFamily: FONTS.heading, fontSize: 22, fontWeight: 600,
+                color: '#ffffff', marginBottom: 6,
+              }}>
+                Your organisation
+              </h2>
+              <p style={{ fontSize: 13, color: 'rgba(125,212,160,0.65)', marginBottom: 24, lineHeight: 1.5 }}>
+                Tell us about your organisation and your role.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <FormField label="Organisation name" required htmlFor="ob-org">
+                  <Input
+                    id="ob-org"
+                    placeholder="e.g. OMANYE Field Office"
+                    value={org}
+                    onChange={e => setOrg(e.target.value)}
+                  />
+                </FormField>
+                <FormField label="Your role" required htmlFor="ob-role">
+                  <Select
+                    id="ob-role"
+                    options={ROLES}
+                    value={role}
+                    onChange={e => setRole(e.target.value as UserRole)}
+                  />
+                </FormField>
               </div>
-              <FormField label="Program name" required htmlFor="progName">
-                <Input
-                  id="progName"
-                  placeholder="e.g. Clean Water Initiative – Volta"
-                  value={data.progName ?? ''}
-                  onChange={e => set('progName', e.target.value)}
-                />
-              </FormField>
-              <FormField label="Primary region" required htmlFor="progRegion">
-                <Select
-                  id="progRegion"
-                  options={REGIONS_GH}
-                  placeholder="Select region…"
-                  value={data.progRegion ?? ''}
-                  onChange={e => set('progRegion', e.target.value)}
-                />
-              </FormField>
-              <FormField label="Brief description" htmlFor="desc">
-                <Textarea
-                  id="desc"
-                  placeholder="What does this program aim to achieve?"
-                  rows={3}
-                />
-              </FormField>
-            </>
+            </div>
           )}
 
+          {/* Step 3: Feature cards + CTA */}
           {step === 2 && (
-            <>
-              <div>
-                <h2 className="font-fraunces text-xl font-semibold text-forest mb-1">
-                  Invite your team
-                </h2>
-                <p className="text-sm text-fern/60">
-                  Add team members by email. You can always do this later.
-                </p>
+            <div className="fade-up">
+              <h2 style={{
+                fontFamily: FONTS.heading, fontSize: 22, fontWeight: 600,
+                color: '#ffffff', marginBottom: 6,
+              }}>
+                Everything you need
+              </h2>
+              <p style={{ fontSize: 13, color: 'rgba(125,212,160,0.65)', marginBottom: 24, lineHeight: 1.5 }}>
+                Your workspace for <strong style={{ color: COLORS.mint }}>{org}</strong> is ready.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 4 }}>
+                {FEATURES.map((f, i) => {
+                  const Icon = f.icon
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(125,212,160,0.12)',
+                        borderRadius: 12,
+                        padding: '14px 14px',
+                      }}
+                    >
+                      <Icon size={16} style={{ color: COLORS.sage, marginBottom: 8 }} />
+                      <p style={{ fontSize: 12, fontWeight: 600, color: '#ffffff', marginBottom: 4 }}>{f.title}</p>
+                      <p style={{ fontSize: 11, color: 'rgba(125,212,160,0.55)', lineHeight: 1.5 }}>{f.description}</p>
+                    </div>
+                  )
+                })}
               </div>
-              <FormField label="Email addresses" htmlFor="invite" hint="Separate multiple emails with commas">
-                <Textarea
-                  id="invite"
-                  placeholder="colleague@org.org, fieldworker@org.org"
-                  rows={4}
-                  value={invite}
-                  onChange={e => setInvite(e.target.value)}
-                />
-              </FormField>
-
-              <div className="rounded-xl bg-foam border border-mist p-4 flex gap-3">
-                <Leaf size={16} className="text-fern flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-forest">You're almost there</p>
-                  <p className="text-xs text-fern/70 mt-0.5">
-                    Your workspace for <strong>{data.orgName}</strong> is ready.
-                    Click <em>Launch workspace</em> to begin.
-                  </p>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 pb-6 flex items-center justify-between">
-          {step > 0 ? (
-            <button
-              onClick={() => setStep(s => s - 1)}
-              className="inline-flex items-center gap-1.5 text-sm text-fern hover:text-moss transition-colors"
-            >
-              <ChevronLeft size={15} /> Back
-            </button>
-          ) : (
-            <span />
+            </div>
           )}
 
-          <div className="flex items-center gap-3">
-            {step === 2 && (
+          {/* Footer nav */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 28 }}>
+            {step > 0 ? (
               <button
-                onClick={onComplete}
-                className="text-sm text-fern/60 hover:text-fern transition-colors"
+                onClick={() => setStep(s => s - 1)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  fontSize: 13, color: 'rgba(125,212,160,0.60)',
+                  cursor: 'pointer', transition: 'color 0.15s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.color = COLORS.mint)}
+                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(125,212,160,0.60)')}
               >
-                Skip &amp; launch
+                <ChevronLeft size={14} /> Back
               </button>
-            )}
+            ) : <span />}
+
             <button
-              onClick={advance}
-              disabled={!canAdvance() || loading}
-              className={cn(
-                'inline-flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-semibold transition-all',
-                canAdvance() && !loading
-                  ? 'bg-moss text-white hover:bg-fern'
-                  : 'bg-mist text-fern/40 cursor-not-allowed'
-              )}
+              onClick={handleNext}
+              disabled={!canNext}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '10px 22px',
+                borderRadius: 10,
+                background: canNext ? COLORS.sage : 'rgba(125,212,160,0.15)',
+                color: canNext ? COLORS.forest : 'rgba(125,212,160,0.35)',
+                fontSize: 13, fontWeight: 700,
+                cursor: canNext ? 'pointer' : 'not-allowed',
+                transition: 'background 0.15s, color 0.15s',
+              }}
             >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <span className="w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-                  Launching…
-                </span>
-              ) : step < 2 ? (
-                <>Continue <ChevronRight size={15} /></>
-              ) : (
-                <>Launch workspace <ChevronRight size={15} /></>
-              )}
+              {step === 2 ? 'Enter Workspace' : 'Continue'}
+              <ChevronRight size={14} />
             </button>
           </div>
         </div>
-      </div>
 
-      <p className="mt-6 text-xs text-fern/40 text-center">
-        OMANYE NGO Workspace · Built for field teams
-      </p>
+        <p style={{ textAlign: 'center', marginTop: 20, fontSize: 11, color: 'rgba(125,212,160,0.30)' }}>
+          OMANYE NGO Workspace · Built for field teams
+        </p>
+      </div>
     </div>
   )
 }

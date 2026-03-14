@@ -1,28 +1,28 @@
 'use client'
 
-import React, { createContext, useContext, useCallback, useState, useEffect, useRef } from 'react'
+import React, { createContext, useContext, useCallback, useState, useEffect } from 'react'
 import { X } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { COLORS } from '@/lib/tokens'
 
 // ── Context ───────────────────────────────────────────────────────────────────
 
 interface ModalConfig {
-  title:    string
-  content:  React.ReactNode
-  size?:    'sm' | 'md' | 'lg' | 'xl'
+  title:   string
+  content: React.ReactNode
+  wide?:   boolean          // 720px vs 520px
   onClose?: () => void
 }
 
-interface ModalContextValue {
-  open:  (config: ModalConfig) => void
+interface ModalCtxValue {
+  open:  (cfg: ModalConfig) => void
   close: () => void
 }
 
-const ModalCtx = createContext<ModalContextValue | null>(null)
+const ModalCtx = createContext<ModalCtxValue | null>(null)
 
-export function useModal(): ModalContextValue {
+export function useModal(): ModalCtxValue {
   const ctx = useContext(ModalCtx)
-  if (!ctx) throw new Error('useModal must be used inside <ModalProvider>')
+  if (!ctx) throw new Error('useModal must be inside ModalProvider')
   return ctx
 }
 
@@ -31,89 +31,96 @@ export function useModal(): ModalContextValue {
 export function ModalProvider({ children }: { children: React.ReactNode }) {
   const [modal, setModal] = useState<(ModalConfig & { visible: boolean }) | null>(null)
 
-  const open  = useCallback((cfg: ModalConfig) => setModal({ ...cfg, visible: true }),  [])
+  const open  = useCallback((cfg: ModalConfig) => setModal({ ...cfg, visible: true }), [])
   const close = useCallback(() => {
-    setModal(prev => prev ? { ...prev, visible: false } : null)
-    setTimeout(() => setModal(null), 200)
+    setModal(p => p ? { ...p, visible: false } : null)
+    setTimeout(() => setModal(null), 180)
   }, [])
 
-  // Esc to close
   useEffect(() => {
     if (!modal?.visible) return
     const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') close() }
-    window.addEventListener('keydown', fn)
-    return () => window.removeEventListener('keydown', fn)
+    document.addEventListener('keydown', fn)
+    return () => document.removeEventListener('keydown', fn)
   }, [modal?.visible, close])
 
   return (
     <ModalCtx.Provider value={{ open, close }}>
       {children}
-      {modal && (
-        <ModalRoot modal={modal} onClose={() => { modal.onClose?.(); close() }} />
-      )}
+      {modal && <ModalRoot modal={modal} onClose={() => { modal.onClose?.(); close() }} />}
     </ModalCtx.Provider>
   )
 }
 
-// ── Modal root ────────────────────────────────────────────────────────────────
+// ── Root ──────────────────────────────────────────────────────────────────────
 
-const SIZE_CLS: Record<string, string> = {
-  sm: 'max-w-sm',
-  md: 'max-w-lg',
-  lg: 'max-w-2xl',
-  xl: 'max-w-4xl',
-}
-
-interface ModalRootProps {
-  modal:   ModalConfig & { visible: boolean }
-  onClose: () => void
-}
-
-function ModalRoot({ modal, onClose }: ModalRootProps) {
-  const panelRef = useRef<HTMLDivElement>(null)
-
+function ModalRoot({
+  modal, onClose,
+}: { modal: ModalConfig & { visible: boolean }; onClose: () => void }) {
+  const maxW = modal.wide ? 720 : 520
   return (
     <div
-      className={cn(
-        'fixed inset-0 z-[100] flex items-center justify-center p-4',
-        modal.visible ? 'animate-fade-in' : 'opacity-0 pointer-events-none'
-      )}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 100,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 16,
+        background: `rgba(10,26,16,0.6)`,
+        backdropFilter: 'blur(2px)',
+      }}
+      className={modal.visible ? 'fade-up' : ''}
+      onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
     >
-      {/* Scrim */}
       <div
-        className="absolute inset-0 bg-forest/40 backdrop-blur-[2px]"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      {/* Panel */}
-      <div
-        ref={panelRef}
-        className={cn(
-          'relative w-full bg-white rounded-2xl shadow-modal flex flex-col max-h-[90vh]',
-          SIZE_CLS[modal.size ?? 'md'],
-          modal.visible ? 'animate-slide-up' : ''
-        )}
+        style={{
+          width: '100%', maxWidth: maxW,
+          background: '#ffffff',
+          borderRadius: 16,
+          boxShadow: '0 24px 64px rgba(10,26,16,0.22)',
+          maxHeight: '90vh',
+          display: 'flex', flexDirection: 'column',
+        }}
+        className={modal.visible ? 'fade-up' : ''}
+        onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-mist flex-shrink-0">
-          <h2 id="modal-title" className="font-fraunces text-lg font-semibold text-forest">
+        <div
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '18px 24px',
+            borderBottom: `1px solid ${COLORS.mist}`,
+            flexShrink: 0,
+          }}
+        >
+          <h2
+            id="modal-title"
+            style={{
+              fontFamily: 'var(--font-fraunces), Georgia, serif',
+              fontSize: 18, fontWeight: 600, color: COLORS.forest,
+            }}
+          >
             {modal.title}
           </h2>
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-fern/40 hover:text-fern hover:bg-foam transition-colors"
+            style={{
+              width: 28, height: 28, borderRadius: 8,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: COLORS.stone, cursor: 'pointer',
+              transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = COLORS.foam)}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             aria-label="Close"
           >
-            <X size={16} />
+            <X size={15} />
           </button>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
           {modal.content}
         </div>
       </div>
@@ -123,9 +130,16 @@ function ModalRoot({ modal, onClose }: ModalRootProps) {
 
 // ── ModalFooter helper ────────────────────────────────────────────────────────
 
-export function ModalFooter({ children, className }: { children: React.ReactNode; className?: string }) {
+export function ModalFooter({ children }: { children: React.ReactNode }) {
   return (
-    <div className={cn('flex items-center justify-end gap-2 pt-4 border-t border-mist mt-4', className)}>
+    <div
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+        gap: 8, paddingTop: 16,
+        borderTop: `1px solid ${COLORS.mist}`,
+        marginTop: 16,
+      }}
+    >
       {children}
     </div>
   )

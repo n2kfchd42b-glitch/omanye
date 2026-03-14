@@ -1,71 +1,93 @@
 import React from 'react'
-import { cn } from '@/lib/utils'
+import { COLORS } from '@/lib/tokens'
 
 // ── FormField wrapper ─────────────────────────────────────────────────────────
 
 interface FormFieldProps {
-  label: string
-  htmlFor?: string
+  label:     string
+  htmlFor?:  string
   required?: boolean
-  hint?: string
-  error?: string
-  children: React.ReactNode
+  hint?:     string
+  error?:    string
+  children:  React.ReactNode
   className?: string
 }
 
-export function FormField({ label, htmlFor, required, hint, error, children, className }: FormFieldProps) {
+export function FormField({ label, htmlFor, required, hint, error, children, className = '' }: FormFieldProps) {
   return (
-    <div className={cn('space-y-1.5', className)}>
+    <div className={`space-y-1.5 ${className}`}>
       <label
         htmlFor={htmlFor}
-        className="block text-sm font-medium text-forest/90"
+        style={{
+          display: 'block',
+          fontSize: 12,
+          fontWeight: 700,
+          color: COLORS.stone,
+          textTransform: 'uppercase',
+          letterSpacing: '0.04em',
+        }}
       >
         {label}
-        {required && <span className="text-red-400 ml-0.5">*</span>}
+        {required && <span style={{ color: COLORS.crimson, marginLeft: 2 }}>*</span>}
       </label>
       {children}
-      {hint  && !error && <p className="text-xs text-fern/50">{hint}</p>}
-      {error &&           <p className="text-xs text-red-500">{error}</p>}
+      {hint  && !error && <p style={{ fontSize: 11, color: COLORS.stone }}>{hint}</p>}
+      {error &&           <p style={{ fontSize: 11, color: COLORS.crimson }}>{error}</p>}
     </div>
   )
+}
+
+// ── Shared input styles ───────────────────────────────────────────────────────
+
+const baseInput: React.CSSProperties = {
+  width: '100%',
+  padding: '8px 12px',
+  fontSize: 14,
+  borderRadius: 8,
+  border: `1px solid ${COLORS.mist}`,
+  background: COLORS.pearl,
+  color: COLORS.forest,
+  outline: 'none',
+  transition: 'border-color 0.15s, box-shadow 0.15s',
+  fontFamily: 'var(--font-instrument), system-ui, sans-serif',
+}
+
+function focusStyle(el: HTMLElement) {
+  el.style.borderColor = COLORS.sage
+  el.style.boxShadow = `0 0 0 3px rgba(74,207,120,0.18)`
+}
+function blurStyle(el: HTMLElement) {
+  el.style.borderColor = COLORS.mist
+  el.style.boxShadow = 'none'
 }
 
 // ── Input ─────────────────────────────────────────────────────────────────────
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  error?: boolean
   prefixIcon?: React.ReactNode
-  suffixIcon?: React.ReactNode
+  error?: boolean
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, error, prefixIcon, suffixIcon, ...props }, ref) => (
+  ({ className, error, prefixIcon, style, onFocus, onBlur, ...props }, ref) => (
     <div className="relative">
       {prefixIcon && (
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-fern/40 pointer-events-none">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: COLORS.stone }}>
           {prefixIcon}
         </span>
       )}
       <input
         ref={ref}
-        className={cn(
-          'w-full px-3 py-2 text-sm rounded-lg border bg-white text-forest',
-          'placeholder:text-forest/35 transition-all outline-none',
-          'focus:ring-2 focus:ring-moss/25 focus:border-moss',
-          error
-            ? 'border-red-400 focus:ring-red-200 focus:border-red-400'
-            : 'border-mist hover:border-mint',
-          prefixIcon && 'pl-9',
-          suffixIcon && 'pr-9',
-          className
-        )}
+        style={{
+          ...baseInput,
+          paddingLeft: prefixIcon ? 34 : 12,
+          borderColor: error ? COLORS.crimson : COLORS.mist,
+          ...style,
+        }}
+        onFocus={e => { focusStyle(e.target); onFocus?.(e) }}
+        onBlur={e  => { blurStyle(e.target);  onBlur?.(e)  }}
         {...props}
       />
-      {suffixIcon && (
-        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-fern/40 pointer-events-none">
-          {suffixIcon}
-        </span>
-      )}
     </div>
   )
 )
@@ -75,22 +97,24 @@ Input.displayName = 'Input'
 
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   error?: boolean
+  mono?:  boolean
 }
 
 export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, error, ...props }, ref) => (
+  ({ error, mono, style, onFocus, onBlur, ...props }, ref) => (
     <textarea
       ref={ref}
-      className={cn(
-        'w-full px-3 py-2 text-sm rounded-lg border bg-white text-forest resize-none',
-        'placeholder:text-forest/35 transition-all outline-none',
-        'focus:ring-2 focus:ring-moss/25 focus:border-moss',
-        error
-          ? 'border-red-400 focus:ring-red-200'
-          : 'border-mist hover:border-mint',
-        className
-      )}
+      style={{
+        ...baseInput,
+        resize: 'vertical',
+        minHeight: 80,
+        borderColor: error ? COLORS.crimson : COLORS.mist,
+        fontFamily: mono ? 'var(--font-mono), Consolas, monospace' : baseInput.fontFamily,
+        ...style,
+      }}
       rows={props.rows ?? 3}
+      onFocus={e => { focusStyle(e.target); onFocus?.(e) }}
+      onBlur={e  => { blurStyle(e.target);  onBlur?.(e)  }}
       {...props}
     />
   )
@@ -100,26 +124,26 @@ Textarea.displayName = 'Textarea'
 // ── Select ────────────────────────────────────────────────────────────────────
 
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
-  error?: boolean
-  options: { value: string; label: string }[]
+  options:      { value: string; label: string }[]
   placeholder?: string
+  error?:       boolean
 }
 
 export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, error, options, placeholder, ...props }, ref) => (
+  ({ options, placeholder, error, style, onFocus, onBlur, ...props }, ref) => (
     <select
       ref={ref}
-      className={cn(
-        'w-full px-3 py-2 text-sm rounded-lg border bg-white text-forest appearance-none cursor-pointer',
-        'transition-all outline-none focus:ring-2 focus:ring-moss/25 focus:border-moss',
-        error
-          ? 'border-red-400 focus:ring-red-200'
-          : 'border-mist hover:border-mint',
-        className
-      )}
+      style={{
+        ...baseInput,
+        cursor: 'pointer',
+        borderColor: error ? COLORS.crimson : COLORS.mist,
+        ...style,
+      }}
+      onFocus={e => { focusStyle(e.target); onFocus?.(e) }}
+      onBlur={e  => { blurStyle(e.target);  onBlur?.(e)  }}
       {...props}
     >
-      {placeholder && <option value="" disabled>{placeholder}</option>}
+      {placeholder && <option value="">{placeholder}</option>}
       {options.map(o => (
         <option key={o.value} value={o.value}>{o.label}</option>
       ))}
