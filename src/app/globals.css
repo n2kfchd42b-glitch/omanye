@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── CSS custom properties ─────────────────────────────────────────────────── */
+:root {
+  --font-fraunces:   'Fraunces';
+  --font-instrument: 'Instrument Sans';
+  --font-mono:       'JetBrains Mono';
+}
+
+/* ── Base resets ────────────────────────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: #F4FAF6;
+    color: #0D2B1E;
+    font-family: var(--font-instrument), 'Instrument Sans', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-fraunces), Fraunces, Georgia, serif;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+
+  code, pre, kbd, samp, .font-mono {
+    font-family: var(--font-mono), 'JetBrains Mono', Consolas, monospace;
+  }
+
+  /* Custom thin scrollbar */
+  ::-webkit-scrollbar       { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #C8EDD8; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #7DD4A0; }
+  * { scrollbar-width: thin; scrollbar-color: #C8EDD8 transparent; }
+}
+
+/* ── Component classes ──────────────────────────────────────────────────────── */
+@layer components {
+  /* Card */
+  .card {
+    @apply bg-white rounded-xl border border-mist/60 shadow-card;
+  }
+  .card-hover {
+    @apply transition-all duration-150 hover:shadow-card-md hover:border-mist hover:bg-foam/30 cursor-pointer;
+  }
+
+  /* Scrollbar utility */
+  .scrollbar-hidden          { scrollbar-width: none; }
+  .scrollbar-hidden::-webkit-scrollbar { display: none; }
+  .scrollbar-thin            { scrollbar-width: thin; }
+}
+
+/* ── Utility extras ─────────────────────────────────────────────────────────── */
+@layer utilities {
+  .font-fraunces   { font-family: var(--font-fraunces), Georgia, serif !important; }
+  .font-instrument { font-family: var(--font-instrument), system-ui, sans-serif !important; }
+  .text-balance    { text-wrap: balance; }
+}
