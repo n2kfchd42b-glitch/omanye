@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useCallback, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Sidebar }        from './Sidebar'
 import { Topbar }         from './Topbar'
 import { ToastProvider }  from './Toast'
@@ -32,9 +33,11 @@ import { Settings }        from './views/Settings'
 
 interface OmanyeAppProps {
   initialUser?: User
+  orgSlug?:     string
 }
 
-export default function OmanyeApp({ initialUser }: OmanyeAppProps = {}) {
+export default function OmanyeApp({ initialUser, orgSlug }: OmanyeAppProps = {}) {
+  const router = useRouter()
   // Auth state — seeded from real Supabase session when available
   const [user, setUser]   = useState<User | null>(initialUser ?? null)
   const [, startTransition] = useTransition()
@@ -67,9 +70,14 @@ export default function OmanyeApp({ initialUser }: OmanyeAppProps = {}) {
   const [collapsed, setCollapsed] = useState(false)
 
   const navigate = useCallback((v: ViewId, pid?: number) => {
+    // donors has a dedicated App Router page
+    if (v === 'donors' && orgSlug) {
+      router.push(`/org/${orgSlug}/donors`)
+      return
+    }
     setView(v)
     if (pid !== undefined) setProgramId(pid)
-  }, [])
+  }, [orgSlug, router])
 
   const sidebarW = collapsed ? SPACING.sidebarWCollapsed : SPACING.sidebarW
 
@@ -261,6 +269,8 @@ function ViewRouter(p: RouterProps) {
           programs={p.programs}
         />
       )
+    case 'donors':
+      return null  // Handled by App Router page at /org/[slug]/donors
     default:
       return (
         <Dashboard

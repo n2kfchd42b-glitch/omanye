@@ -5,6 +5,7 @@ import {
   LayoutDashboard, FolderOpen, Database, BarChart2,
   FileBarChart, FileText, RadioTower, ShieldCheck,
   Users, Map, Settings, ChevronLeft, ChevronRight,
+  HandCoins,
 } from 'lucide-react'
 import { COLORS, SPACING } from '@/lib/tokens'
 import { OmanyeLogo, OmanyeSymbol } from '@/components/Logo'
@@ -18,6 +19,7 @@ interface NavItem { id: ViewId; label: string; icon: React.ElementType }
 const WORKSPACE_NAV: NavItem[] = [
   { id: 'dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
   { id: 'programs',    label: 'Programs',    icon: FolderOpen      },
+  { id: 'donors',      label: 'Donors',      icon: HandCoins       },
   { id: 'data-hub',    label: 'Data Hub',    icon: Database        },
   { id: 'analytics',   label: 'Analytics',   icon: BarChart2       },
   { id: 'reports',     label: 'Reports',     icon: FileBarChart    },
