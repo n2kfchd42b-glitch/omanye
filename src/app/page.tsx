@@ -1,5 +1,6 @@
-import { OmanyeApp } from '@/components/OmanyeApp'
+'use client'
+import OmanyeApp from '@/components/OmanyeApp'
 
-export default function Page() {
+export default function Home() {
   return <OmanyeApp />
 }
