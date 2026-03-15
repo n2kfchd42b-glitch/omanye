@@ -16,7 +16,6 @@ import type {
 import type { DashboardStats, ActivityItem } from '@/app/(app)/org/[slug]/dashboard/page'
 
 // Views
-import { Onboarding }      from './views/Onboarding'
 import { Dashboard }       from './views/Dashboard'
 import { Programs }        from './views/Programs'
 import { ProgramDetail }   from './views/ProgramDetail'
@@ -96,16 +95,11 @@ export default function OmanyeApp({
 
   const sidebarW = collapsed ? SPACING.sidebarWCollapsed : SPACING.sidebarW
 
-  // ── Onboarding ──────────────────────────────────────────────────────────────
+  // ── No user — middleware handles redirect to /login; this is a safety net ───
 
   if (!user) {
-    return (
-      <ToastProvider>
-        <ModalProvider>
-          <Onboarding onComplete={(u) => setUser(u)} />
-        </ModalProvider>
-      </ToastProvider>
-    )
+    router.replace('/login')
+    return null
   }
 
   // ── App shell ───────────────────────────────────────────────────────────────
