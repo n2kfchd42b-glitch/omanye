@@ -1,11 +1,12 @@
 'use client'
 
-import React, { useState, useTransition } from 'react'
+import React, { useState, useTransition, useEffect } from 'react'
 import Link from 'next/link'
 import { COLORS, FONTS } from '@/lib/tokens'
 import type { DonorNotification, DonorNotificationType } from '@/lib/donors'
 import { NOTIFICATION_TYPE_LABELS } from '@/lib/donors'
 import { markNotificationRead, markAllNotificationsRead } from '@/app/actions/notifications'
+import { createClient } from '@/lib/supabase/client'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -54,6 +55,40 @@ export default function NotificationsClient({ notifications: initial }: Props) {
   const [, startTransition] = useTransition()
 
   const unreadCount = notifications.filter(n => !n.read).length
+
+  // ── Realtime subscription for new notifications ──────────────────────────────
+  useEffect(() => {
+    const supabase = createClient()
+
+    const channel = supabase
+      .channel('donor-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event:  '*',
+          schema: 'public',
+          table:  'donor_notifications',
+          // RLS on the server ensures the donor only sees their own rows
+        },
+        (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => {
+          if (payload.eventType === 'INSERT') {
+            const newNotif = payload.new as unknown as DonorNotification
+            setNotifications(prev => [newNotif, ...prev])
+          } else if (payload.eventType === 'UPDATE') {
+            const updated = payload.new as unknown as DonorNotification
+            setNotifications(prev =>
+              prev.map(n => n.id === updated.id ? updated : n)
+            )
+          } else if (payload.eventType === 'DELETE') {
+            const deleted = payload.old as { id: string }
+            setNotifications(prev => prev.filter(n => n.id !== deleted.id))
+          }
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [])
 
   function markRead(id: string) {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
