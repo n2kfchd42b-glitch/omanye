@@ -14,9 +14,12 @@ const VIEW_TITLE: Record<ViewId, string> = {
   'program-detail': 'Program Detail',
   'data-hub':       'Data Hub',
   analytics:        'Analytics',
+  reports:          'Donor Reports',
   documents:        'Documents',
+  fieldstatus:      'Field Status',
+  audit:            'Audit Trail',
   team:             'Team',
-  'field-map':      'Field Map',
+  map:              'Field Map',
   settings:         'Settings',
 }
 

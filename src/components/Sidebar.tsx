@@ -3,7 +3,8 @@
 import React from 'react'
 import {
   LayoutDashboard, FolderOpen, Database, BarChart2,
-  FileText, Users, Map, Settings, ChevronLeft, ChevronRight,
+  FileBarChart, FileText, RadioTower, ShieldCheck,
+  Users, Map, Settings, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { COLORS, SPACING } from '@/lib/tokens'
 import { OmanyeLogo, OmanyeSymbol } from '@/components/Logo'
@@ -15,13 +16,16 @@ import type { ViewId, User } from '@/lib/types'
 interface NavItem { id: ViewId; label: string; icon: React.ElementType }
 
 const WORKSPACE_NAV: NavItem[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'programs',  label: 'Programs',  icon: FolderOpen      },
-  { id: 'data-hub',  label: 'Data Hub',  icon: Database        },
-  { id: 'analytics', label: 'Analytics', icon: BarChart2       },
-  { id: 'documents', label: 'Documents', icon: FileText        },
-  { id: 'team',      label: 'Team',      icon: Users           },
-  { id: 'field-map', label: 'Field Map', icon: Map             },
+  { id: 'dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
+  { id: 'programs',    label: 'Programs',    icon: FolderOpen      },
+  { id: 'data-hub',    label: 'Data Hub',    icon: Database        },
+  { id: 'analytics',   label: 'Analytics',   icon: BarChart2       },
+  { id: 'reports',     label: 'Reports',     icon: FileBarChart    },
+  { id: 'documents',   label: 'Documents',   icon: FileText        },
+  { id: 'fieldstatus', label: 'Field Status',icon: RadioTower      },
+  { id: 'audit',       label: 'Audit Trail', icon: ShieldCheck     },
+  { id: 'team',        label: 'Team',        icon: Users           },
+  { id: 'map',         label: 'Field Map',   icon: Map             },
 ]
 
 const SYSTEM_NAV: NavItem[] = [
@@ -53,6 +57,10 @@ export function Sidebar({ view, onNav, collapsed, onToggle, user }: SidebarProps
         transition: 'width 0.2s ease, min-width 0.2s ease',
         overflow: 'hidden',
         flexShrink: 0,
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        zIndex: 40,
       }}
     >
       {/* Logo */}
@@ -196,8 +204,8 @@ function NavLink({
       }}
       onMouseEnter={e => {
         if (!active) {
-          e.currentTarget.style.background = 'rgba(26,92,58,0.12)'
-          e.currentTarget.style.color = COLORS.mint
+          e.currentTarget.style.background = 'rgba(19,56,40,0.80)'
+          e.currentTarget.style.color = '#ffffff'
         }
       }}
       onMouseLeave={e => {

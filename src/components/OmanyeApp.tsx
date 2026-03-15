@@ -1,27 +1,32 @@
 'use client'
 
 import React, { useState, useCallback } from 'react'
-import { Sidebar }      from './Sidebar'
-import { Topbar }       from './Topbar'
-import { ToastProvider } from './Toast'
-import { ModalProvider } from './Modal'
+import { Sidebar }        from './Sidebar'
+import { Topbar }         from './Topbar'
+import { ToastProvider }  from './Toast'
+import { ModalProvider }  from './Modal'
+import { AuditProvider }  from '@/lib/useAuditLog'
 import { COLORS, SPACING } from '@/lib/tokens'
 import type {
   ViewId, User, Program, Dataset,
   Analysis, Document, TeamMember,
+  DonorReport, AlertRule, CollectionPeriod,
 } from '@/lib/types'
 
 // Views
-import { Onboarding }    from './views/Onboarding'
-import { Dashboard }     from './views/Dashboard'
-import { Programs }      from './views/Programs'
-import { ProgramDetail } from './views/ProgramDetail'
-import { DataHub }       from './views/DataHub'
-import { Analytics }     from './views/Analytics'
-import { Documents }     from './views/Documents'
-import { Team }          from './views/Team'
-import { FieldMap }      from './views/FieldMap'
-import { Settings }      from './views/Settings'
+import { Onboarding }      from './views/Onboarding'
+import { Dashboard }       from './views/Dashboard'
+import { Programs }        from './views/Programs'
+import { ProgramDetail }   from './views/ProgramDetail'
+import { DataHub }         from './views/DataHub'
+import { Analytics }       from './views/Analytics'
+import { DonorReportView } from './views/DonorReport'
+import { Documents }       from './views/Documents'
+import { FieldStatus }     from './views/FieldStatus'
+import { AuditTrail }      from './views/AuditTrail'
+import { Team }            from './views/Team'
+import { FieldMap }        from './views/FieldMap'
+import { Settings }        from './views/Settings'
 
 // ── App ───────────────────────────────────────────────────────────────────────
 
@@ -30,11 +35,14 @@ export function OmanyeApp() {
   const [user, setUser] = useState<User | null>(null)
 
   // App data — all start empty
-  const [programs,  setPrograms]  = useState<Program[]>([])
-  const [datasets,  setDatasets]  = useState<Dataset[]>([])
-  const [analyses,  setAnalyses]  = useState<Analysis[]>([])
-  const [documents, setDocuments] = useState<Document[]>([])
-  const [team,      setTeam]      = useState<TeamMember[]>([])
+  const [programs,   setPrograms]   = useState<Program[]>([])
+  const [datasets,   setDatasets]   = useState<Dataset[]>([])
+  const [analyses,   setAnalyses]   = useState<Analysis[]>([])
+  const [documents,  setDocuments]  = useState<Document[]>([])
+  const [team,       setTeam]       = useState<TeamMember[]>([])
+  const [reports,    setReports]    = useState<DonorReport[]>([])
+  const [alertRules, setAlertRules] = useState<AlertRule[]>([])
+  const [periods,    setPeriods]    = useState<CollectionPeriod[]>([])
 
   // Navigation
   const [view,      setView]      = useState<ViewId>('dashboard')
@@ -65,48 +73,60 @@ export function OmanyeApp() {
   return (
     <ToastProvider>
       <ModalProvider>
-        <div style={{ display: 'flex', minHeight: '100vh', background: COLORS.snow }}>
-          <Sidebar
-            view={view}
-            onNav={(v) => navigate(v)}
-            collapsed={collapsed}
-            onToggle={() => setCollapsed(c => !c)}
-            user={user}
-          />
-
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <Topbar
+        <AuditProvider>
+          <div style={{ display: 'flex', minHeight: '100vh', background: COLORS.snow }}>
+            <Sidebar
               view={view}
-              sidebarW={sidebarW}
+              onNav={(v) => navigate(v)}
+              collapsed={collapsed}
+              onToggle={() => setCollapsed(c => !c)}
               user={user}
-              onSettings={() => navigate('settings')}
-              onSignOut={() => setUser(null)}
             />
 
-            <main
-              style={{
-                flex: 1,
-                marginTop: SPACING.topbarH,
-                padding: SPACING.pagePad,
-                overflowY: 'auto',
-              }}
-              key={view + (programId ?? '')}
-            >
-              <ViewRouter
+            <div style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              marginLeft: sidebarW,
+              transition: 'margin-left 0.2s ease',
+            }}>
+              <Topbar
                 view={view}
-                programId={programId}
-                navigate={navigate}
+                sidebarW={sidebarW}
                 user={user}
-                setUser={setUser}
-                programs={programs}      setPrograms={setPrograms}
-                datasets={datasets}      setDatasets={setDatasets}
-                analyses={analyses}      setAnalyses={setAnalyses}
-                documents={documents}    setDocuments={setDocuments}
-                team={team}              setTeam={setTeam}
+                onSettings={() => navigate('settings')}
+                onSignOut={() => setUser(null)}
               />
-            </main>
+
+              <main
+                style={{
+                  flex: 1,
+                  marginTop: SPACING.topbarH,
+                  padding: SPACING.pagePad,
+                  overflowY: 'auto',
+                }}
+                key={view + (programId ?? '')}
+              >
+                <ViewRouter
+                  view={view}
+                  programId={programId}
+                  navigate={navigate}
+                  user={user}
+                  setUser={setUser}
+                  programs={programs}      setPrograms={setPrograms}
+                  datasets={datasets}      setDatasets={setDatasets}
+                  analyses={analyses}      setAnalyses={setAnalyses}
+                  documents={documents}    setDocuments={setDocuments}
+                  team={team}              setTeam={setTeam}
+                  reports={reports}        setReports={setReports}
+                  alertRules={alertRules}  setAlertRules={setAlertRules}
+                  periods={periods}        setPeriods={setPeriods}
+                />
+              </main>
+            </div>
           </div>
-        </div>
+        </AuditProvider>
       </ModalProvider>
     </ToastProvider>
   )
@@ -115,16 +135,19 @@ export function OmanyeApp() {
 // ── ViewRouter ────────────────────────────────────────────────────────────────
 
 interface RouterProps {
-  view:       ViewId
-  programId:  number | null
-  navigate:   (v: ViewId, pid?: number) => void
-  user:       User
-  setUser:    (u: User) => void
-  programs:   Program[];   setPrograms:  React.Dispatch<React.SetStateAction<Program[]>>
-  datasets:   Dataset[];   setDatasets:  React.Dispatch<React.SetStateAction<Dataset[]>>
-  analyses:   Analysis[];  setAnalyses:  React.Dispatch<React.SetStateAction<Analysis[]>>
-  documents:  Document[];  setDocuments: React.Dispatch<React.SetStateAction<Document[]>>
-  team:       TeamMember[]; setTeam:     React.Dispatch<React.SetStateAction<TeamMember[]>>
+  view:        ViewId
+  programId:   number | null
+  navigate:    (v: ViewId, pid?: number) => void
+  user:        User
+  setUser:     (u: User) => void
+  programs:    Program[];          setPrograms:   React.Dispatch<React.SetStateAction<Program[]>>
+  datasets:    Dataset[];          setDatasets:   React.Dispatch<React.SetStateAction<Dataset[]>>
+  analyses:    Analysis[];         setAnalyses:   React.Dispatch<React.SetStateAction<Analysis[]>>
+  documents:   Document[];         setDocuments:  React.Dispatch<React.SetStateAction<Document[]>>
+  team:        TeamMember[];       setTeam:       React.Dispatch<React.SetStateAction<TeamMember[]>>
+  reports:     DonorReport[];      setReports:    React.Dispatch<React.SetStateAction<DonorReport[]>>
+  alertRules:  AlertRule[];        setAlertRules: React.Dispatch<React.SetStateAction<AlertRule[]>>
+  periods:     CollectionPeriod[]; setPeriods:    React.Dispatch<React.SetStateAction<CollectionPeriod[]>>
 }
 
 function ViewRouter(p: RouterProps) {
@@ -175,6 +198,15 @@ function ViewRouter(p: RouterProps) {
           datasets={p.datasets}
         />
       )
+    case 'reports':
+      return (
+        <DonorReportView
+          reports={p.reports}
+          setReports={p.setReports}
+          programs={p.programs}
+          user={p.user}
+        />
+      )
     case 'documents':
       return (
         <Documents
@@ -184,6 +216,17 @@ function ViewRouter(p: RouterProps) {
           user={p.user}
         />
       )
+    case 'fieldstatus':
+      return (
+        <FieldStatus
+          periods={p.periods}
+          setPeriods={p.setPeriods}
+          team={p.team}
+          user={p.user}
+        />
+      )
+    case 'audit':
+      return <AuditTrail />
     case 'team':
       return (
         <Team
@@ -191,13 +234,16 @@ function ViewRouter(p: RouterProps) {
           setTeam={p.setTeam}
         />
       )
-    case 'field-map':
+    case 'map':
       return <FieldMap />
     case 'settings':
       return (
         <Settings
           user={p.user}
           setUser={p.setUser}
+          alertRules={p.alertRules}
+          setAlertRules={p.setAlertRules}
+          programs={p.programs}
         />
       )
     default:
