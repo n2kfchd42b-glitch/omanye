@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import ProgramDetailClient from './ProgramDetailClient'
 import type { Program, Indicator, ProgramUpdate } from '@/lib/programs'
+import type { BudgetCategory, Expenditure, BudgetAmendment, FundingTranche, BudgetSummary, CategorySpend } from '@/lib/budget'
 
 interface Props {
   params: { slug: string; programId: string }
@@ -59,6 +60,23 @@ export default async function ProgramDetailPage({ params }: Props) {
     .eq('program_id', params.programId)
     .order('published_at', { ascending: false })
 
+  // Fetch budget data in parallel
+  const [
+    categoriesResult,
+    expendituresResult,
+    summaryResult,
+    categorySpendResult,
+    tranchesResult,
+    amendmentsResult,
+  ] = await Promise.all([
+    supabase.from('budget_categories').select('*').eq('program_id', params.programId).order('sort_order', { ascending: true }),
+    supabase.from('expenditures').select('*').eq('program_id', params.programId).order('transaction_date', { ascending: false }),
+    supabase.from('v_budget_summary').select('*').eq('program_id', params.programId).maybeSingle(),
+    supabase.from('v_category_spend').select('*').eq('program_id', params.programId).order('sort_order', { ascending: true }),
+    supabase.from('funding_tranches').select('*').eq('program_id', params.programId).order('tranche_number', { ascending: true }),
+    supabase.from('budget_amendments').select('*').eq('program_id', params.programId).order('created_at', { ascending: false }),
+  ])
+
   return (
     <ProgramDetailClient
       program={program as Program}
@@ -67,6 +85,12 @@ export default async function ProgramDetailPage({ params }: Props) {
       userRole={profile.role}
       orgSlug={params.slug}
       currentUserId={user.id}
+      initialCategories={(categoriesResult.data ?? []) as BudgetCategory[]}
+      initialExpenditures={(expendituresResult.data ?? []) as Expenditure[]}
+      initialSummary={(summaryResult.data as BudgetSummary | null) ?? null}
+      initialCategorySpend={(categorySpendResult.data ?? []) as CategorySpend[]}
+      initialTranches={(tranchesResult.data ?? []) as FundingTranche[]}
+      initialAmendments={(amendmentsResult.data ?? []) as BudgetAmendment[]}
     />
   )
 }
