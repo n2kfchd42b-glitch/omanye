@@ -30,7 +30,7 @@ import { Settings }        from './views/Settings'
 
 // ── App ───────────────────────────────────────────────────────────────────────
 
-export function OmanyeApp() {
+export default function OmanyeApp() {
   // Auth state
   const [user, setUser] = useState<User | null>(null)
 
