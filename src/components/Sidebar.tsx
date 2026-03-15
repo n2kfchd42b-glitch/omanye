@@ -57,10 +57,6 @@ export function Sidebar({ view, onNav, collapsed, onToggle, user }: SidebarProps
         transition: 'width 0.2s ease, min-width 0.2s ease',
         overflow: 'hidden',
         flexShrink: 0,
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        zIndex: 40,
       }}
     >
       {/* Logo */}
