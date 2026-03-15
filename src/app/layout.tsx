@@ -1,12 +1,13 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import { AuthProvider } from '@/lib/auth/context'
 
 export const metadata: Metadata = {
   title: {
     default:  'OMANYE — NGO Workspace',
     template: '%s | OMANYE',
   },
-  description: 'The NGO Workspace for Field Teams & Impact Reporting',
+  description: 'The NGO Workspace for Field Teams, Impact Reporting & Donor Transparency',
 }
 
 export const viewport: Viewport = {
@@ -22,7 +23,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         Font CSS variables are declared in globals.css using system font stacks.
         Swap in next/font/google when network access is available.
       */}
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   )
 }
