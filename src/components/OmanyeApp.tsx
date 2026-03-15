@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useTransition } from 'react'
 import { Sidebar }        from './Sidebar'
 import { Topbar }         from './Topbar'
 import { ToastProvider }  from './Toast'
@@ -30,9 +30,26 @@ import { Settings }        from './views/Settings'
 
 // ── App ───────────────────────────────────────────────────────────────────────
 
-export default function OmanyeApp() {
-  // Auth state
-  const [user, setUser] = useState<User | null>(null)
+interface OmanyeAppProps {
+  initialUser?: User
+}
+
+export default function OmanyeApp({ initialUser }: OmanyeAppProps = {}) {
+  // Auth state — seeded from real Supabase session when available
+  const [user, setUser]   = useState<User | null>(initialUser ?? null)
+  const [, startTransition] = useTransition()
+
+  const handleSignOut = useCallback(() => {
+    if (initialUser) {
+      // Real auth — invoke server action to clear session
+      startTransition(async () => {
+        const { signOut } = await import('@/app/actions/auth')
+        await signOut()
+      })
+    } else {
+      setUser(null)
+    }
+  }, [initialUser])
 
   // App data — all start empty
   const [programs,   setPrograms]   = useState<Program[]>([])
@@ -94,7 +111,7 @@ export default function OmanyeApp() {
                 sidebarW={sidebarW}
                 user={user}
                 onSettings={() => navigate('settings')}
-                onSignOut={() => setUser(null)}
+                onSignOut={handleSignOut}
               />
 
               <main
