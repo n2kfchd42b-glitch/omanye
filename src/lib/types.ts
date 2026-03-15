@@ -222,6 +222,7 @@ export type ViewId =
   | 'dashboard'
   | 'programs'
   | 'program-detail'
+  | 'donors'
   | 'data-hub'
   | 'analytics'
   | 'reports'

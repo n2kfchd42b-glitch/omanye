@@ -11,6 +11,11 @@ export type IndicatorFrequency = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'ANNUALLY'
 export type UpdateType         = 'PROGRESS' | 'MILESTONE' | 'CHALLENGE' | 'DONOR_REPORT' | 'FIELD_DISPATCH'
 export type ExpenditureStatus  = 'PENDING' | 'APPROVED' | 'REJECTED' | 'VOID'
 export type TrancheStatus      = 'EXPECTED' | 'RECEIVED' | 'DELAYED' | 'CANCELLED'
+export type InvitationStatus   = 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'REVOKED'
+export type DonorNotificationType =
+  | 'ACCESS_GRANTED' | 'ACCESS_UPDATED' | 'ACCESS_REVOKED'
+  | 'NEW_UPDATE'     | 'NEW_REPORT'     | 'REQUEST_APPROVED'
+  | 'REQUEST_DENIED' | 'TRANCHE_REMINDER'
 
 // ── Per-table Row / Insert / Update types ─────────────────────────────────────
 
@@ -414,6 +419,82 @@ type FundingTrancheInsert = {
 }
 type FundingTrancheUpdate = Partial<FundingTrancheInsert>
 
+// ── Extended DPA with new columns ─────────────────────────────────────────────
+
+// DPA row now includes donor management columns added in migration 004
+type DPARowExtended = DPARow & {
+  nickname:       string | null
+  internal_notes: string | null
+  last_viewed_at: string | null
+  view_count:     number
+}
+
+// ── donor_invitations ─────────────────────────────────────────────────────────
+
+type DonorInvitationRow = {
+  id:                   string
+  organization_id:      string
+  program_id:           string
+  invited_by:           string
+  email:                string
+  donor_name:           string | null
+  organization_name:    string | null
+  access_level:         AccessLevel
+  can_download_reports: boolean
+  token:                string
+  message:              string | null
+  status:               InvitationStatus
+  expires_at:           string
+  accepted_at:          string | null
+  created_at:           string
+}
+type DonorInvitationInsert = {
+  id?:                   string
+  organization_id:       string
+  program_id:            string
+  invited_by:            string
+  email:                 string
+  donor_name?:           string | null
+  organization_name?:    string | null
+  access_level?:         AccessLevel
+  can_download_reports?: boolean
+  token?:                string
+  message?:              string | null
+  status?:               InvitationStatus
+  expires_at?:           string
+  accepted_at?:          string | null
+  created_at?:           string
+}
+type DonorInvitationUpdate = Partial<DonorInvitationInsert>
+
+// ── donor_notifications ───────────────────────────────────────────────────────
+
+type DonorNotificationRow = {
+  id:              string
+  donor_id:        string
+  organization_id: string
+  program_id:      string | null
+  type:            DonorNotificationType
+  title:           string
+  body:            string
+  link:            string | null
+  read:            boolean
+  created_at:      string
+}
+type DonorNotificationInsert = {
+  id?:              string
+  donor_id:         string
+  organization_id:  string
+  program_id?:      string | null
+  type:             DonorNotificationType
+  title:            string
+  body?:            string
+  link?:            string | null
+  read?:            boolean
+  created_at?:      string
+}
+type DonorNotificationUpdate = Partial<DonorNotificationInsert>
+
 // ── Database interface ────────────────────────────────────────────────────────
 
 export interface Database {
@@ -497,6 +578,18 @@ export interface Database {
         Update:        FundingTrancheUpdate
         Relationships: []
       }
+      donor_invitations: {
+        Row:           DonorInvitationRow
+        Insert:        DonorInvitationInsert
+        Update:        DonorInvitationUpdate
+        Relationships: []
+      }
+      donor_notifications: {
+        Row:           DonorNotificationRow
+        Insert:        DonorNotificationInsert
+        Update:        DonorNotificationUpdate
+        Relationships: []
+      }
     }
 
     Views: {
@@ -539,14 +632,16 @@ export interface Database {
     }
 
     Enums: {
-      omanye_role:          OmanyeRole
-      subscription_tier:    SubscriptionTier
-      program_status:       ProgramStatusDB
-      access_level:         AccessLevel
-      request_status:       RequestStatus
-      program_visibility:   ProgramVisibility
-      indicator_frequency:  IndicatorFrequency
-      update_type:          UpdateType
+      omanye_role:               OmanyeRole
+      subscription_tier:         SubscriptionTier
+      program_status:            ProgramStatusDB
+      access_level:              AccessLevel
+      request_status:            RequestStatus
+      program_visibility:        ProgramVisibility
+      indicator_frequency:       IndicatorFrequency
+      update_type:               UpdateType
+      invitation_status:         InvitationStatus
+      donor_notification_type:   DonorNotificationType
     }
 
     CompositeTypes: {

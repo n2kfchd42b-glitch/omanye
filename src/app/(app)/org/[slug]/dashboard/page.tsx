@@ -51,6 +51,7 @@ export default async function OrgDashboardPage({ params }: Props) {
         org:   orgName,
         role:  mapRole(profile.role) as UserRole,
       }}
+      orgSlug={orgSlug}
     />
   )
 }
