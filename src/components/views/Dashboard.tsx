@@ -4,6 +4,7 @@ import React from 'react'
 import {
   FolderOpen, Database, Users, TrendingUp,
   Plus, AlertCircle, ArrowRight, BarChart2,
+  HandCoins, Bell, Activity,
 } from 'lucide-react'
 import { COLORS, FONTS } from '@/lib/tokens'
 import { StatusBadge }  from '@/components/atoms/Badge'
@@ -11,19 +12,39 @@ import { ProgressBar }  from '@/components/atoms/ProgressBar'
 import { EmptyState }   from '@/components/atoms/EmptyState'
 import { firstName, todayDisplay, formatCurrency } from '@/lib/utils'
 import type { ViewId, User, Program, Dataset, TeamMember } from '@/lib/types'
+import type { DashboardStats, ActivityItem } from '@/app/(app)/org/[slug]/dashboard/page'
 
 interface DashboardProps {
-  user:       User
-  programs:   Program[]
-  datasets:   Dataset[]
-  team:       TeamMember[]
-  onNavigate: (v: ViewId, id?: number) => void
+  user:            User
+  programs:        Program[]
+  datasets:        Dataset[]
+  team:            TeamMember[]
+  onNavigate:      (v: ViewId, id?: number) => void
+  stats?:          DashboardStats
+  recentActivity?: ActivityItem[]
 }
 
-export function Dashboard({ user, programs, datasets, team, onNavigate }: DashboardProps) {
-  const activePrograms = programs.filter(p => p.status === 'active').length
+const ACTIVITY_ICONS: Record<ActivityItem['type'], React.ReactNode> = {
+  indicator_update: <TrendingUp  size={13} />,
+  program_update:   <BarChart2   size={13} />,
+  expenditure:      <HandCoins   size={13} />,
+  access_request:   <Bell        size={13} />,
+}
+
+const ACTIVITY_COLORS: Record<ActivityItem['type'], string> = {
+  indicator_update: COLORS.sage,
+  program_update:   COLORS.fern,
+  expenditure:      COLORS.gold,
+  access_request:   '#E05252',
+}
+
+export function Dashboard({
+  user, programs, datasets, team, onNavigate, stats, recentActivity,
+}: DashboardProps) {
+  // Use server-fetched stats when available; fall back to client-side computation
+  const activePrograms = stats?.activePrograms ?? programs.filter(p => p.status === 'active').length
   const totalBudget    = programs.reduce((s, p) => s + p.budget, 0)
-  const showNudge      = programs.length === 0 || team.length === 0 || datasets.length === 0
+  const showNudge      = (stats?.activePrograms ?? programs.length) === 0
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto' }}>
@@ -55,9 +76,7 @@ export function Dashboard({ user, programs, datasets, team, onNavigate }: Dashbo
           <div>
             <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.forest }}>Complete your workspace setup</p>
             <p style={{ fontSize: 12, color: COLORS.stone, marginTop: 2 }}>
-              {programs.length === 0 && 'Add your first program. '}
-              {datasets.length === 0 && 'Connect a data source. '}
-              {team.length === 0 && 'Invite team members.'}
+              Add your first program to start tracking activities and sharing data with donors.
             </p>
           </div>
         </div>
@@ -68,10 +87,30 @@ export function Dashboard({ user, programs, datasets, team, onNavigate }: Dashbo
         className="fade-up-2"
         style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 28 }}
       >
-        <StatCard icon={FolderOpen} label="Active Programs" value={activePrograms || '—'} color={COLORS.moss}  />
-        <StatCard icon={Users}      label="Team Members"    value={team.length    || '—'} color={COLORS.fern}  />
-        <StatCard icon={Database}   label="Datasets"        value={datasets.length|| '—'} color={COLORS.sky}   />
-        <StatCard icon={TrendingUp} label="Total Budget"    value={totalBudget ? formatCurrency(totalBudget) : '—'} color={COLORS.gold} />
+        <StatCard
+          icon={FolderOpen}
+          label="Active Programs"
+          value={stats ? activePrograms || '—' : (programs.length ? activePrograms : '—')}
+          color={COLORS.moss}
+        />
+        <StatCard
+          icon={Activity}
+          label="Indicators"
+          value={stats?.totalIndicators ?? '—'}
+          color={COLORS.fern}
+        />
+        <StatCard
+          icon={HandCoins}
+          label="Active Donors"
+          value={stats?.activeDonors ?? '—'}
+          color={COLORS.sky}
+        />
+        <StatCard
+          icon={Bell}
+          label="Pending Requests"
+          value={stats?.pendingRequests ?? '—'}
+          color={(stats?.pendingRequests ?? 0) > 0 ? '#E05252' : COLORS.gold}
+        />
       </div>
 
       {/* Two-column */}
@@ -138,12 +177,49 @@ export function Dashboard({ user, programs, datasets, team, onNavigate }: Dashbo
           <h3 style={{ fontFamily: FONTS.heading, fontSize: 15, fontWeight: 600, color: COLORS.forest, marginBottom: 16 }}>
             Recent Activity
           </h3>
-          <EmptyState
-            icon={<BarChart2 size={20} />}
-            title="No activity yet"
-            description="Activity will appear here as your team works."
-            compact
-          />
+          {recentActivity && recentActivity.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {recentActivity.map((item, i) => (
+                <div
+                  key={item.id + item.type}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                    padding: '9px 0',
+                    borderBottom: i < recentActivity.length - 1 ? `1px solid ${COLORS.mist}` : 'none',
+                  }}
+                >
+                  <div style={{
+                    width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                    background: ACTIVITY_COLORS[item.type] + '18',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: ACTIVITY_COLORS[item.type],
+                  }}>
+                    {ACTIVITY_ICONS[item.type]}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{
+                      fontSize: 12, fontWeight: 600, color: COLORS.forest,
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    }}>
+                      {item.title}
+                    </p>
+                    <p style={{ fontSize: 11, color: COLORS.stone, marginTop: 1 }}>
+                      {item.subtitle} · {new Date(item.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={<BarChart2 size={20} />}
+              title="No activity yet"
+              description="Activity will appear here as your team works."
+              compact
+            />
+          )}
         </div>
       </div>
 

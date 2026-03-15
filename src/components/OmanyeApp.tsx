@@ -13,6 +13,7 @@ import type {
   Analysis, Document, TeamMember,
   DonorReport, AlertRule, CollectionPeriod,
 } from '@/lib/types'
+import type { DashboardStats, ActivityItem } from '@/app/(app)/org/[slug]/dashboard/page'
 
 // Views
 import { Onboarding }      from './views/Onboarding'
@@ -32,11 +33,16 @@ import { Settings }        from './views/Settings'
 // ── App ───────────────────────────────────────────────────────────────────────
 
 interface OmanyeAppProps {
-  initialUser?: User
-  orgSlug?:     string
+  initialUser?:    User
+  orgSlug?:        string
+  orgId?:          string
+  initialStats?:   DashboardStats
+  recentActivity?: ActivityItem[]
 }
 
-export default function OmanyeApp({ initialUser, orgSlug }: OmanyeAppProps = {}) {
+export default function OmanyeApp({
+  initialUser, orgSlug, orgId, initialStats, recentActivity,
+}: OmanyeAppProps = {}) {
   const router = useRouter()
   // Auth state — seeded from real Supabase session when available
   const [user, setUser]   = useState<User | null>(initialUser ?? null)
@@ -70,6 +76,15 @@ export default function OmanyeApp({ initialUser, orgSlug }: OmanyeAppProps = {})
   const [collapsed, setCollapsed] = useState(false)
 
   const navigate = useCallback((v: ViewId, pid?: number) => {
+    // programs and program-detail have dedicated App Router pages
+    if (v === 'programs' && orgSlug) {
+      router.push(`/org/${orgSlug}/programs`)
+      return
+    }
+    if (v === 'program-detail' && orgSlug && pid !== undefined) {
+      router.push(`/org/${orgSlug}/programs/${pid}`)
+      return
+    }
     // donors has a dedicated App Router page
     if (v === 'donors' && orgSlug) {
       router.push(`/org/${orgSlug}/donors`)
@@ -145,6 +160,8 @@ export default function OmanyeApp({ initialUser, orgSlug }: OmanyeAppProps = {})
                   reports={reports}        setReports={setReports}
                   alertRules={alertRules}  setAlertRules={setAlertRules}
                   periods={periods}        setPeriods={setPeriods}
+                  initialStats={initialStats}
+                  recentActivity={recentActivity}
                 />
               </main>
             </div>
@@ -171,6 +188,8 @@ interface RouterProps {
   reports:     DonorReport[];      setReports:    React.Dispatch<React.SetStateAction<DonorReport[]>>
   alertRules:  AlertRule[];        setAlertRules: React.Dispatch<React.SetStateAction<AlertRule[]>>
   periods:     CollectionPeriod[]; setPeriods:    React.Dispatch<React.SetStateAction<CollectionPeriod[]>>
+  initialStats?:   DashboardStats
+  recentActivity?: ActivityItem[]
 }
 
 function ViewRouter(p: RouterProps) {
@@ -183,6 +202,8 @@ function ViewRouter(p: RouterProps) {
           datasets={p.datasets}
           team={p.team}
           onNavigate={p.navigate}
+          stats={p.initialStats}
+          recentActivity={p.recentActivity}
         />
       )
     case 'programs':
@@ -279,6 +300,8 @@ function ViewRouter(p: RouterProps) {
           datasets={p.datasets}
           team={p.team}
           onNavigate={p.navigate}
+          stats={p.initialStats}
+          recentActivity={p.recentActivity}
         />
       )
   }

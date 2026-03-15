@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useOptimistic, useTransition } from 'react'
+import React, { useState, useOptimistic, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Plus, Star, Eye, EyeOff, TrendingUp, Calendar,
@@ -42,6 +42,7 @@ import {
   UPDATE_TYPES,
 } from '@/lib/programs'
 import type { OmanyeRole, ProgramStatusDB } from '@/lib/supabase/database.types'
+import { createClient } from '@/lib/supabase/client'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -105,6 +106,36 @@ export default function ProgramDetailClient({
 
   const isAdmin  = userRole === 'NGO_ADMIN'
   const canEdit  = userRole === 'NGO_ADMIN' || userRole === 'NGO_STAFF'
+
+  // ── Realtime: live indicator value updates ──────────────────────────────────
+  useEffect(() => {
+    const supabase = createClient()
+
+    const channel = supabase
+      .channel('indicator-updates-' + initialProgram.id)
+      .on(
+        'postgres_changes',
+        {
+          event:  'INSERT',
+          schema: 'public',
+          table:  'indicator_updates',
+          filter: `program_id=eq.${initialProgram.id}`,
+        },
+        (payload) => {
+          const update = payload.new as { indicator_id: string; new_value: number }
+          setIndicators(prev =>
+            prev.map(ind =>
+              ind.id === update.indicator_id
+                ? { ...ind, current_value: update.new_value }
+                : ind
+            )
+          )
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [initialProgram.id])
 
   return (
     <div style={{ maxWidth: 1060, margin: '0 auto', padding: '0 4px' }}>
@@ -613,7 +644,6 @@ function CreateIndicatorForm({
           <FormField label="Name" required htmlFor="ni-name">
             <Input id="ni-name" placeholder="e.g. Children Screened for Malnutrition" value={name} onChange={e => setName(e.target.value)} autoFocus />
           </FormField>
-        </div>
         </div>
         <div style={{ gridColumn: '1 / -1' }}>
           <FormField label="Description" htmlFor="ni-desc">

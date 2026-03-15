@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useTransition } from 'react'
+import React, { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   HandCoins, Plus, ChevronRight, Users, Mail, Clock, AlertCircle,
@@ -27,6 +27,7 @@ import {
   INVITATION_STATUS_COLORS,
 } from '@/lib/donors'
 import { ACCESS_LEVEL_LABELS, ACCESS_LEVEL_DESCRIPTIONS } from '@/lib/auth/types'
+import { createClient } from '@/lib/supabase/client'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,36 @@ export default function DonorsClient({
   const isAdmin    = userRole === 'NGO_ADMIN'
   const [tab, setTab]       = useState<TabId>('donors')
   const [showInvite, setShowInvite] = useState(false)
+  const [livePendingCount, setLivePendingCount] = useState(pendingRequestCount)
+
+  // ── Realtime: pending access request badge ─────────────────────────────────
+  useEffect(() => {
+    const supabase = createClient()
+
+    const channel = supabase
+      .channel('ngo-access-requests-' + organizationId)
+      .on(
+        'postgres_changes',
+        {
+          event:  '*',
+          schema: 'public',
+          table:  'donor_access_requests',
+          filter: `organization_id=eq.${organizationId}`,
+        },
+        async () => {
+          // Re-fetch live pending count
+          const { count } = await supabase
+            .from('donor_access_requests')
+            .select('id', { count: 'exact', head: true })
+            .eq('organization_id', organizationId)
+            .eq('status', 'PENDING')
+          setLivePendingCount(count ?? 0)
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [organizationId])
 
   const totalDonors      = donors.length
   const activeAccess     = donors.reduce((acc, d) => acc + d.access.filter(a => a.active).length, 0)
@@ -99,7 +130,7 @@ export default function DonorsClient({
               { label: 'Total Donors',       value: totalDonors,      icon: <Users size={14} /> },
               { label: 'Active Access',       value: activeAccess,     icon: <CheckCircle size={14} /> },
               { label: 'Pending Invites',     value: pendingInvites,   icon: <Mail size={14} /> },
-              { label: 'Pending Requests',    value: pendingRequestCount, icon: <AlertCircle size={14} />, highlight: pendingRequestCount > 0 },
+              { label: 'Pending Requests',    value: livePendingCount, icon: <AlertCircle size={14} />, highlight: livePendingCount > 0 },
             ].map(card => (
               <div key={card.label} style={{
                 flex: 1, background: 'rgba(255,255,255,0.07)', borderRadius: 10,
@@ -122,7 +153,7 @@ export default function DonorsClient({
             {([
               { id: 'donors',      label: 'All Donors',       count: totalDonors },
               { id: 'invitations', label: 'Invitations',      count: invitations.length },
-              { id: 'requests',    label: 'Access Requests',  count: pendingRequestCount, badge: pendingRequestCount > 0 },
+              { id: 'requests',    label: 'Access Requests',  count: livePendingCount, badge: livePendingCount > 0 },
             ] as { id: TabId; label: string; count: number; badge?: boolean }[]).map(t => (
               <button
                 key={t.id}

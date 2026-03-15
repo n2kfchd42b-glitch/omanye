@@ -7,6 +7,21 @@ interface Props {
   params: { slug: string }
 }
 
+export interface DashboardStats {
+  activePrograms:   number
+  totalIndicators:  number
+  activeDonors:     number
+  pendingRequests:  number
+}
+
+export interface ActivityItem {
+  id:        string
+  type:      'indicator_update' | 'program_update' | 'expenditure' | 'access_request'
+  title:     string
+  subtitle:  string
+  timestamp: string
+}
+
 export default async function OrgDashboardPage({ params }: Props) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -26,22 +41,145 @@ export default async function OrgDashboardPage({ params }: Props) {
   // Fetch org to validate slug and get org name
   let orgName = ''
   let orgSlug = params.slug
-  if (profile.organization_id) {
+  const orgId = profile.organization_id ?? ''
+
+  if (orgId) {
     const { data: org } = await supabase
       .from('organizations')
       .select('slug, name')
-      .eq('id', profile.organization_id)
+      .eq('id', orgId)
       .single()
 
     if (org) {
       orgName = org.name
       orgSlug = org.slug
-      // Ensure the slug in the URL matches the user's actual org
       if (org.slug !== params.slug) {
         redirect(`/org/${org.slug}/dashboard`)
       }
     }
   }
+
+  // ── Fetch dashboard stats in parallel ───────────────────────────────────────
+  const [
+    activeProgramsResult,
+    indicatorsResult,
+    activeDonorsResult,
+    pendingRequestsResult,
+  ] = await Promise.all([
+    supabase
+      .from('programs')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', orgId)
+      .eq('status', 'ACTIVE')
+      .is('deleted_at', null),
+
+    supabase
+      .from('indicators')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', orgId),
+
+    supabase
+      .from('donor_program_access')
+      .select('donor_id', { count: 'exact', head: true })
+      .eq('organization_id', orgId)
+      .eq('active', true),
+
+    supabase
+      .from('donor_access_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', orgId)
+      .eq('status', 'PENDING'),
+  ])
+
+  const stats: DashboardStats = {
+    activePrograms:  activeProgramsResult.count  ?? 0,
+    totalIndicators: indicatorsResult.count       ?? 0,
+    activeDonors:    activeDonorsResult.count     ?? 0,
+    pendingRequests: pendingRequestsResult.count  ?? 0,
+  }
+
+  // ── Fetch recent activity (last 10 events merged) ────────────────────────────
+  const [indUpdates, progUpdates, expenditures, accessRequests] = await Promise.all([
+    supabase
+      .from('indicator_updates')
+      .select('id, indicator_id, new_value, submitted_at, indicators(name)')
+      .eq('organization_id', orgId)
+      .order('submitted_at', { ascending: false })
+      .limit(5),
+
+    supabase
+      .from('program_updates')
+      .select('id, title, update_type, published_at, program_id, programs(name)')
+      .eq('organization_id', orgId)
+      .order('published_at', { ascending: false })
+      .limit(5),
+
+    supabase
+      .from('expenditures')
+      .select('id, description, amount, currency, created_at, programs(name)')
+      .eq('organization_id', orgId)
+      .order('created_at', { ascending: false })
+      .limit(5),
+
+    supabase
+      .from('donor_access_requests')
+      .select('id, status, created_at, programs(name), profiles(full_name)')
+      .eq('organization_id', orgId)
+      .order('created_at', { ascending: false })
+      .limit(5),
+  ])
+
+  // Merge and sort by timestamp
+  const activityItems: ActivityItem[] = []
+
+  for (const row of (indUpdates.data ?? []) as Record<string, unknown>[]) {
+    const ind = row.indicators as Record<string, unknown> | null
+    activityItems.push({
+      id:        row.id as string,
+      type:      'indicator_update',
+      title:     `Indicator updated: ${ind?.name ?? 'Unknown'}`,
+      subtitle:  `New value: ${row.new_value}`,
+      timestamp: row.submitted_at as string,
+    })
+  }
+
+  for (const row of (progUpdates.data ?? []) as Record<string, unknown>[]) {
+    const prog = row.programs as Record<string, unknown> | null
+    activityItems.push({
+      id:        row.id as string,
+      type:      'program_update',
+      title:     row.title as string,
+      subtitle:  prog?.name ? `${prog.name}` : 'Program update',
+      timestamp: (row.published_at ?? row.created_at) as string,
+    })
+  }
+
+  for (const row of (expenditures.data ?? []) as Record<string, unknown>[]) {
+    const prog = row.programs as Record<string, unknown> | null
+    activityItems.push({
+      id:        row.id as string,
+      type:      'expenditure',
+      title:     `Expenditure: ${row.description ?? 'No description'}`,
+      subtitle:  `${row.currency} ${(row.amount as number).toLocaleString()}${prog?.name ? ` · ${prog.name}` : ''}`,
+      timestamp: row.created_at as string,
+    })
+  }
+
+  for (const row of (accessRequests.data ?? []) as Record<string, unknown>[]) {
+    const prof = row.profiles as Record<string, unknown> | null
+    const prog = row.programs as Record<string, unknown> | null
+    activityItems.push({
+      id:        row.id as string,
+      type:      'access_request',
+      title:     `Access request from ${prof?.full_name ?? 'Donor'}`,
+      subtitle:  `${prog?.name ?? 'Program'} · ${row.status}`,
+      timestamp: row.created_at as string,
+    })
+  }
+
+  activityItems.sort((a, b) =>
+    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  )
 
   return (
     <OmanyeWorkspace
@@ -52,6 +190,9 @@ export default async function OrgDashboardPage({ params }: Props) {
         role:  mapRole(profile.role) as UserRole,
       }}
       orgSlug={orgSlug}
+      orgId={orgId}
+      initialStats={stats}
+      recentActivity={activityItems.slice(0, 10)}
     />
   )
 }
