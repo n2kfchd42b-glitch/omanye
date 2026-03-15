@@ -47,7 +47,6 @@ const errorStyle: React.CSSProperties = {
 export default function LoginPage() {
   const [serverError, setServerError] = useState<string | null>(null)
   const [googleLoading, setGoogleLoading] = useState(false)
-  const supabase = createClient()
 
   const {
     register,
@@ -63,6 +62,9 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true)
+    // createClient() is called here (inside a browser event handler) so it
+    // never runs during SSR and won't crash when env vars are not yet set.
+    const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
