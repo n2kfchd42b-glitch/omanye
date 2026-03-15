@@ -2,22 +2,21 @@
 
 import React, { useState, useMemo } from 'react'
 import { Download, ShieldCheck } from 'lucide-react'
-import { COLORS, FONTS } from '@/lib/tokens'
+import { COLORS, FONTS, SHADOW } from '@/lib/tokens'
 import { useAuditLog } from '@/lib/useAuditLog'
 import { useToast } from '@/components/Toast'
-import { EmptyState } from '@/components/atoms/EmptyState'
-import type { AuditAction, AuditResource } from '@/lib/types'
+import type { AuditAction, AuditResource, AuditEntry } from '@/lib/types'
 
-// ── Badge colors ──────────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 
-const ACTION_COLORS: Record<AuditAction, { bg: string; text: string }> = {
-  CREATE: { bg: COLORS.fern,    text: '#fff' },
-  UPDATE: { bg: '#2563EB',      text: '#fff' },
-  DELETE: { bg: COLORS.crimson, text: '#fff' },
-  SUBMIT: { bg: COLORS.moss,    text: '#fff' },
-  EXPORT: { bg: COLORS.amber,   text: '#fff' },
-  LOGIN:  { bg: COLORS.stone,   text: '#fff' },
-  INVITE: { bg: '#8B5CF6',      text: '#fff' },
+const ACTION_META: Record<AuditAction, { bg: string; label: string }> = {
+  CREATE: { bg: COLORS.fern,    label: 'CREATE' },
+  UPDATE: { bg: COLORS.sky,     label: 'UPDATE' },
+  DELETE: { bg: COLORS.crimson, label: 'DELETE' },
+  SUBMIT: { bg: COLORS.moss,    label: 'SUBMIT' },
+  EXPORT: { bg: COLORS.amber,   label: 'EXPORT' },
+  LOGIN:  { bg: COLORS.stone,   label: 'LOGIN'  },
+  INVITE: { bg: '#8B5CF6',      label: 'INVITE' },
 }
 
 const RESOURCES: AuditResource[] = [
@@ -25,193 +24,285 @@ const RESOURCES: AuditResource[] = [
   'Dataset', 'Team', 'Report', 'Alert', 'Settings',
 ]
 
-// ── AuditTrail view ───────────────────────────────────────────────────────────
+function fmtTimestamp(iso: string) {
+  return new Date(iso).toLocaleString('en-GB', {
+    day: 'numeric', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  })
+}
+
+// ── Filters state ─────────────────────────────────────────────────────────────
+
+interface Filters {
+  dateFrom: string
+  dateTo: string
+  actor: string
+  resource: AuditResource | 'all'
+  search: string
+}
+
+function blankFilters(): Filters {
+  return { dateFrom: '', dateTo: '', actor: '', resource: 'all', search: '' }
+}
+
+// ── Filter helpers ────────────────────────────────────────────────────────────
+
+function applyFilters(entries: AuditEntry[], f: Filters): AuditEntry[] {
+  return entries.filter(e => {
+    const ts = new Date(e.timestamp)
+    if (f.dateFrom && ts < new Date(f.dateFrom)) return false
+    if (f.dateTo) {
+      const to = new Date(f.dateTo)
+      to.setDate(to.getDate() + 1)
+      if (ts >= to) return false
+    }
+    if (f.actor && !e.actor.toLowerCase().includes(f.actor.toLowerCase())) return false
+    if (f.resource !== 'all' && e.resource !== f.resource) return false
+    if (f.search && !e.details.toLowerCase().includes(f.search.toLowerCase())) return false
+    return true
+  })
+}
+
+// ── Action Badge ─────────────────────────────────────────────────────────────
+
+function ActionBadge({ action }: { action: AuditAction }) {
+  const { bg, label } = ACTION_META[action]
+  return (
+    <span style={{
+      display: 'inline-block',
+      padding: '2px 10px', borderRadius: 20,
+      background: bg, color: '#ffffff',
+      fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
+      whiteSpace: 'nowrap',
+    }}>
+      {label}
+    </span>
+  )
+}
+
+// ── Input style ───────────────────────────────────────────────────────────────
+
+const inputStyle: React.CSSProperties = {
+  padding: '7px 10px', borderRadius: 7, fontFamily: FONTS.body,
+  fontSize: 12, color: COLORS.charcoal, background: COLORS.snow,
+  border: `1px solid ${COLORS.mist}`, outline: 'none',
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
 
 export function AuditTrail() {
   const { entries } = useAuditLog()
-  const { success } = useToast()
+  const { toast } = useToast()
+  const [filters, setFilters] = useState<Filters>(blankFilters())
 
-  const [dateFrom,     setDateFrom]     = useState('')
-  const [dateTo,       setDateTo]       = useState('')
-  const [actorFilter,  setActorFilter]  = useState('')
-  const [resourceFilter, setResourceFilter] = useState<AuditResource | 'all'>('all')
-  const [searchFilter, setSearchFilter] = useState('')
-
-  const filtered = useMemo(() => {
-    return entries.filter(e => {
-      const ts = new Date(e.timestamp)
-      if (dateFrom && ts < new Date(dateFrom)) return false
-      if (dateTo   && ts > new Date(dateTo + 'T23:59:59')) return false
-      if (actorFilter && !e.actor.toLowerCase().includes(actorFilter.toLowerCase())) return false
-      if (resourceFilter !== 'all' && e.resource !== resourceFilter) return false
-      if (searchFilter && !e.details.toLowerCase().includes(searchFilter.toLowerCase()) &&
-          !e.resourceName.toLowerCase().includes(searchFilter.toLowerCase())) return false
-      return true
-    })
-  }, [entries, dateFrom, dateTo, actorFilter, resourceFilter, searchFilter])
-
-  function handleExport() {
-    const header = 'Timestamp,Actor,Action,Resource,Resource Name,Details,IP'
-    const rows = filtered.map(e =>
-      [e.timestamp, e.actor, e.action, e.resource, e.resourceName, `"${e.details}"`, e.ip].join(',')
-    )
-    const csv = [header, ...rows].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url; a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-    success('Audit log exported')
+  function setFilter<K extends keyof Filters>(k: K, v: Filters[K]) {
+    setFilters(f => ({ ...f, [k]: v }))
   }
 
-  const inputStyle: React.CSSProperties = {
-    padding: '7px 10px', borderRadius: 8,
-    border: `1px solid ${COLORS.mist}`, fontSize: 13,
-    color: COLORS.forest, background: '#fff',
-    outline: 'none',
+  const filtered = useMemo(() => applyFilters(entries, filters), [entries, filters])
+
+  function handleExport() {
+    toast('Audit log exported', 'success')
   }
 
   return (
-    <div className="fade-up" style={{ maxWidth: 1100, margin: '0 auto' }}>
+    <div className="fade-up" style={{ fontFamily: FONTS.body }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
-          <h2 style={{ fontFamily: FONTS.heading, fontSize: 22, fontWeight: 600, color: COLORS.forest }}>Audit Trail</h2>
-          <p style={{ fontSize: 12, color: COLORS.stone, marginTop: 2 }}>
-            {filtered.length} entr{filtered.length !== 1 ? 'ies' : 'y'} · read-only
+          <h2 style={{ fontFamily: FONTS.heading, fontSize: 22, color: COLORS.forest, margin: 0 }}>
+            Audit Trail
+          </h2>
+          <p style={{ fontSize: 13, color: COLORS.stone, margin: '4px 0 0' }}>
+            {filtered.length} of {entries.length} entries
           </p>
         </div>
         <button
           onClick={handleExport}
           style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '8px 14px', borderRadius: 8,
-            border: `1px solid ${COLORS.mist}`,
-            background: '#fff', color: COLORS.slate,
-            fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '9px 18px', borderRadius: 8,
+            background: COLORS.forest, border: 'none', color: '#ffffff',
+            fontFamily: FONTS.body, fontSize: 13, fontWeight: 600, cursor: 'pointer',
           }}
         >
-          <Download size={13} /> Export CSV
+          <Download size={14} /> Export CSV
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="fade-up-1 card" style={{ padding: 16, marginBottom: 20 }}>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+      {/* Filters row */}
+      <div style={{
+        background: '#ffffff', borderRadius: 10, boxShadow: SHADOW.card,
+        border: `1px solid ${COLORS.mist}`, padding: '14px 18px',
+        marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end',
+      }}>
+        {/* Date from */}
+        <div>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: COLORS.slate, marginBottom: 4 }}>
+            From
+          </label>
           <input
-            type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-            style={{ ...inputStyle, width: 140 }} placeholder="From"
+            type="date"
+            value={filters.dateFrom}
+            onChange={e => setFilter('dateFrom', e.target.value)}
+            style={inputStyle}
           />
-          <span style={{ fontSize: 12, color: COLORS.stone }}>to</span>
+        </div>
+
+        {/* Date to */}
+        <div>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: COLORS.slate, marginBottom: 4 }}>
+            To
+          </label>
           <input
-            type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+            type="date"
+            value={filters.dateTo}
+            onChange={e => setFilter('dateTo', e.target.value)}
+            style={inputStyle}
+          />
+        </div>
+
+        {/* Actor */}
+        <div>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: COLORS.slate, marginBottom: 4 }}>
+            Actor
+          </label>
+          <input
+            value={filters.actor}
+            onChange={e => setFilter('actor', e.target.value)}
+            placeholder="Search actor…"
             style={{ ...inputStyle, width: 140 }}
           />
+        </div>
+
+        {/* Details search */}
+        <div>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: COLORS.slate, marginBottom: 4 }}>
+            Search Details
+          </label>
           <input
-            type="text" value={actorFilter} onChange={e => setActorFilter(e.target.value)}
-            placeholder="Filter by actor..." style={{ ...inputStyle, width: 160 }}
-          />
-          <input
-            type="text" value={searchFilter} onChange={e => setSearchFilter(e.target.value)}
-            placeholder="Search details..." style={{ ...inputStyle, flex: 1, minWidth: 160 }}
+            value={filters.search}
+            onChange={e => setFilter('search', e.target.value)}
+            placeholder="Search details…"
+            style={{ ...inputStyle, width: 160 }}
           />
         </div>
 
-        {/* Resource pills */}
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
-          {(['all', ...RESOURCES] as const).map(r => (
-            <button
-              key={r}
-              onClick={() => setResourceFilter(r as AuditResource | 'all')}
-              style={{
-                padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 500,
-                cursor: 'pointer', transition: 'all 0.15s',
-                background: resourceFilter === r ? COLORS.moss : COLORS.foam,
-                color: resourceFilter === r ? '#fff' : COLORS.slate,
-                border: `1px solid ${resourceFilter === r ? COLORS.moss : COLORS.mist}`,
-              }}
-            >
-              {r === 'all' ? 'All Resources' : r}
-            </button>
-          ))}
-        </div>
+        {/* Reset */}
+        {(filters.dateFrom || filters.dateTo || filters.actor || filters.search || filters.resource !== 'all') && (
+          <button
+            onClick={() => setFilters(blankFilters())}
+            style={{
+              padding: '7px 14px', borderRadius: 7, cursor: 'pointer',
+              background: 'none', border: `1px solid ${COLORS.mist}`,
+              color: COLORS.stone, fontFamily: FONTS.body, fontSize: 12,
+            }}
+          >
+            Reset
+          </button>
+        )}
       </div>
 
-      {/* Table */}
-      {filtered.length === 0 ? (
-        <div className="card">
-          <EmptyState
-            icon={<ShieldCheck size={24} />}
-            title="No audit entries yet"
-            description="Actions like creating programs, updating data, and inviting team members will appear here."
-          />
+      {/* Resource pills */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+        {(['all', ...RESOURCES] as const).map(r => {
+          const active = filters.resource === r
+          return (
+            <button
+              key={r}
+              onClick={() => setFilter('resource', r)}
+              style={{
+                padding: '5px 14px', borderRadius: 20, cursor: 'pointer',
+                fontFamily: FONTS.body, fontSize: 11, fontWeight: 600,
+                border: `1.5px solid ${active ? COLORS.fern : COLORS.mist}`,
+                background: active ? COLORS.fern : '#ffffff',
+                color: active ? '#ffffff' : COLORS.slate,
+              }}
+            >
+              {r === 'all' ? 'All' : r}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Empty state */}
+      {entries.length === 0 && (
+        <div style={{
+          textAlign: 'center', padding: '72px 32px',
+          background: COLORS.snow, borderRadius: 12,
+          border: `2px dashed ${COLORS.mist}`,
+        }}>
+          <ShieldCheck size={40} style={{ color: COLORS.mist, marginBottom: 16 }} />
+          <p style={{ fontSize: 16, color: COLORS.stone, marginBottom: 6, fontFamily: FONTS.heading }}>
+            No audit entries yet
+          </p>
+          <p style={{ fontSize: 13, color: COLORS.stone }}>
+            Actions taken in the app will appear here automatically.
+          </p>
         </div>
-      ) : (
-        <div className="fade-up-2 card" style={{ padding: 0, overflow: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}>
-            <thead>
-              <tr style={{ background: COLORS.snow }}>
-                {['Timestamp', 'Actor', 'Action', 'Resource', 'Details', 'IP'].map(h => (
-                  <th
-                    key={h}
-                    style={{
-                      padding: '10px 14px', fontSize: 11, fontWeight: 700,
-                      color: COLORS.stone, textAlign: 'left',
-                      textTransform: 'uppercase', letterSpacing: '0.04em',
-                      whiteSpace: 'nowrap', borderBottom: `1px solid ${COLORS.mist}`,
-                    }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((e, i) => {
-                const ac = ACTION_COLORS[e.action] ?? { bg: COLORS.stone, text: '#fff' }
-                return (
-                  <tr
-                    key={e.id}
-                    style={{ background: i % 2 === 0 ? '#fff' : COLORS.foam, borderTop: `1px solid ${COLORS.mist}` }}
-                  >
-                    <td style={{ padding: '10px 14px', fontSize: 11, fontFamily: 'var(--font-mono)', color: COLORS.stone, whiteSpace: 'nowrap' }}>
-                      {new Date(e.timestamp).toLocaleString()}
-                    </td>
-                    <td style={{ padding: '10px 14px', fontSize: 12, fontWeight: 500, color: COLORS.forest, whiteSpace: 'nowrap' }}>
-                      {e.actor}
-                    </td>
-                    <td style={{ padding: '10px 14px' }}>
-                      <span style={{
-                        display: 'inline-block', padding: '2px 8px', borderRadius: 10,
-                        fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
-                        background: ac.bg, color: ac.text,
-                      }}>
-                        {e.action}
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px 14px', fontSize: 12, color: COLORS.slate, whiteSpace: 'nowrap' }}>
-                      <span style={{
-                        display: 'inline-block', padding: '2px 8px', borderRadius: 6,
-                        fontSize: 11, background: COLORS.foam, color: COLORS.fern,
-                        border: `1px solid ${COLORS.mist}`,
-                      }}>
-                        {e.resource}
-                      </span>
-                      {' '}
-                      <span style={{ fontSize: 12, color: COLORS.forest }}>{e.resourceName}</span>
-                    </td>
-                    <td style={{ padding: '10px 14px', fontSize: 12, color: COLORS.slate, maxWidth: 300 }}>
-                      {e.details}
-                    </td>
-                    <td style={{ padding: '10px 14px', fontSize: 11, fontFamily: 'var(--font-mono)', color: COLORS.stone, whiteSpace: 'nowrap' }}>
-                      {e.ip}
-                    </td>
+      )}
+
+      {/* Table */}
+      {entries.length > 0 && (
+        <div style={{
+          background: '#ffffff', borderRadius: 12, boxShadow: SHADOW.card,
+          border: `1px solid ${COLORS.mist}`, overflow: 'hidden',
+        }}>
+          {filtered.length === 0 ? (
+            <p style={{ padding: '40px', textAlign: 'center', color: COLORS.stone, fontStyle: 'italic', fontSize: 13 }}>
+              No entries match the current filters.
+            </p>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: COLORS.forest }}>
+                    {['Timestamp', 'Actor', 'Action', 'Resource', 'Details', 'IP'].map(col => (
+                      <th key={col} style={{
+                        padding: '10px 14px', textAlign: 'left',
+                        fontFamily: FONTS.heading, fontSize: 12, fontWeight: 700,
+                        color: '#ffffff', whiteSpace: 'nowrap',
+                      }}>{col}</th>
+                    ))}
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {filtered.map((entry, i) => (
+                    <tr key={entry.id} style={{
+                      background: i % 2 === 0 ? '#ffffff' : COLORS.foam,
+                      borderBottom: `1px solid ${COLORS.mist}`,
+                    }}>
+                      <td style={{ padding: '10px 14px', whiteSpace: 'nowrap', color: COLORS.slate, fontSize: 12, fontFamily: FONTS.mono }}>
+                        {fmtTimestamp(entry.timestamp)}
+                      </td>
+                      <td style={{ padding: '10px 14px', fontWeight: 600, color: COLORS.charcoal, whiteSpace: 'nowrap' }}>
+                        {entry.actor}
+                      </td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <ActionBadge action={entry.action} />
+                      </td>
+                      <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                        <span style={{
+                          fontSize: 11, padding: '2px 8px', borderRadius: 20,
+                          background: COLORS.mist, color: COLORS.moss, fontWeight: 600,
+                        }}>
+                          {entry.resource}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 14px', color: COLORS.slate, maxWidth: 320 }}>
+                        <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {entry.details}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 14px', color: COLORS.stone, fontSize: 11, fontFamily: FONTS.mono, whiteSpace: 'nowrap' }}>
+                        {entry.ip}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>
