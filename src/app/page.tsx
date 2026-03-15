@@ -4,6 +4,11 @@ import { createClient } from '@/lib/supabase/server'
 // Root page: resolve auth state and redirect to the right destination.
 // Middleware handles unauthenticated requests; this handles authenticated ones.
 export default async function Home() {
+  // If Supabase is not yet configured, send straight to login.
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    redirect('/login')
+  }
+
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 

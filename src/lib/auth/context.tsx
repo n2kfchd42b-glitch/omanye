@@ -32,7 +32,6 @@ const AuthContext = createContext<AuthState>({
 // ── AuthProvider ──────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const supabase = createClient()
   const [state, setState] = useState<AuthState>({
     session:      null,
     user:         null,
@@ -41,29 +40,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading:      true,
   })
 
-  const loadProfile = useCallback(async (userId: string) => {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
-
-    if (!profile) return { profile: null, organization: null }
-
-    let organization: Organization | null = null
-    if (profile.organization_id) {
-      const { data: org } = await supabase
-        .from('organizations')
-        .select('*')
-        .eq('id', profile.organization_id)
-        .single()
-      organization = org ?? null
+  useEffect(() => {
+    // Only initialise Supabase client in the browser, after env vars are confirmed present.
+    // This prevents SSR crashes when credentials have not yet been configured.
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      setState(s => ({ ...s, loading: false }))
+      return
     }
 
-    return { profile, organization }
-  }, [supabase])
+    const supabase = createClient()
 
-  useEffect(() => {
+    const loadProfile = async (userId: string) => {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+
+      if (!profile) return { profile: null, organization: null }
+
+      let organization: Organization | null = null
+      if (profile.organization_id) {
+        const { data: org } = await supabase
+          .from('organizations')
+          .select('*')
+          .eq('id', profile.organization_id)
+          .single()
+        organization = org ?? null
+      }
+
+      return { profile, organization }
+    }
+
     // Initial session fetch
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
@@ -87,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     )
 
     return () => subscription.unsubscribe()
-  }, [loadProfile, supabase.auth])
+  }, [])
 
   return (
     <AuthContext.Provider value={state}>

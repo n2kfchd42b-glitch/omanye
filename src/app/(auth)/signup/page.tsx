@@ -1,7 +1,6 @@
-import Link from 'next/link'
-import type { Metadata } from 'next'
+'use client'
 
-export const metadata: Metadata = { title: 'Create Account' }
+import Link from 'next/link'
 
 export default function SignupChoicePage() {
   return (
