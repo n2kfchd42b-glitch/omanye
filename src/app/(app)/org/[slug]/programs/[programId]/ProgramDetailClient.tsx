@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Plus, Star, Eye, EyeOff, TrendingUp, Calendar,
   MapPin, Link2, Tag, Edit2, Trash2, Loader2, Save, Globe,
-  Lock, BarChart3, FileText, Users, Settings, ChevronDown,
+  Lock, BarChart3, FileText, Users, Settings, ChevronDown, Wallet,
 } from 'lucide-react'
 import { COLORS, FONTS } from '@/lib/tokens'
 import { StatusBadge, GenericBadge } from '@/components/atoms/Badge'
@@ -28,6 +28,8 @@ import {
   createProgramUpdate,
   toggleUpdateDonorVisibility,
 } from '@/app/actions/indicators'
+import BudgetTab from './BudgetTab'
+import type { BudgetCategory, Expenditure, BudgetAmendment, FundingTranche, BudgetSummary, CategorySpend } from '@/lib/budget'
 import type { Program, Indicator, ProgramUpdate, IndicatorFrequency, UpdateType, ProgramVisibility } from '@/lib/programs'
 import {
   PROGRAM_STATUS_LABELS,
@@ -44,20 +46,27 @@ import type { OmanyeRole, ProgramStatusDB } from '@/lib/supabase/database.types'
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Props {
-  program:       Program
-  indicators:    Indicator[]
-  updates:       ProgramUpdate[]
-  userRole:      OmanyeRole
-  orgSlug:       string
-  currentUserId: string
+  program:              Program
+  indicators:           Indicator[]
+  updates:              ProgramUpdate[]
+  userRole:             OmanyeRole
+  orgSlug:              string
+  currentUserId:        string
+  initialCategories:    BudgetCategory[]
+  initialExpenditures:  Expenditure[]
+  initialSummary:       BudgetSummary | null
+  initialCategorySpend: CategorySpend[]
+  initialTranches:      FundingTranche[]
+  initialAmendments:    BudgetAmendment[]
 }
 
-type TabId = 'overview' | 'indicators' | 'updates' | 'settings'
+type TabId = 'overview' | 'indicators' | 'updates' | 'budget' | 'settings'
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: 'overview',   label: 'Overview',   icon: <BarChart3 size={14} /> },
   { id: 'indicators', label: 'Indicators', icon: <TrendingUp size={14} /> },
   { id: 'updates',    label: 'Updates',    icon: <FileText size={14} /> },
+  { id: 'budget',     label: 'Budget',     icon: <Wallet size={14} /> },
   { id: 'settings',   label: 'Settings',   icon: <Settings size={14} /> },
 ]
 
@@ -81,6 +90,12 @@ export default function ProgramDetailClient({
   userRole,
   orgSlug,
   currentUserId,
+  initialCategories,
+  initialExpenditures,
+  initialSummary,
+  initialCategorySpend,
+  initialTranches,
+  initialAmendments,
 }: Props) {
   const router = useRouter()
   const [tab, setTab]                = useState<TabId>('overview')
@@ -215,6 +230,22 @@ export default function ProgramDetailClient({
           setUpdates={setUpdates}
           canEdit={canEdit}
           isAdmin={isAdmin}
+        />
+      )}
+      {tab === 'budget' && (
+        <BudgetTab
+          programId={program.id}
+          organizationId={program.organization_id}
+          currency={program.currency}
+          totalBudget={program.total_budget ?? null}
+          userRole={userRole}
+          currentUserId={currentUserId}
+          initialCategories={initialCategories}
+          initialCategorySpend={initialCategorySpend}
+          initialExpenditures={initialExpenditures}
+          initialSummary={initialSummary}
+          initialTranches={initialTranches}
+          initialAmendments={initialAmendments}
         />
       )}
       {tab === 'settings' && isAdmin && (

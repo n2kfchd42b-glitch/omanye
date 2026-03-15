@@ -1,14 +1,16 @@
 // ── OMANYE Database Types ────────────────────────────────────────────────────
 // Keep in sync with supabase/migrations/
 
-export type OmanyeRole        = 'NGO_ADMIN' | 'NGO_STAFF' | 'NGO_VIEWER' | 'DONOR'
-export type SubscriptionTier  = 'FREE' | 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE'
-export type ProgramStatusDB   = 'PLANNING' | 'ACTIVE' | 'COMPLETED' | 'SUSPENDED'
-export type AccessLevel       = 'SUMMARY_ONLY' | 'INDICATORS' | 'INDICATORS_AND_BUDGET' | 'FULL'
-export type RequestStatus     = 'PENDING' | 'APPROVED' | 'DENIED'
-export type ProgramVisibility = 'PRIVATE' | 'DONOR_ONLY' | 'PUBLIC'
+export type OmanyeRole         = 'NGO_ADMIN' | 'NGO_STAFF' | 'NGO_VIEWER' | 'DONOR'
+export type SubscriptionTier   = 'FREE' | 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE'
+export type ProgramStatusDB    = 'PLANNING' | 'ACTIVE' | 'COMPLETED' | 'SUSPENDED'
+export type AccessLevel        = 'SUMMARY_ONLY' | 'INDICATORS' | 'INDICATORS_AND_BUDGET' | 'FULL'
+export type RequestStatus      = 'PENDING' | 'APPROVED' | 'DENIED'
+export type ProgramVisibility  = 'PRIVATE' | 'DONOR_ONLY' | 'PUBLIC'
 export type IndicatorFrequency = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'ANNUALLY' | 'ONCE'
-export type UpdateType        = 'PROGRESS' | 'MILESTONE' | 'CHALLENGE' | 'DONOR_REPORT' | 'FIELD_DISPATCH'
+export type UpdateType         = 'PROGRESS' | 'MILESTONE' | 'CHALLENGE' | 'DONOR_REPORT' | 'FIELD_DISPATCH'
+export type ExpenditureStatus  = 'PENDING' | 'APPROVED' | 'REJECTED' | 'VOID'
+export type TrancheStatus      = 'EXPECTED' | 'RECEIVED' | 'DELAYED' | 'CANCELLED'
 
 // ── Per-table Row / Insert / Update types ─────────────────────────────────────
 
@@ -281,6 +283,137 @@ type DARInsert = {
 }
 type DARUpdate = Partial<DARInsert>
 
+// ── Budget table types ────────────────────────────────────────────────────────
+
+type BudgetCategoryRow = {
+  id:               string
+  program_id:       string
+  organization_id:  string
+  name:             string
+  description:      string | null
+  allocated_amount: number
+  currency:         string
+  color:            string
+  sort_order:       number
+  created_at:       string
+  updated_at:       string
+}
+type BudgetCategoryInsert = {
+  id?:              string
+  program_id:       string
+  organization_id:  string
+  name:             string
+  description?:     string | null
+  allocated_amount: number
+  currency?:        string
+  color?:           string
+  sort_order?:      number
+  created_at?:      string
+  updated_at?:      string
+}
+type BudgetCategoryUpdate = Partial<BudgetCategoryInsert>
+
+type ExpenditureRow = {
+  id:                 string
+  program_id:         string
+  organization_id:    string
+  budget_category_id: string | null
+  description:        string
+  amount:             number
+  currency:           string
+  transaction_date:   string
+  payment_method:     string | null
+  reference_number:   string | null
+  receipt_url:        string | null
+  approved_by:        string | null
+  approved_at:        string | null
+  status:             ExpenditureStatus
+  notes:              string | null
+  submitted_by:       string
+  created_at:         string
+  updated_at:         string
+}
+type ExpenditureInsert = {
+  id?:                 string
+  program_id:          string
+  organization_id:     string
+  budget_category_id?: string | null
+  description:         string
+  amount:              number
+  currency?:           string
+  transaction_date:    string
+  payment_method?:     string | null
+  reference_number?:   string | null
+  receipt_url?:        string | null
+  approved_by?:        string | null
+  approved_at?:        string | null
+  status?:             ExpenditureStatus
+  notes?:              string | null
+  submitted_by:        string
+  created_at?:         string
+  updated_at?:         string
+}
+type ExpenditureUpdate = Partial<ExpenditureInsert>
+
+type BudgetAmendmentRow = {
+  id:               string
+  program_id:       string
+  organization_id:  string
+  from_category_id: string
+  to_category_id:   string
+  amount:           number
+  reason:           string
+  approved_by:      string
+  created_at:       string
+}
+type BudgetAmendmentInsert = {
+  id?:              string
+  program_id:       string
+  organization_id:  string
+  from_category_id: string
+  to_category_id:   string
+  amount:           number
+  reason:           string
+  approved_by:      string
+  created_at?:      string
+}
+
+type FundingTrancheRow = {
+  id:              string
+  program_id:      string
+  organization_id: string
+  donor_id:        string | null
+  funder_name:     string | null
+  tranche_number:  number
+  expected_amount: number
+  received_amount: number | null
+  currency:        string
+  expected_date:   string
+  received_date:   string | null
+  status:          TrancheStatus
+  notes:           string | null
+  created_at:      string
+  updated_at:      string
+}
+type FundingTrancheInsert = {
+  id?:              string
+  program_id:       string
+  organization_id:  string
+  donor_id?:        string | null
+  funder_name?:     string | null
+  tranche_number?:  number
+  expected_amount:  number
+  received_amount?: number | null
+  currency?:        string
+  expected_date:    string
+  received_date?:   string | null
+  status?:          TrancheStatus
+  notes?:           string | null
+  created_at?:      string
+  updated_at?:      string
+}
+type FundingTrancheUpdate = Partial<FundingTrancheInsert>
+
 // ── Database interface ────────────────────────────────────────────────────────
 
 export interface Database {
@@ -340,10 +473,59 @@ export interface Database {
         Update:        DARUpdate
         Relationships: []
       }
+      budget_categories: {
+        Row:           BudgetCategoryRow
+        Insert:        BudgetCategoryInsert
+        Update:        BudgetCategoryUpdate
+        Relationships: []
+      }
+      expenditures: {
+        Row:           ExpenditureRow
+        Insert:        ExpenditureInsert
+        Update:        ExpenditureUpdate
+        Relationships: []
+      }
+      budget_amendments: {
+        Row:           BudgetAmendmentRow
+        Insert:        BudgetAmendmentInsert
+        Update:        never
+        Relationships: []
+      }
+      funding_tranches: {
+        Row:           FundingTrancheRow
+        Insert:        FundingTrancheInsert
+        Update:        FundingTrancheUpdate
+        Relationships: []
+      }
     }
 
     Views: {
-      [_ in never]: never
+      v_budget_summary: {
+        Row: {
+          program_id:      string
+          organization_id: string
+          total_allocated: number
+          total_spent:     number
+          total_remaining: number
+          burn_rate_pct:   number | null
+        }
+      }
+      v_category_spend: {
+        Row: {
+          category_id:     string
+          program_id:      string
+          organization_id: string
+          name:            string
+          description:     string | null
+          allocated_amount: number
+          currency:        string
+          color:           string
+          sort_order:      number
+          spent:           number
+          remaining:       number
+          burn_rate_pct:   number | null
+        }
+      }
     }
 
     Functions: {

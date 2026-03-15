@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import DonorProgramDetailClient from './DonorProgramDetailClient'
-import { filterProgram, canSeeIndicators, canSeeBudget } from '@/lib/donorFilter'
+import { filterProgram, canSeeIndicators, canSeeBudget, filterBudget } from '@/lib/donorFilter'
 import type { Program, Indicator, ProgramUpdate, DonorProgramView } from '@/lib/programs'
+import type { BudgetSummary, CategorySpend, FundingTranche, DonorBudgetView } from '@/lib/budget'
 
 interface Props {
   params: { programId: string }
@@ -89,6 +90,25 @@ export default async function DonorProgramDetailPage({ params }: Props) {
     .limit(1)
     .maybeSingle()
 
+  // Fetch budget data if donor has budget-level access
+  let donorBudgetView: DonorBudgetView | null = null
+  if (canSeeBudget(grant.access_level)) {
+    const [summaryResult, categoryResult, trancheResult] = await Promise.all([
+      supabase.from('v_budget_summary').select('*').eq('program_id', params.programId).maybeSingle(),
+      supabase.from('v_category_spend').select('*').eq('program_id', params.programId).order('sort_order', { ascending: true }),
+      supabase.from('funding_tranches').select('*').eq('program_id', params.programId).order('tranche_number', { ascending: true }),
+    ])
+
+    donorBudgetView = filterBudget(
+      program as Program,
+      grant.access_level,
+      (categoryResult.data ?? []) as CategorySpend[],
+      (summaryResult.data as BudgetSummary | null) ?? null,
+      (trancheResult.data ?? []) as FundingTranche[],
+      user.id,
+    )
+  }
+
   return (
     <DonorProgramDetailClient
       program={programView}
@@ -104,6 +124,7 @@ export default async function DonorProgramDetailPage({ params }: Props) {
       expiresAt={grant.expires_at}
       pendingRequest={pendingRequest ?? null}
       organizationId={program.organization_id}
+      donorBudget={donorBudgetView}
     />
   )
 }

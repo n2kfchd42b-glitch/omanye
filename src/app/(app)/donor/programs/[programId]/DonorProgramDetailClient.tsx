@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Lock, TrendingUp, AlertCircle, Calendar,
   MapPin, Link2, BarChart3, FileText, Loader2, Globe,
+  DollarSign, Wallet, Percent, TrendingDown,
 } from 'lucide-react'
 import { COLORS, FONTS } from '@/lib/tokens'
 import { StatusBadge, GenericBadge } from '@/components/atoms/Badge'
@@ -18,6 +19,11 @@ import { UPDATE_TYPE_LABELS, UPDATE_TYPE_COLORS } from '@/lib/programs'
 import type { AccessLevel } from '@/lib/supabase/database.types'
 import { ACCESS_LEVEL_LABELS, ACCESS_LEVEL_DESCRIPTIONS } from '@/lib/auth/types'
 import { canSeeIndicators, canSeeBudget } from '@/lib/donorFilter'
+import type { DonorBudgetView } from '@/lib/budget'
+import {
+  TRANCHE_STATUS_LABELS,
+  TRANCHE_STATUS_COLORS,
+} from '@/lib/budget'
 
 interface Props {
   program:        DonorProgramView
@@ -29,14 +35,16 @@ interface Props {
   expiresAt:      string | null
   pendingRequest: { requested_access_level: AccessLevel; status: string; created_at: string } | null
   organizationId: string
+  donorBudget:    DonorBudgetView | null
 }
 
-type TabId = 'overview' | 'indicators' | 'updates'
+type TabId = 'overview' | 'indicators' | 'updates' | 'budget'
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: 'overview',   label: 'Overview',   icon: <BarChart3 size={13} /> },
   { id: 'indicators', label: 'Indicators', icon: <TrendingUp size={13} /> },
   { id: 'updates',    label: 'Updates',    icon: <FileText size={13} /> },
+  { id: 'budget',     label: 'Budget',     icon: <Wallet size={13} /> },
 ]
 
 const ACCESS_LEVEL_OPTIONS: { value: AccessLevel; label: string }[] = [
@@ -47,7 +55,7 @@ const ACCESS_LEVEL_OPTIONS: { value: AccessLevel; label: string }[] = [
 
 export default function DonorProgramDetailClient({
   program, rawProgram, updates, org,
-  accessLevel, canDownload, expiresAt, pendingRequest, organizationId,
+  accessLevel, canDownload, expiresAt, pendingRequest, organizationId, donorBudget,
 }: Props) {
   const router = useRouter()
   const [tab, setTab] = useState<TabId>('overview')
@@ -195,6 +203,15 @@ export default function DonorProgramDetailClient({
       )}
       {tab === 'updates' && (
         <UpdatesTab updates={updates} />
+      )}
+      {tab === 'budget' && (
+        <DonorBudgetTab
+          accessLevel={accessLevel}
+          donorBudget={donorBudget}
+          currency={program.currency ?? 'USD'}
+          onRequestAccess={() => setShowRequestModal(true)}
+          hasPendingRequest={!!pendingRequest}
+        />
       )}
 
       {showRequestModal && (
@@ -427,6 +444,196 @@ function UpdatesTab({ updates }: { updates: ProgramUpdate[] }) {
           </div>
         )
       })}
+    </div>
+  )
+}
+
+// ── Donor Budget Tab ──────────────────────────────────────────────────────────
+
+function DonorBudgetTab({
+  accessLevel, donorBudget, currency, onRequestAccess, hasPendingRequest,
+}: {
+  accessLevel:       AccessLevel
+  donorBudget:       DonorBudgetView | null
+  currency:          string
+  onRequestAccess:   () => void
+  hasPendingRequest: boolean
+}) {
+  const fmt = (n: number) => formatCurrency(n, currency)
+
+  // Locked state for SUMMARY_ONLY and INDICATORS
+  if (!donorBudget) {
+    return (
+      <div className="card" style={{ padding: '40px 32px', textAlign: 'center', border: `2px solid ${COLORS.gold}33` }}>
+        <Lock size={32} color={COLORS.stone} style={{ margin: '0 auto 16px' }} />
+        <h3 style={{ fontFamily: FONTS.heading, fontSize: 17, fontWeight: 700, color: COLORS.forest, marginBottom: 8 }}>
+          Budget Data Locked
+        </h3>
+        <p style={{ fontSize: 13, color: COLORS.slate, maxWidth: 380, margin: '0 auto 20px', lineHeight: 1.6 }}>
+          Your current access level ({ACCESS_LEVEL_LABELS[accessLevel]}) does not include budget information.
+          Request <strong>Budget + Indicators</strong> or <strong>Full Access</strong> to unlock aggregated financial data.
+        </p>
+        <p style={{ fontSize: 11, color: COLORS.stone, marginBottom: 20 }}>
+          Note: Individual expenditures are never shared with donors.
+        </p>
+        {!hasPendingRequest ? (
+          <button
+            onClick={onRequestAccess}
+            style={{
+              padding: '9px 20px', borderRadius: 8,
+              background: COLORS.moss, color: '#fff',
+              border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            Request Budget Access
+          </button>
+        ) : (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, background: '#FEF3C7', color: '#78350F', fontSize: 12, fontWeight: 600 }}>
+            <AlertCircle size={13} /> Access request pending
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const summary  = donorBudget.budget_summary
+  const catSpend = donorBudget.category_spend
+  const tranches = donorBudget.funding_tranches
+  const isFullAccess = accessLevel === 'FULL'
+
+  return (
+    <div>
+      {/* Summary cards */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
+        {donorBudget.total_budget != null && (
+          <div className="card" style={{ flex: 1, minWidth: 140, padding: '16px 18px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <DollarSign size={13} color={COLORS.fern} />
+              <span style={{ fontSize: 10, fontWeight: 700, color: COLORS.stone, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Budget</span>
+            </div>
+            <div style={{ fontFamily: FONTS.heading, fontSize: 20, fontWeight: 800, color: COLORS.forest }}>
+              {fmt(donorBudget.total_budget)}
+            </div>
+          </div>
+        )}
+        {summary && (
+          <>
+            <div className="card" style={{ flex: 1, minWidth: 140, padding: '16px 18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <TrendingDown size={13} color={COLORS.amber} />
+                <span style={{ fontSize: 10, fontWeight: 700, color: COLORS.stone, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Spent</span>
+              </div>
+              <div style={{ fontFamily: FONTS.heading, fontSize: 20, fontWeight: 800, color: COLORS.forest }}>{fmt(summary.total_spent)}</div>
+            </div>
+            <div className="card" style={{ flex: 1, minWidth: 140, padding: '16px 18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <Wallet size={13} color={COLORS.fern} />
+                <span style={{ fontSize: 10, fontWeight: 700, color: COLORS.stone, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Remaining</span>
+              </div>
+              <div style={{ fontFamily: FONTS.heading, fontSize: 20, fontWeight: 800, color: COLORS.forest }}>{fmt(summary.total_remaining)}</div>
+            </div>
+            <div className="card" style={{ flex: 1, minWidth: 140, padding: '16px 18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <Percent size={13} color={COLORS.gold} />
+                <span style={{ fontSize: 10, fontWeight: 700, color: COLORS.stone, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Burn Rate</span>
+              </div>
+              <div style={{ fontFamily: FONTS.heading, fontSize: 20, fontWeight: 800, color: COLORS.forest }}>
+                {summary.burn_rate_pct != null ? `${summary.burn_rate_pct}%` : '—'}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Category breakdown */}
+      {catSpend.length > 0 && (
+        <div className="card" style={{ marginBottom: 20, padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '14px 20px', borderBottom: `1px solid ${COLORS.mist}` }}>
+            <h3 style={{ fontFamily: FONTS.heading, fontSize: 14, fontWeight: 700, color: COLORS.forest }}>
+              Budget Breakdown by Category
+            </h3>
+            <p style={{ fontSize: 11, color: COLORS.stone, marginTop: 2 }}>
+              Aggregated figures only — individual expenditures are not disclosed.
+            </p>
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: COLORS.snow }}>
+                {['Category', 'Allocated', 'Spent', 'Remaining', 'Burn Rate'].map(h => (
+                  <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: COLORS.slate, borderBottom: `1px solid ${COLORS.mist}` }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {catSpend.map((cat, i) => (
+                <tr key={cat.category_id} style={{ borderBottom: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? '#fff' : COLORS.snow }}>
+                  <td style={{ padding: '10px 16px' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ width: 10, height: 10, borderRadius: 2, background: cat.color, display: 'inline-block' }} />
+                      {cat.name}
+                    </span>
+                  </td>
+                  <td style={{ padding: '10px 16px' }}>{fmt(cat.allocated_amount)}</td>
+                  <td style={{ padding: '10px 16px' }}>{fmt(cat.spent)}</td>
+                  <td style={{ padding: '10px 16px', color: cat.remaining < 0 ? '#C0392B' : undefined }}>{fmt(cat.remaining)}</td>
+                  <td style={{ padding: '10px 16px' }}>
+                    <span style={{ color: (cat.burn_rate_pct ?? 0) > 90 ? '#C0392B' : (cat.burn_rate_pct ?? 0) > 70 ? COLORS.amber : COLORS.fern }}>
+                      {cat.burn_rate_pct != null ? `${cat.burn_rate_pct}%` : '—'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Funding tranches */}
+      {tranches.length > 0 && (
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '14px 20px', borderBottom: `1px solid ${COLORS.mist}` }}>
+            <h3 style={{ fontFamily: FONTS.heading, fontSize: 14, fontWeight: 700, color: COLORS.forest }}>
+              Funding Tranches {isFullAccess ? '' : '(Your Contributions)'}
+            </h3>
+          </div>
+          <div style={{ padding: '12px 0' }}>
+            {tranches.map(t => {
+              const colors = TRANCHE_STATUS_COLORS[t.status]
+              return (
+                <div key={t.id} style={{ padding: '12px 20px', borderBottom: `1px solid ${COLORS.mist}`, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: COLORS.charcoal, marginBottom: 3 }}>
+                      Tranche {t.tranche_number}{t.funder_name ? ` — ${t.funder_name}` : ''}
+                    </div>
+                    <div style={{ fontSize: 12, color: COLORS.slate }}>
+                      Expected: <strong>{fmt(t.expected_amount)}</strong> by {formatDate(t.expected_date)}
+                      {t.received_amount != null && (
+                        <> · Received: <strong>{fmt(t.received_amount)}</strong>{t.received_date ? ` on ${formatDate(t.received_date)}` : ''}</>
+                      )}
+                    </div>
+                  </div>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600,
+                    background: colors.bg, color: colors.text,
+                  }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: colors.dot, display: 'inline-block' }} />
+                    {TRANCHE_STATUS_LABELS[t.status]}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {catSpend.length === 0 && tranches.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '40px 0', color: COLORS.stone, fontSize: 14 }}>
+          No budget data has been published for this program yet.
+        </div>
+      )}
     </div>
   )
 }
