@@ -10,14 +10,16 @@ import { FormField, Input, Textarea } from '@/components/atoms/FormField'
 import { useModal, ModalFooter } from '@/components/Modal'
 import { useToast } from '@/components/Toast'
 import { nextId, todayISO, formatCurrency, pct } from '@/lib/utils'
+import { LogframeMatrix } from './LogframeMatrix'
 import type { Program, Indicator, BudgetCategory } from '@/lib/types'
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
-type Tab = 'overview' | 'indicators' | 'budget' | 'team' | 'activity'
+type Tab = 'overview' | 'logframe' | 'indicators' | 'budget' | 'team' | 'activity'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview',    label: 'Overview'    },
+  { id: 'logframe',    label: 'Logframe'    },
   { id: 'indicators',  label: 'Indicators'  },
   { id: 'budget',      label: 'Budget'      },
   { id: 'team',        label: 'Team'        },
@@ -135,6 +137,7 @@ export function ProgramDetail({ program, onBack, onUpdate }: ProgramDetailProps)
       {/* Tab content */}
       <div className="fade-up-3">
         {tab === 'overview'   && <OverviewTab   program={program} onUpdate={onUpdate} />}
+        {tab === 'logframe'   && <LogframeMatrix program={program} onUpdate={onUpdate} />}
         {tab === 'indicators' && <IndicatorsTab program={program} onUpdate={onUpdate} />}
         {tab === 'budget'     && <BudgetTab     program={program} onUpdate={onUpdate} />}
         {tab === 'team'       && <EmptyState icon={<Users size={22} />}    title="No team members assigned" description="Assign team members from the Team view." compact />}
@@ -296,7 +299,7 @@ function AddIndicatorForm({ onSave }: { onSave: (i: Indicator) => void }) {
 
   function handleSave() {
     if (!name.trim() || !target) return
-    onSave({ id: nextId(), name: name.trim(), target: Number(target), current: 0, unit: unit.trim() || 'units' })
+    onSave({ id: nextId(), programId: 0, name: name.trim(), target: Number(target), current: 0, unit: unit.trim() || 'units' })
     close()
   }
 
@@ -436,7 +439,7 @@ function AddBudgetForm({ onSave }: { onSave: (c: BudgetCategory) => void }) {
       <ModalFooter>
         <button onClick={close} style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, color: COLORS.stone, cursor: 'pointer', border: `1px solid ${COLORS.mist}` }}>Cancel</button>
         <button
-          onClick={() => { if (!name.trim() || !allocated) return; onSave({ id: nextId(), name: name.trim(), allocated: Number(allocated), spent: Number(spent) || 0 }); close() }}
+          onClick={() => { if (!name.trim() || !allocated) return; onSave({ id: nextId(), programId: 0, name: name.trim(), allocated: Number(allocated), spent: Number(spent) || 0 }); close() }}
           disabled={!name.trim() || !allocated}
           style={{
             padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,

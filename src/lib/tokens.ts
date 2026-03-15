@@ -14,13 +14,14 @@ export const COLORS = {
   gold:    '#D4AF5C',
 
   // Extended palette
-  pearl:   '#F0F7F3',   // card bg, input bg
-  stone:   '#6B8F7A',   // muted text, descriptions
-  slate:   '#445E4D',   // secondary text
-  sky:     '#0EA5E9',   // links, sky-blue
-  crimson: '#E5334B',   // errors, admin role
-  amber:   '#D97706',   // warnings, planning status
-  ink:     '#0A1A10',   // dark overlay
+  pearl:    '#E4EFE7',  // borders
+  stone:    '#7A9688',  // placeholder text
+  slate:    '#4A6355',  // muted text
+  charcoal: '#2C3E35',  // body text
+  sky:      '#2563EB',  // links, info
+  amber:    '#D97706',  // warnings
+  crimson:  '#C0392B',  // errors, danger
+  ink:      '#0F1A14',  // darkest text
 } as const
 
 export const FONTS = {

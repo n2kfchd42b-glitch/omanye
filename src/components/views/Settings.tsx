@@ -1,25 +1,28 @@
 'use client'
 
 import React, { useState } from 'react'
-import { User as UserIcon, Building2, Bell, Shield, CreditCard } from 'lucide-react'
+import { User as UserIcon, Building2, Bell, Shield, CreditCard, AlertTriangle } from 'lucide-react'
 import { COLORS, FONTS } from '@/lib/tokens'
 import { FormField, Input, Select } from '@/components/atoms/FormField'
 import { EmptyState } from '@/components/atoms/EmptyState'
 import { useToast } from '@/components/Toast'
-import type { User, UserRole, NotifPrefs } from '@/lib/types'
+import { useAuditLog } from '@/lib/useAuditLog'
+import type { User, UserRole, NotifPrefs, AlertRule, Program } from '@/lib/types'
+import { AlertRules } from './AlertRules'
 
 // ── Nav sidebar ───────────────────────────────────────────────────────────────
 
-type SettingsSection = 'profile' | 'organisation' | 'notifications' | 'security' | 'billing'
+type SettingsSection = 'profile' | 'organisation' | 'alertrules' | 'notifications' | 'security' | 'billing'
 
 interface SectionDef { id: SettingsSection; label: string; icon: React.ElementType }
 
 const SECTIONS: SectionDef[] = [
-  { id: 'profile',       label: 'Profile',       icon: UserIcon   },
-  { id: 'organisation',  label: 'Organisation',  icon: Building2  },
-  { id: 'notifications', label: 'Notifications', icon: Bell       },
-  { id: 'security',      label: 'Security',      icon: Shield     },
-  { id: 'billing',       label: 'Billing',       icon: CreditCard },
+  { id: 'profile',       label: 'Profile',       icon: UserIcon       },
+  { id: 'organisation',  label: 'Organisation',  icon: Building2      },
+  { id: 'alertrules',    label: 'Alert Rules',   icon: AlertTriangle  },
+  { id: 'notifications', label: 'Notifications', icon: Bell           },
+  { id: 'security',      label: 'Security',      icon: Shield         },
+  { id: 'billing',       label: 'Billing',       icon: CreditCard     },
 ]
 
 const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
@@ -35,21 +38,24 @@ const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
 // ── Settings view ─────────────────────────────────────────────────────────────
 
 interface SettingsProps {
-  user:    User
-  setUser: (u: User) => void
+  user:          User
+  setUser:       (u: User) => void
+  alertRules:    AlertRule[]
+  setAlertRules: React.Dispatch<React.SetStateAction<AlertRule[]>>
+  programs:      Program[]
 }
 
-export function Settings({ user, setUser }: SettingsProps) {
+export function Settings({ user, setUser, alertRules, setAlertRules, programs }: SettingsProps) {
   const [section, setSection] = useState<SettingsSection>('profile')
 
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto' }}>
+    <div style={{ maxWidth: 920, margin: '0 auto' }}>
       <div className="fade-up" style={{ marginBottom: 24 }}>
         <h2 style={{ fontFamily: FONTS.heading, fontSize: 22, fontWeight: 600, color: COLORS.forest }}>Settings</h2>
         <p style={{ fontSize: 12, color: COLORS.stone, marginTop: 2 }}>Manage your workspace preferences</p>
       </div>
 
-      <div className="fade-up-1" style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 24, alignItems: 'start' }}>
+      <div className="fade-up-1" style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: 24, alignItems: 'start' }}>
         {/* Nav sidebar */}
         <div className="card" style={{ padding: 8, overflow: 'hidden' }}>
           {SECTIONS.map(s => {
@@ -78,12 +84,13 @@ export function Settings({ user, setUser }: SettingsProps) {
         </div>
 
         {/* Content */}
-        <div className="card" style={{ padding: 28 }}>
-          {section === 'profile'       && <ProfileSection       user={user} setUser={setUser} />}
-          {section === 'organisation'  && <OrganisationSection  user={user} />}
-          {section === 'notifications' && <NotificationsSection />}
-          {section === 'security'      && <ComingSoonSection label="Security" />}
-          {section === 'billing'       && <ComingSoonSection label="Billing" />}
+        <div>
+          {section === 'profile'       && <div className="card" style={{ padding: 28 }}><ProfileSection       user={user} setUser={setUser} /></div>}
+          {section === 'organisation'  && <div className="card" style={{ padding: 28 }}><OrganisationSection  user={user} setUser={setUser} /></div>}
+          {section === 'alertrules'    && <AlertRules alertRules={alertRules} setAlertRules={setAlertRules} programs={programs} user={user} />}
+          {section === 'notifications' && <div className="card" style={{ padding: 28 }}><NotificationsSection /></div>}
+          {section === 'security'      && <div className="card" style={{ padding: 28 }}><ComingSoonSection label="Security" /></div>}
+          {section === 'billing'       && <div className="card" style={{ padding: 28 }}><ComingSoonSection label="Billing" /></div>}
         </div>
       </div>
     </div>
@@ -94,13 +101,16 @@ export function Settings({ user, setUser }: SettingsProps) {
 
 function ProfileSection({ user, setUser }: { user: User; setUser: (u: User) => void }) {
   const { success } = useToast()
+  const { append }  = useAuditLog()
   const [name,  setName]  = useState(user.name)
   const [email, setEmail] = useState(user.email)
   const [role,  setRole]  = useState<UserRole>(user.role)
 
   function handleSave() {
-    setUser({ ...user, name: name.trim() || user.name, email: email.trim() || user.email, role })
+    const updated = { ...user, name: name.trim() || user.name, email: email.trim() || user.email, role }
+    setUser(updated)
     success('Profile updated')
+    append({ actor: user.name, action: 'UPDATE', resource: 'Settings', resourceName: 'Profile', details: `Updated profile for ${updated.name}` })
   }
 
   const dirty = name !== user.name || email !== user.email || role !== user.role
@@ -140,9 +150,17 @@ function ProfileSection({ user, setUser }: { user: User; setUser: (u: User) => v
 
 // ── Organisation section ──────────────────────────────────────────────────────
 
-function OrganisationSection({ user }: { user: User }) {
+function OrganisationSection({ user, setUser }: { user: User; setUser: (u: User) => void }) {
   const { success } = useToast()
-  const [org, setOrg] = useState(user.org)
+  const { append }  = useAuditLog()
+  const [org,     setOrg]     = useState(user.org)
+  const [website, setWebsite] = useState('')
+
+  function handleSave() {
+    setUser({ ...user, org: org.trim() || user.org })
+    success('Organisation updated')
+    append({ actor: user.name, action: 'UPDATE', resource: 'Settings', resourceName: 'Organisation', details: `Updated org to ${org}` })
+  }
 
   return (
     <div>
@@ -151,9 +169,12 @@ function OrganisationSection({ user }: { user: User }) {
         <FormField label="Organisation name" required htmlFor="so-org">
           <Input id="so-org" value={org} onChange={e => setOrg(e.target.value)} />
         </FormField>
+        <FormField label="Website" htmlFor="so-web">
+          <Input id="so-web" type="url" placeholder="https://example.org" value={website} onChange={e => setWebsite(e.target.value)} />
+        </FormField>
         <div style={{ paddingTop: 8 }}>
           <button
-            onClick={() => success('Organisation updated')}
+            onClick={handleSave}
             style={{
               padding: '9px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
               background: COLORS.moss, color: '#fff', cursor: 'pointer',

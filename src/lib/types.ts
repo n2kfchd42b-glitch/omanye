@@ -1,4 +1,4 @@
-// ── OMANYE TypeScript Interfaces (matching spec exactly) ─────────────────────
+// ── OMANYE TypeScript Interfaces ──────────────────────────────────────────────
 
 export type UserRole =
   | 'Project Lead'
@@ -19,18 +19,32 @@ export interface User {
 export type ProgramStatus = 'planning' | 'active' | 'paused' | 'completed'
 
 export interface Indicator {
-  id:      number
-  name:    string
-  target:  number
-  current: number
-  unit:    string
+  id:        number
+  programId: number
+  name:      string
+  target:    number
+  current:   number
+  unit:      string
 }
 
 export interface BudgetCategory {
   id:        number
+  programId: number
   name:      string
   allocated: number
   spent:     number
+}
+
+export interface LogframeRow {
+  id:                  number
+  programId:           number
+  level:               'goal' | 'outcome' | 'output' | 'activity'
+  description:         string
+  indicatorIds:        number[]
+  meansOfVerification: string
+  assumptions:         string
+  status:              'not_started' | 'on_track' | 'at_risk' | 'off_track'
+  order:               number
 }
 
 export interface Program {
@@ -38,16 +52,17 @@ export interface Program {
   name:             string
   funder:           string
   location:         string
+  objective:        string
   budget:           number
-  currency:         string
   spent:            number
-  start:            string   // ISO date
+  currency:         string
+  start:            string
   end:              string
   status:           ProgramStatus
-  progress:         number   // 0–100
-  objective:        string
+  progress:         number
   indicators:       Indicator[]
   budgetCategories: BudgetCategory[]
+  logframe:         LogframeRow[]
   createdAt:        string
 }
 
@@ -55,14 +70,14 @@ export type DataSource    = 'KoBoToolbox' | 'REDCap' | 'ODK Central' | 'Upload' 
 export type DatasetStatus = 'processing' | 'clean' | 'review' | 'error'
 
 export interface Dataset {
-  id:        number
-  name:      string
-  source:    DataSource
-  rows:      number | string
-  cols:      number | string
-  size:      string
-  status:    DatasetStatus
-  updated:   string
+  id:         number
+  name:       string
+  source:     DataSource
+  rows:       number | string
+  cols:       number | string
+  size:       string
+  status:     DatasetStatus
+  updated:    string
   programId?: number
 }
 
@@ -93,6 +108,14 @@ export interface Document {
   sections: Section[]
 }
 
+export interface Comment {
+  id:     number
+  author: string
+  role:   UserRole
+  text:   string
+  time:   string
+}
+
 export interface TeamMember {
   id:     number
   name:   string
@@ -103,12 +126,94 @@ export interface TeamMember {
   joined: string
 }
 
-export interface Comment {
-  id:     number
-  author: string
-  role:   UserRole
-  text:   string
-  time:   string
+export interface DonorReport {
+  id:          number
+  title:       string
+  programId:   number
+  programName: string
+  funder:      string
+  period:      { start: string; end: string }
+  format:      'pdf' | 'word' | 'both'
+  sections:    string[]
+  challenges:  string
+  status:      'draft' | 'generated' | 'submitted'
+  createdAt:   string
+}
+
+export type TriggerType =
+  | 'indicator_below'
+  | 'indicator_above'
+  | 'budget_burn'
+  | 'report_due'
+  | 'submission_overdue'
+
+export type Severity = 'low' | 'medium' | 'high' | 'critical'
+
+export interface AlertRule {
+  id:             number
+  name:           string
+  triggerType:    TriggerType
+  programId?:     number
+  programName?:   string
+  indicatorId?:   number
+  indicatorName?: string
+  threshold:      number
+  unit?:          string
+  channels:       ('inapp' | 'email')[]
+  severity:       Severity
+  active:         boolean
+  lastTriggered?: string
+  createdAt:      string
+}
+
+export type AuditAction =
+  | 'CREATE'
+  | 'UPDATE'
+  | 'DELETE'
+  | 'SUBMIT'
+  | 'EXPORT'
+  | 'LOGIN'
+  | 'INVITE'
+
+export type AuditResource =
+  | 'Program'
+  | 'Indicator'
+  | 'Budget'
+  | 'Document'
+  | 'Dataset'
+  | 'Team'
+  | 'Report'
+  | 'Alert'
+  | 'Settings'
+
+export interface AuditEntry {
+  id:           number
+  timestamp:    string
+  actor:        string
+  action:       AuditAction
+  resource:     AuditResource
+  resourceName: string
+  details:      string
+  ip:           string
+}
+
+export interface FieldAssignment {
+  id:           number
+  staffName:    string
+  district:     string
+  status:       'submitted' | 'pending' | 'overdue' | 'not_started'
+  submittedAt?: string
+  records?:     number
+}
+
+export interface CollectionPeriod {
+  id:          number
+  name:        string
+  programId:   number
+  programName: string
+  dueDate:     string
+  status:      'open' | 'closed' | 'overdue'
+  assignments: FieldAssignment[]
 }
 
 // ── UI navigation ──────────────────────────────────────────────────────────────
@@ -119,9 +224,12 @@ export type ViewId =
   | 'program-detail'
   | 'data-hub'
   | 'analytics'
+  | 'reports'
   | 'documents'
+  | 'fieldstatus'
+  | 'audit'
   | 'team'
-  | 'field-map'
+  | 'map'
   | 'settings'
 
 export type ToastVariant = 'success' | 'error' | 'warn'
@@ -134,9 +242,9 @@ export interface ToastItem {
 }
 
 export interface NotifPrefs {
-  submissions: boolean
+  submissions:  boolean
   weeklyDigest: boolean
-  milestones: boolean
+  milestones:   boolean
   teamActivity: boolean
   donorReports: boolean
 }

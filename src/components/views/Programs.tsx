@@ -65,6 +65,7 @@ function NewProgramForm({ onSave }: NewProgramFormProps) {
       objective: objective.trim(),
       indicators: [],
       budgetCategories: [],
+      logframe: [],
       createdAt: todayISO(),
     }
     onSave(prog)
