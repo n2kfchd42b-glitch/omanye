@@ -2,9 +2,10 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Bell, ChevronDown, User, Settings, LogOut, Building2 } from 'lucide-react'
+import { Search, ChevronDown, User, Settings, LogOut, Building2 } from 'lucide-react'
 import { COLORS, SPACING, FONTS } from '@/lib/tokens'
 import { Avatar } from '@/components/atoms/Avatar'
+import { NotificationsPanel } from '@/components/NotificationsPanel'
 import type { ViewId, User as UserType } from '@/lib/types'
 
 // ── View titles ───────────────────────────────────────────────────────────────
@@ -133,31 +134,8 @@ export function Topbar({ view, sidebarW, user, orgSlug, onSettings, onSignOut }:
           />
         </div>
 
-        {/* Bell */}
-        <button
-          style={{
-            position: 'relative',
-            width: 34, height: 34,
-            borderRadius: 8,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: COLORS.stone,
-            cursor: 'pointer',
-            transition: 'background 0.15s',
-            background: 'transparent',
-            border: 'none',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.background = COLORS.foam)}
-          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-          aria-label="Notifications"
-        >
-          <Bell size={15} />
-          <span style={{
-            position: 'absolute', top: 8, right: 8,
-            width: 6, height: 6, borderRadius: '50%',
-            background: COLORS.crimson,
-            border: '1.5px solid #ffffff',
-          }} />
-        </button>
+        {/* Notifications */}
+        <NotificationsPanel orgSlug={orgSlug} />
 
         {/* Avatar + dropdown */}
         <div style={{ position: 'relative' }} ref={dropRef}>

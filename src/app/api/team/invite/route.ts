@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { OmanyeRole } from '@/lib/supabase/database.types'
+import { logAction } from '@/lib/audit/logger'
 
 interface InviteBody {
   email:       string
@@ -106,6 +107,18 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch { /* email failure should not block invitation creation */ }
+
+  void logAction({
+    organizationId: orgId,
+    actorId:        user.id,
+    actorName:      profile.full_name ?? 'Unknown',
+    actorRole:      profile.role,
+    action:         'team.member_invited',
+    entityType:     'team_invitation',
+    entityId:       (invitation as Record<string, unknown>).id as string,
+    entityName:     body.full_name || body.email,
+    metadata:       { email: body.email, role: body.role },
+  })
 
   // If program_ids provided, create program access grants once the user accepts
   // (stored on invitation for now; assignments created at accept time)

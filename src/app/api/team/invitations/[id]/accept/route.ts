@@ -3,6 +3,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { logActionForUser } from '@/lib/audit/logger'
+import { sendNotification, getOrgAdmins } from '@/lib/notifications/sender'
 
 interface Params { params: { id: string } }
 
@@ -90,6 +92,33 @@ export async function POST(req: NextRequest, { params }: Params) {
     .select('slug')
     .eq('id', inv.organization_id as string)
     .single()
+
+  const orgId = inv.organization_id as string
+  const memberName = (inv.full_name as string | null) ?? authEmail.split('@')[0]
+
+  void logActionForUser(user.id, {
+    organizationId: orgId,
+    action:         'team.member_joined',
+    entityType:     'profile',
+    entityId:       user.id,
+    entityName:     memberName,
+    metadata:       { role: inv.role as string },
+  })
+
+  // Notify NGO_ADMINs
+  void (async () => {
+    const admins = await getOrgAdmins(orgId)
+    const orgName = (org as Record<string, unknown> | null)?.slug ?? 'your organization'
+    await Promise.all(admins.map(a => sendNotification({
+      organizationId: orgId,
+      recipientId:    a.id,
+      type:           'TEAM_MEMBER_JOINED',
+      title:          `${memberName} joined ${orgName} as ${inv.role as string}`,
+      body:           `${memberName} accepted their team invitation.`,
+      link:           `/org/${(org as Record<string, unknown> | null)?.slug as string}/team`,
+      priority:       'LOW',
+    })))
+  })()
 
   return NextResponse.json({
     success:  true,

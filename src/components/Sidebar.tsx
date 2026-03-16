@@ -5,7 +5,7 @@ import {
   LayoutDashboard, FolderOpen,
   FileBarChart, RadioTower,
   Users, Settings, ChevronLeft, ChevronRight,
-  HandCoins,
+  HandCoins, Shield,
 } from 'lucide-react'
 import { COLORS, SPACING } from '@/lib/tokens'
 import { OmanyeLogo, OmanyeSymbol } from '@/components/Logo'
@@ -49,6 +49,10 @@ const WORKSPACE_NAV: NavItem[] = [
 ]
 
 const SYSTEM_NAV: NavItem[] = [
+  {
+    id: 'audit', label: 'Audit Log', icon: Shield,
+    allowedRoles: ['Admin'],
+  },
   {
     id: 'settings', label: 'Settings', icon: Settings,
     allowedRoles: ['Admin'],

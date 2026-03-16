@@ -6,7 +6,7 @@ import {
   ArrowLeft, Plus, Star, Eye, EyeOff, TrendingUp, Calendar,
   MapPin, Link2, Tag, Edit2, Trash2, Loader2, Save, Globe,
   Lock, BarChart3, FileText, Users, Settings, ChevronDown, Wallet, FileBarChart,
-  Database, Activity,
+  Database, Activity, Clock,
 } from 'lucide-react'
 import { COLORS, FONTS } from '@/lib/tokens'
 import { StatusBadge, GenericBadge } from '@/components/atoms/Badge'
@@ -62,7 +62,7 @@ interface Props {
   initialAmendments:    BudgetAmendment[]
 }
 
-type TabId = 'overview' | 'indicators' | 'updates' | 'budget' | 'reports' | 'field' | 'mae' | 'settings'
+type TabId = 'overview' | 'indicators' | 'updates' | 'budget' | 'reports' | 'field' | 'mae' | 'activity' | 'settings'
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode; external?: boolean }[] = [
   { id: 'overview',   label: 'Overview',    icon: <BarChart3 size={14} /> },
@@ -72,6 +72,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode; external?: boolea
   { id: 'reports',    label: 'Reports',     icon: <FileBarChart size={14} /> },
   { id: 'field',      label: 'Field Data',  icon: <Database size={14} />, external: true },
   { id: 'mae',        label: 'M&E',         icon: <Activity size={14} />, external: true },
+  { id: 'activity',   label: 'Activity',    icon: <Clock size={14} /> },
   { id: 'settings',   label: 'Settings',    icon: <Settings size={14} /> },
 ]
 
@@ -296,6 +297,9 @@ export default function ProgramDetailClient({
           orgSlug={orgSlug}
           canCreate={canEdit}
         />
+      )}
+      {tab === 'activity' && (
+        <ActivityTab programId={program.id} />
       )}
       {tab === 'settings' && isAdmin && (
         <SettingsTab
@@ -1274,6 +1278,159 @@ function SettingsTab({
             </button>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── Activity Tab ───────────────────────────────────────────────────────────────
+
+interface ActivityEntry {
+  id:          string
+  created_at:  string
+  actor_name:  string
+  actor_role:  string
+  action:      string
+  entity_type: string | null
+  entity_name: string | null
+  changes:     Record<string, { from: unknown; to: unknown }> | null
+}
+
+function relativeTimeAct(iso: string): string {
+  const diff  = Date.now() - new Date(iso).getTime()
+  const mins  = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days  = Math.floor(diff / 86400000)
+  if (mins < 1)   return 'just now'
+  if (mins < 60)  return `${mins}m ago`
+  if (hours < 24) return `${hours}h ago`
+  if (days < 7)   return `${days}d ago`
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function formatActLabel(action: string): string {
+  const labels: Record<string, string> = {
+    'program.created':           'Created this program',
+    'program.updated':           'Updated program details',
+    'program.visibility_changed':'Changed program visibility',
+    'indicator.created':         'Added an indicator',
+    'indicator.updated':         'Updated an indicator',
+    'indicator.value_updated':   'Updated indicator value',
+    'expenditure.submitted':     'Submitted an expenditure',
+    'expenditure.approved':      'Approved an expenditure',
+    'expenditure.rejected':      'Rejected an expenditure',
+    'budget.reallocated':        'Reallocated budget',
+    'report.created':            'Created a report',
+    'report.generated':          'Generated a report',
+    'report.published':          'Published a report',
+    'report.submitted':          'Submitted a report',
+    'field.submission_created':  'Created a field submission',
+    'field.submission_reviewed': 'Reviewed a field submission',
+    'field.submission_flagged':  'Flagged a field submission',
+  }
+  return labels[action] ?? action.replace('.', ' → ')
+}
+
+function ActivityTab({ programId }: { programId: string }) {
+  const [entries, setEntries] = React.useState<ActivityEntry[]>([])
+  const [loading, setLoading] = React.useState(true)
+
+  React.useEffect(() => {
+    fetch(`/api/audit?program_id=${programId}&limit=50`)
+      .then(r => r.json())
+      .then(({ data }) => setEntries(data ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [programId])
+
+  if (loading) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center', color: COLORS.stone, fontSize: 13, fontFamily: FONTS.body }}>
+        Loading activity…
+      </div>
+    )
+  }
+
+  if (entries.length === 0) {
+    return (
+      <div style={{
+        padding: '60px 24px', textAlign: 'center',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+      }}>
+        <Clock size={32} color={COLORS.mist} />
+        <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: COLORS.slate, fontFamily: FONTS.body }}>
+          No activity yet
+        </p>
+        <p style={{ margin: 0, fontSize: 12, color: COLORS.stone, fontFamily: FONTS.body }}>
+          Actions on this program will be recorded here
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ maxWidth: 680 }}>
+      <div style={{ position: 'relative', paddingLeft: 28 }}>
+        {/* Timeline line */}
+        <div style={{
+          position: 'absolute', left: 9, top: 6, bottom: 6,
+          width: 2, background: COLORS.mist,
+        }} />
+
+        {entries.map((entry, idx) => (
+          <div key={entry.id} style={{
+            position: 'relative', marginBottom: 20,
+          }}>
+            {/* Dot */}
+            <div style={{
+              position: 'absolute', left: -28 + 4, top: 6,
+              width: 10, height: 10, borderRadius: 5,
+              background: COLORS.sage,
+              border: `2px solid #fff`,
+              boxShadow: `0 0 0 2px ${COLORS.mist}`,
+            }} />
+
+            {/* Card */}
+            <div style={{
+              background: '#fff',
+              border: `1px solid ${COLORS.mist}`,
+              borderRadius: 8, padding: '12px 16px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <span style={{
+                  fontSize: 12, fontWeight: 600, color: COLORS.forest, fontFamily: FONTS.body,
+                }}>
+                  {entry.actor_name}
+                </span>
+                <span style={{
+                  fontSize: 10, padding: '1px 6px', borderRadius: 20,
+                  background: COLORS.foam, color: COLORS.slate,
+                  fontFamily: FONTS.body,
+                }}>
+                  {entry.actor_role}
+                </span>
+                <span style={{ marginLeft: 'auto', fontSize: 11, color: COLORS.stone, fontFamily: FONTS.body }}>
+                  {relativeTimeAct(entry.created_at)}
+                </span>
+              </div>
+              <p style={{ margin: 0, fontSize: 13, color: COLORS.charcoal, fontFamily: FONTS.body }}>
+                {formatActLabel(entry.action)}
+                {entry.entity_name && entry.entity_type !== 'program' && (
+                  <span style={{ color: COLORS.slate }}> — {entry.entity_name}</span>
+                )}
+              </p>
+              {entry.changes && Object.entries(entry.changes).map(([field, { from, to }]) => (
+                <span key={field} style={{
+                  display: 'inline-block', marginTop: 4, marginRight: 4,
+                  fontSize: 10, padding: '2px 6px', borderRadius: 5,
+                  background: '#FEF3C7', color: '#78350F', fontFamily: FONTS.body,
+                }}>
+                  {field}: {String(from ?? '–')} → {String(to ?? '–')}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )

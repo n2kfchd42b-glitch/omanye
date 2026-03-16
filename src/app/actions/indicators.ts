@@ -10,6 +10,8 @@ import type {
   SubmitIndicatorUpdatePayload,
   CreateProgramUpdatePayload,
 } from '@/lib/programs'
+import { logAction } from '@/lib/audit/logger'
+import { sendNotification, getOrgAdmins } from '@/lib/notifications/sender'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -22,7 +24,7 @@ async function requireEditor() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, organization_id')
+    .select('role, organization_id, full_name')
     .eq('id', user.id)
     .single()
 
@@ -39,7 +41,7 @@ async function requireAdmin() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, organization_id')
+    .select('role, organization_id, full_name')
     .eq('id', user.id)
     .single()
 
@@ -82,6 +84,18 @@ export async function createIndicator(
 
   if (dbError || !data) return { data: null, error: dbError?.message ?? 'Failed to create indicator' }
 
+  void logAction({
+    organizationId: profile.organization_id,
+    actorId:        user!.id,
+    actorName:      (profile as Record<string, unknown>).full_name as string ?? 'Unknown',
+    actorRole:      profile.role,
+    action:         'indicator.created',
+    entityType:     'indicator',
+    entityId:       (data as Indicator).id,
+    entityName:     (data as Indicator).name,
+    metadata:       { program_id: payload.program_id },
+  })
+
   revalidatePath('/org')
   return { data: data as Indicator, error: null }
 }
@@ -110,7 +124,7 @@ export async function updateIndicator(
   id:      string,
   payload: Partial<CreateIndicatorPayload>,
 ): Promise<ActionResult<Indicator>> {
-  const { profile, supabase, error } = await requireEditor()
+  const { user, profile, supabase, error } = await requireEditor()
   if (error || !profile?.organization_id) {
     return { data: null, error: error ?? 'No organization' }
   }
@@ -124,6 +138,18 @@ export async function updateIndicator(
     .single()
 
   if (dbError || !data) return { data: null, error: dbError?.message ?? 'Failed to update indicator' }
+
+  void logAction({
+    organizationId: profile.organization_id,
+    actorId:        user!.id,
+    actorName:      (profile as Record<string, unknown>).full_name as string ?? 'Unknown',
+    actorRole:      profile.role,
+    action:         'indicator.updated',
+    entityType:     'indicator',
+    entityId:       id,
+    entityName:     (data as Indicator).name,
+    metadata:       { program_id: (data as Indicator).program_id },
+  })
 
   revalidatePath('/org')
   return { data: data as Indicator, error: null }
@@ -249,6 +275,49 @@ export async function submitIndicatorUpdate(
     .from('indicators')
     .update({ current_value: payload.new_value })
     .eq('id', indicatorId)
+
+  // Fetch indicator name for audit
+  const indName = (indicator as Record<string, unknown>).name as string ?? indicatorId
+  const orgId   = profile.organization_id
+
+  void logAction({
+    organizationId: orgId,
+    actorId:        user!.id,
+    actorName:      (profile as Record<string, unknown>).full_name as string ?? 'Unknown',
+    actorRole:      profile.role,
+    action:         'indicator.value_updated',
+    entityType:     'indicator',
+    entityId:       indicatorId,
+    entityName:     indName,
+    changes:        { value: { from: (indicator as Record<string, unknown>).current_value, to: payload.new_value } },
+    metadata:       { program_id: (indicator as Record<string, unknown>).program_id as string },
+  })
+
+  // Check if indicator is off-track (current < 50% of target)
+  void (async () => {
+    const { data: fullInd } = await supabase
+      .from('indicators')
+      .select('name, target_value, program_id')
+      .eq('id', indicatorId)
+      .single()
+    if (!fullInd) return
+    const fi = fullInd as Record<string, unknown>
+    const target  = fi.target_value as number | null
+    const current = payload.new_value
+    if (target && current !== null && target > 0 && (current / target) < 0.5) {
+      const pct = Math.round((current / target) * 100)
+      const admins = await getOrgAdmins(orgId)
+      await Promise.all(admins.map(a => sendNotification({
+        organizationId: orgId,
+        recipientId:    a.id,
+        type:           'INDICATOR_OFF_TRACK',
+        title:          `${fi.name as string} is off track (${pct}% of target)`,
+        body:           `Current value: ${current}, Target: ${target}`,
+        link:           `/org/programs/${fi.program_id as string}/indicators`,
+        priority:       'HIGH',
+      })))
+    }
+  })()
 
   revalidatePath('/org')
   return { data: updateRecord as IndicatorUpdate, error: null }

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { filterProgram } from '@/lib/donorFilter'
 import type { Program, CreateProgramPayload, UpdateProgramPayload, DonorProgramView } from '@/lib/programs'
 import type { ProgramVisibility } from '@/lib/supabase/database.types'
+import { logAction } from '@/lib/audit/logger'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -17,7 +18,7 @@ async function requireNGOEditor() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, organization_id')
+    .select('role, organization_id, full_name')
     .eq('id', user.id)
     .single()
 
@@ -64,6 +65,17 @@ export async function createProgram(
     return { data: null, error: dbError?.message ?? 'Failed to create program' }
   }
 
+  void logAction({
+    organizationId: profile.organization_id,
+    actorId:        user!.id,
+    actorName:      (profile as Record<string, unknown>).full_name as string ?? 'Unknown',
+    actorRole:      profile.role,
+    action:         'program.created',
+    entityType:     'program',
+    entityId:       (data as Program).id,
+    entityName:     (data as Program).name,
+  })
+
   revalidatePath(`/org`)
   return { data: data as Program, error: null }
 }
@@ -109,7 +121,7 @@ export async function updateProgram(
   id:      string,
   payload: UpdateProgramPayload,
 ): Promise<ActionResult<Program>> {
-  const { profile, supabase, error } = await requireNGOEditor()
+  const { user, profile, supabase, error } = await requireNGOEditor()
   if (error || !profile?.organization_id) {
     return { data: null, error: error ?? 'No organization' }
   }
@@ -124,6 +136,17 @@ export async function updateProgram(
 
   if (dbError || !data) return { data: null, error: dbError?.message ?? 'Failed to update program' }
 
+  void logAction({
+    organizationId: profile.organization_id,
+    actorId:        user!.id,
+    actorName:      (profile as Record<string, unknown>).full_name as string ?? 'Unknown',
+    actorRole:      profile.role,
+    action:         'program.updated',
+    entityType:     'program',
+    entityId:       id,
+    entityName:     (data as Program).name,
+  })
+
   revalidatePath(`/org`)
   return { data: data as Program, error: null }
 }
@@ -137,13 +160,16 @@ export async function deleteProgram(id: string): Promise<ActionResult> {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, organization_id')
+    .select('role, organization_id, full_name')
     .eq('id', user.id)
     .single()
 
   if (!profile || profile.role !== 'NGO_ADMIN') {
     return { data: null, error: 'Only NGO_ADMIN can delete programs' }
   }
+
+  // Fetch name before soft-delete
+  const { data: prog } = await supabase.from('programs').select('name').eq('id', id).single()
 
   const { error: dbError } = await supabase
     .from('programs')
@@ -152,6 +178,17 @@ export async function deleteProgram(id: string): Promise<ActionResult> {
     .eq('organization_id', profile.organization_id!)
 
   if (dbError) return { data: null, error: dbError.message }
+
+  void logAction({
+    organizationId: profile.organization_id!,
+    actorId:        user.id,
+    actorName:      (profile as Record<string, unknown>).full_name as string ?? 'Unknown',
+    actorRole:      profile.role,
+    action:         'program.deleted',
+    entityType:     'program',
+    entityId:       id,
+    entityName:     (prog as Record<string, unknown> | null)?.name as string ?? id,
+  })
 
   revalidatePath(`/org`)
   return { data: undefined, error: null }
@@ -169,7 +206,7 @@ export async function updateProgramVisibility(
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, organization_id')
+    .select('role, organization_id, full_name')
     .eq('id', user.id)
     .single()
 
@@ -186,6 +223,18 @@ export async function updateProgramVisibility(
     .single()
 
   if (dbError || !data) return { data: null, error: dbError?.message ?? 'Failed to update visibility' }
+
+  void logAction({
+    organizationId: profile.organization_id!,
+    actorId:        user.id,
+    actorName:      (profile as Record<string, unknown>).full_name as string ?? 'Unknown',
+    actorRole:      profile.role,
+    action:         'program.visibility_changed',
+    entityType:     'program',
+    entityId:       id,
+    entityName:     (data as Program).name,
+    changes:        { visibility: { from: null, to: visibility } },
+  })
 
   revalidatePath(`/org`)
   return { data: data as Program, error: null }
@@ -344,6 +393,37 @@ export async function submitAccessRequest(payload: {
     })
 
   if (dbError) return { data: null, error: dbError.message }
+
+  // Notify NGO_ADMINs of the access request
+  void (async () => {
+    const { getOrgAdmins: getAdmins, sendNotification: sendNotif } = await import('@/lib/notifications/sender')
+    const admins = await getAdmins(payload.organization_id)
+
+    const { data: progData } = await supabase
+      .from('programs')
+      .select('name')
+      .eq('id', payload.program_id)
+      .single()
+    const progName = (progData as Record<string, unknown> | null)?.name as string ?? 'a program'
+
+    const { data: donorProfile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single()
+    const donorName = (donorProfile as Record<string, unknown> | null)?.full_name as string ?? 'A donor'
+
+    await Promise.all(admins.map(a => sendNotif({
+      organizationId: payload.organization_id,
+      recipientId:    a.id,
+      type:           'DONOR_ACCESS_REQUESTED',
+      title:          `${donorName} requested ${payload.requested_access_level.replace(/_/g, ' ')} access to ${progName}`,
+      body:           payload.message ?? `Access level: ${payload.requested_access_level}`,
+      link:           `/org/donors`,
+      priority:       'HIGH',
+    })))
+  })()
+
   return { data: undefined, error: null }
 }
 

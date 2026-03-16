@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { logAction } from '@/lib/audit/logger'
 
 interface Params { params: { profileId: string } }
 
@@ -91,7 +92,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   // Check the target is in the same org
   const { data: target } = await supabase
     .from('profiles')
-    .select('id, role, organization_id')
+    .select('id, full_name, role, organization_id')
     .eq('id', params.profileId)
     .eq('organization_id', orgId)
     .single()
@@ -105,6 +106,18 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     .eq('id', params.profileId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  void logAction({
+    organizationId: orgId,
+    actorId:        user.id,
+    actorName:      (myProfile as Record<string, unknown>).full_name as string ?? 'Unknown',
+    actorRole:      myProfile.role,
+    action:         'team.member_removed',
+    entityType:     'profile',
+    entityId:       params.profileId,
+    entityName:     (target as Record<string, unknown>).full_name as string ?? params.profileId,
+    metadata:       { removed_role: (target as Record<string, unknown>).role as string },
+  })
 
   // Also remove all program assignments in this org
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

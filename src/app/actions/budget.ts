@@ -3,6 +3,8 @@
 // ── OMANYE Budget & Financial Tracking — Server Actions ───────────────────────
 
 import { createClient } from '@/lib/supabase/server'
+import { logActionForUser } from '@/lib/audit/logger'
+import { sendNotification, getOrgAdmins } from '@/lib/notifications/sender'
 import type {
   BudgetCategory,
   Expenditure,
@@ -132,6 +134,34 @@ export async function submitExpenditure(
     .single()
 
   if (error) return { data: null, error: error.message }
+
+  void logActionForUser(submittedBy, {
+    organizationId: organizationId,
+    action:         'expenditure.submitted',
+    entityType:     'expenditure',
+    entityId:       (data as Record<string, unknown>).id as string,
+    entityName:     payload.description,
+    metadata:       { program_id: programId, amount: payload.amount },
+  })
+
+  // Notify NGO_ADMINs
+  void (async () => {
+    const admins = await getOrgAdmins(organizationId)
+    const { data: progData } = await createClient().from('programs').select('name, slug:organization_id').eq('id', programId).single()
+    const progName = (progData as Record<string, unknown> | null)?.name as string ?? 'a program'
+    const { data: subProfile } = await createClient().from('profiles').select('full_name').eq('id', submittedBy).single()
+    const subName = (subProfile as Record<string, unknown> | null)?.full_name as string ?? 'Someone'
+    await Promise.all(admins.map(a => sendNotification({
+      organizationId,
+      recipientId:    a.id,
+      type:           'EXPENDITURE_SUBMITTED',
+      title:          `${subName} submitted an expenditure for ${progName}`,
+      body:           `${payload.description} — ${payload.currency ?? 'USD'} ${payload.amount}`,
+      link:           `/org/programs/${programId}/budget`,
+      priority:       'MEDIUM',
+    })))
+  })()
+
   return { data: data as Expenditure, error: null }
 }
 
@@ -224,6 +254,57 @@ export async function approveExpenditure(
     .single()
 
   if (error) return { data: null, error: error.message }
+
+  const d = data as Record<string, unknown>
+  void logActionForUser(approvedBy, {
+    organizationId: d.organization_id as string,
+    action:         'expenditure.approved',
+    entityType:     'expenditure',
+    entityId:       expenditureId,
+    entityName:     d.description as string,
+    metadata:       { program_id: d.program_id as string, amount: d.amount },
+  })
+
+  // Notify the original submitter
+  void (async () => {
+    const submittedBy = d.submitted_by as string
+    const orgId = d.organization_id as string
+    if (submittedBy) {
+      await sendNotification({
+        organizationId: orgId,
+        recipientId:    submittedBy,
+        type:           'EXPENDITURE_APPROVED',
+        title:          `Your expenditure of ${d.currency as string} ${d.amount} was approved`,
+        body:           d.description as string,
+        link:           `/org/programs/${d.program_id as string}/budget`,
+        priority:       'MEDIUM',
+      })
+    }
+    // Check budget warning: fetch category burn rate
+    if (d.budget_category_id) {
+      const { data: catSpend } = await supabase
+        .from('v_category_spend')
+        .select('category_name, burn_rate_pct')
+        .eq('category_id', d.budget_category_id as string)
+        .maybeSingle()
+      if (catSpend) {
+        const cs = catSpend as Record<string, unknown>
+        if ((cs.burn_rate_pct as number) > 80) {
+          const admins = await getOrgAdmins(orgId)
+          await Promise.all(admins.map(a => sendNotification({
+            organizationId: orgId,
+            recipientId:    a.id,
+            type:           'BUDGET_WARNING',
+            title:          `${cs.category_name as string} budget is ${Math.round(cs.burn_rate_pct as number)}% spent`,
+            body:           `Budget category is approaching its limit.`,
+            link:           `/org/programs/${d.program_id as string}/budget`,
+            priority:       'HIGH',
+          })))
+        }
+      }
+    }
+  })()
+
   return { data: data as Expenditure, error: null }
 }
 
@@ -249,6 +330,33 @@ export async function rejectExpenditure(
     .single()
 
   if (error) return { data: null, error: error.message }
+
+  const d = data as Record<string, unknown>
+  void logActionForUser(approvedBy, {
+    organizationId: d.organization_id as string,
+    action:         'expenditure.rejected',
+    entityType:     'expenditure',
+    entityId:       expenditureId,
+    entityName:     d.description as string,
+    metadata:       { program_id: d.program_id as string, amount: d.amount },
+  })
+
+  // Notify the original submitter
+  void (async () => {
+    const submittedBy = d.submitted_by as string
+    if (submittedBy) {
+      await sendNotification({
+        organizationId: d.organization_id as string,
+        recipientId:    submittedBy,
+        type:           'EXPENDITURE_REJECTED',
+        title:          `Your expenditure of ${d.currency as string} ${d.amount} was rejected`,
+        body:           notes ?? d.description as string,
+        link:           `/org/programs/${d.program_id as string}/budget`,
+        priority:       'MEDIUM',
+      })
+    }
+  })()
+
   return { data: data as Expenditure, error: null }
 }
 
@@ -347,6 +455,15 @@ export async function createBudgetAmendment(
       ])
     }
   }
+
+  void logActionForUser(approvedBy, {
+    organizationId: organizationId,
+    action:         'budget.reallocated',
+    entityType:     'budget_amendment',
+    entityId:       (data as Record<string, unknown>).id as string,
+    entityName:     payload.reason,
+    metadata:       { program_id: programId, amount: payload.amount },
+  })
 
   return { data: data as BudgetAmendment, error: null }
 }

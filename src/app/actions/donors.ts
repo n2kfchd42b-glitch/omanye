@@ -3,6 +3,8 @@
 // ── OMANYE Donor Management — Server Actions ───────────────────────────────────
 
 import { createClient } from '@/lib/supabase/server'
+import { logActionForUser } from '@/lib/audit/logger'
+import { sendNotification as sendNGONotification, getOrgAdmins } from '@/lib/notifications/sender'
 import type {
   DonorInvitation,
   DonorRelationship,
@@ -92,6 +94,15 @@ export async function inviteDonor(
     .single()
 
   if (error) return { data: null, error: error.message }
+
+  void logActionForUser(user.id, {
+    organizationId,
+    action:     'donor.invited',
+    entityType: 'donor_invitation',
+    entityId:   (invitation as Record<string, unknown>).id as string,
+    entityName: payload.donor_name ?? payload.email,
+    metadata:   { program_id: payload.program_id, access_level: payload.access_level },
+  })
 
   // Trigger edge function for invitation email (fire-and-forget)
   supabase.functions.invoke('send-donor-invitation', {
@@ -445,6 +456,17 @@ export async function updateDonorAccess(
 
   if (error) return { data: null, error: error.message }
 
+  const { data: { user: currentUser } } = await supabase.auth.getUser()
+  if (currentUser) {
+    void logActionForUser(currentUser.id, {
+      organizationId,
+      action:     'donor.access_updated',
+      entityType: 'donor_program_access',
+      entityName: donorId,
+      metadata:   { donor_id: donorId, program_id: programId, ...payload },
+    })
+  }
+
   // Send notification if access level changed
   if (payload.access_level !== undefined) {
     await sendNotification(supabase, {
@@ -481,6 +503,17 @@ export async function revokeDonorAccess(
     .eq('organization_id', organizationId)
 
   if (error) return { data: null, error: error.message }
+
+  const { data: { user: currentUser } } = await supabase.auth.getUser()
+  if (currentUser) {
+    void logActionForUser(currentUser.id, {
+      organizationId,
+      action:     'donor.access_revoked',
+      entityType: 'donor_program_access',
+      entityName: donorId,
+      metadata:   { donor_id: donorId, program_id: programId },
+    })
+  }
 
   // Send notification
   await sendNotification(supabase, {
@@ -693,6 +726,15 @@ export async function approveAccessRequest(
 
   if (updateError) return { data: null, error: updateError.message }
 
+  void logActionForUser(user.id, {
+    organizationId,
+    action:     'donor.request_approved',
+    entityType: 'donor_access_request',
+    entityId:   requestId,
+    entityName: (req as Record<string, unknown>).donor_id as string,
+    metadata:   { program_id: (req as Record<string, unknown>).program_id as string, access_level: accessLevel },
+  })
+
   // Upsert donor_program_access
   await supabase
     .from('donor_program_access')
@@ -751,6 +793,15 @@ export async function denyAccessRequest(
     .eq('id', requestId)
 
   if (error) return { data: null, error: error.message }
+
+  void logActionForUser(user.id, {
+    organizationId,
+    action:     'donor.request_denied',
+    entityType: 'donor_access_request',
+    entityId:   requestId,
+    entityName: (req as Record<string, unknown>).donor_id as string,
+    metadata:   { program_id: (req as Record<string, unknown>).program_id as string },
+  })
 
   // Notify donor
   await sendNotification(supabase, {
