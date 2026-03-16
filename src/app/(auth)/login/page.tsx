@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { signIn } from '@/app/actions/auth'
 
 const schema = z.object({
   email:    z.string().email('Enter a valid email address'),
@@ -45,6 +45,7 @@ const errorStyle: React.CSSProperties = {
 }
 
 export default function LoginPage() {
+  const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
   const [googleLoading, setGoogleLoading] = useState(false)
 
@@ -56,8 +57,53 @@ export default function LoginPage() {
 
   const onSubmit = async (values: FormValues) => {
     setServerError(null)
-    const result = await signIn(values)
-    if (result?.error) setServerError(result.error)
+    const supabase = createClient()
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email:    values.email,
+      password: values.password,
+    })
+
+    if (error) {
+      setServerError(error.message)
+      return
+    }
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setServerError('Authentication failed.'); return }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, onboarding_complete, organization_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile) { setServerError('Profile not found.'); return }
+
+    if (!profile.onboarding_complete) {
+      router.push('/onboarding')
+      return
+    }
+
+    if (profile.role === 'DONOR') {
+      router.push('/donor/dashboard')
+      return
+    }
+
+    if (profile.organization_id) {
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('slug')
+        .eq('id', profile.organization_id)
+        .single()
+
+      if (org?.slug) {
+        router.push(`/org/${org.slug}/dashboard`)
+        return
+      }
+    }
+
+    router.push('/onboarding')
   }
 
   const handleGoogleSignIn = async () => {

@@ -1,12 +1,26 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Link from 'next/link'
-import { signUpNGO } from '@/app/actions/auth'
-import type { Metadata } from 'next'
+import { createClient } from '@/lib/supabase/client'
+
+function toSlug(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '') +
+    '-' +
+    Math.random().toString(36).substring(2, 6)
+  )
+}
 
 const schema = z.object({
   orgName:            z.string().min(2, 'Organisation name must be at least 2 characters'),
@@ -52,6 +66,7 @@ const errorStyle: React.CSSProperties = {
 const fieldStyle: React.CSSProperties = { marginBottom: 14 }
 
 export default function NGOSignupPage() {
+  const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
   const [step, setStep] = useState<1 | 2>(1)
 
@@ -69,8 +84,55 @@ export default function NGOSignupPage() {
 
   const onSubmit = async (values: FormValues) => {
     setServerError(null)
-    const result = await signUpNGO(values)
-    if (result?.error) setServerError(result.error)
+    const supabase = createClient()
+
+    // 1. Create auth user
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email:    values.email,
+      password: values.password,
+      options:  { data: { full_name: values.fullName } },
+    })
+
+    if (authError || !authData.user) {
+      setServerError(authError?.message ?? 'Failed to create account.')
+      return
+    }
+
+    const userId = authData.user.id
+
+    // 2. Create organization
+    const { data: org, error: orgError } = await supabase
+      .from('organizations')
+      .insert({
+        name:                values.orgName,
+        slug:                toSlug(values.orgName),
+        country:             values.country || null,
+        registration_number: values.registrationNumber || null,
+      })
+      .select()
+      .single()
+
+    if (orgError || !org) {
+      setServerError('Failed to create organization.')
+      return
+    }
+
+    // 3. Create profile
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id:              userId,
+        full_name:       values.fullName,
+        role:            'NGO_ADMIN',
+        organization_id: org.id,
+      })
+
+    if (profileError) {
+      setServerError('Failed to create profile.')
+      return
+    }
+
+    router.push('/onboarding')
   }
 
   return (

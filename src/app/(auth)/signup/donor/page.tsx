@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Link from 'next/link'
-import { signUpDonor } from '@/app/actions/auth'
+import { createClient } from '@/lib/supabase/client'
 
 const schema = z.object({
   fullName:         z.string().min(2, 'Full name is required'),
@@ -49,6 +50,7 @@ const errorStyle: React.CSSProperties = {
 const fieldStyle: React.CSSProperties = { marginBottom: 14 }
 
 export default function DonorSignupPage() {
+  const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
 
   const {
@@ -59,8 +61,51 @@ export default function DonorSignupPage() {
 
   const onSubmit = async (values: FormValues) => {
     setServerError(null)
-    const result = await signUpDonor(values)
-    if (result?.error) setServerError(result.error)
+    const supabase = createClient()
+
+    // 1. Create auth user
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email:    values.email,
+      password: values.password,
+      options:  { data: { full_name: values.fullName } },
+    })
+
+    if (authError || !authData.user) {
+      setServerError(authError?.message ?? 'Failed to create account.')
+      return
+    }
+
+    const userId = authData.user.id
+
+    // 2. Create profile
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id:        userId,
+        full_name: values.fullName,
+        role:      'DONOR',
+      })
+
+    if (profileError) {
+      setServerError('Failed to create profile.')
+      return
+    }
+
+    // 3. Create donor_profiles row
+    const { error: donorProfileError } = await supabase
+      .from('donor_profiles')
+      .insert({
+        id:                userId,
+        organization_name: values.donorOrgName || null,
+        contact_email:     values.email,
+      })
+
+    if (donorProfileError) {
+      setServerError('Failed to create donor profile.')
+      return
+    }
+
+    router.push('/onboarding')
   }
 
   return (
