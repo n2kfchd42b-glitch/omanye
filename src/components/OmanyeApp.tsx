@@ -89,6 +89,21 @@ export default function OmanyeApp({
       router.push(`/org/${orgSlug}/donors`)
       return
     }
+    // reports has a dedicated App Router page
+    if (v === 'reports' && orgSlug) {
+      router.push(`/org/${orgSlug}/reports`)
+      return
+    }
+    // team has a dedicated App Router page
+    if (v === 'team' && orgSlug) {
+      router.push(`/org/${orgSlug}/team`)
+      return
+    }
+    // settings has a dedicated App Router page
+    if (v === 'settings' && orgSlug) {
+      router.push(`/org/${orgSlug}/settings`)
+      return
+    }
     setView(v)
     if (pid !== undefined) setProgramId(pid)
   }, [orgSlug, router])
@@ -127,6 +142,7 @@ export default function OmanyeApp({
                 view={view}
                 sidebarW={sidebarW}
                 user={user}
+                orgSlug={orgSlug}
                 onSettings={() => navigate('settings')}
                 onSignOut={handleSignOut}
               />

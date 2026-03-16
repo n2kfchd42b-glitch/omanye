@@ -2,36 +2,57 @@
 
 import React from 'react'
 import {
-  LayoutDashboard, FolderOpen, Database, BarChart2,
-  FileBarChart, FileText, RadioTower, ShieldCheck,
-  Users, Map, Settings, ChevronLeft, ChevronRight,
+  LayoutDashboard, FolderOpen,
+  FileBarChart, RadioTower,
+  Users, Settings, ChevronLeft, ChevronRight,
   HandCoins,
 } from 'lucide-react'
 import { COLORS, SPACING } from '@/lib/tokens'
 import { OmanyeLogo, OmanyeSymbol } from '@/components/Logo'
 import { Avatar } from '@/components/atoms/Avatar'
-import type { ViewId, User } from '@/lib/types'
+import type { ViewId, User, UserRole } from '@/lib/types'
 
 // ── Nav config ────────────────────────────────────────────────────────────────
 
-interface NavItem { id: ViewId; label: string; icon: React.ElementType }
+interface NavItem {
+  id:           ViewId
+  label:        string
+  icon:         React.ElementType
+  allowedRoles: UserRole[]
+}
 
 const WORKSPACE_NAV: NavItem[] = [
-  { id: 'dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
-  { id: 'programs',    label: 'Programs',    icon: FolderOpen      },
-  { id: 'donors',      label: 'Donors',      icon: HandCoins       },
-  { id: 'data-hub',    label: 'Data Hub',    icon: Database        },
-  { id: 'analytics',   label: 'Analytics',   icon: BarChart2       },
-  { id: 'reports',     label: 'Reports',     icon: FileBarChart    },
-  { id: 'documents',   label: 'Documents',   icon: FileText        },
-  { id: 'fieldstatus', label: 'Field Status',icon: RadioTower      },
-  { id: 'audit',       label: 'Audit Trail', icon: ShieldCheck     },
-  { id: 'team',        label: 'Team',        icon: Users           },
-  { id: 'map',         label: 'Field Map',   icon: Map             },
+  {
+    id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard,
+    allowedRoles: ['Admin', 'Field Staff', 'M&E Officer', 'Supervisor', 'Viewer', 'Donor'],
+  },
+  {
+    id: 'programs', label: 'Programs', icon: FolderOpen,
+    allowedRoles: ['Admin', 'Field Staff', 'M&E Officer', 'Supervisor', 'Viewer'],
+  },
+  {
+    id: 'fieldstatus', label: 'Field Data', icon: RadioTower,
+    allowedRoles: ['Admin', 'Field Staff', 'M&E Officer', 'Supervisor'],
+  },
+  {
+    id: 'donors', label: 'Donors', icon: HandCoins,
+    allowedRoles: ['Admin'],
+  },
+  {
+    id: 'reports', label: 'Reports', icon: FileBarChart,
+    allowedRoles: ['Admin', 'Field Staff', 'M&E Officer', 'Supervisor', 'Viewer'],
+  },
+  {
+    id: 'team', label: 'Team', icon: Users,
+    allowedRoles: ['Admin', 'Field Staff', 'M&E Officer', 'Supervisor'],
+  },
 ]
 
 const SYSTEM_NAV: NavItem[] = [
-  { id: 'settings', label: 'Settings', icon: Settings },
+  {
+    id: 'settings', label: 'Settings', icon: Settings,
+    allowedRoles: ['Admin'],
+  },
 ]
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -46,6 +67,9 @@ interface SidebarProps {
 
 export function Sidebar({ view, onNav, collapsed, onToggle, user }: SidebarProps) {
   const w = collapsed ? SPACING.sidebarWCollapsed : SPACING.sidebarW
+
+  const visibleWorkspace = WORKSPACE_NAV.filter(item => item.allowedRoles.includes(user.role))
+  const visibleSystem    = SYSTEM_NAV.filter(item => item.allowedRoles.includes(user.role))
 
   return (
     <aside
@@ -92,7 +116,7 @@ export function Sidebar({ view, onNav, collapsed, onToggle, user }: SidebarProps
             Workspace
           </p>
         )}
-        {WORKSPACE_NAV.map(item => (
+        {visibleWorkspace.map(item => (
           <NavLink
             key={item.id}
             item={item}
@@ -102,20 +126,23 @@ export function Sidebar({ view, onNav, collapsed, onToggle, user }: SidebarProps
           />
         ))}
 
-        <div style={{ margin: '12px 0', borderTop: `1px solid rgba(255,255,255,0.06)` }} />
-
-        {!collapsed && (
-          <p style={{
-            fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
-            letterSpacing: '0.1em', color: 'rgba(125,212,160,0.40)',
-            padding: '0 16px 8px',
-          }}>
-            System
-          </p>
+        {visibleSystem.length > 0 && (
+          <>
+            <div style={{ margin: '12px 0', borderTop: `1px solid rgba(255,255,255,0.06)` }} />
+            {!collapsed && (
+              <p style={{
+                fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
+                letterSpacing: '0.1em', color: 'rgba(125,212,160,0.40)',
+                padding: '0 16px 8px',
+              }}>
+                System
+              </p>
+            )}
+            {visibleSystem.map(item => (
+              <NavLink key={item.id} item={item} active={view === item.id} collapsed={collapsed} onNav={onNav} />
+            ))}
+          </>
         )}
-        {SYSTEM_NAV.map(item => (
-          <NavLink key={item.id} item={item} active={view === item.id} collapsed={collapsed} onNav={onNav} />
-        ))}
       </nav>
 
       {/* Bottom */}
@@ -159,6 +186,11 @@ export function Sidebar({ view, onNav, collapsed, onToggle, user }: SidebarProps
             cursor: 'pointer',
             borderTop: `1px solid rgba(255,255,255,0.04)`,
             transition: 'color 0.15s',
+            background: 'transparent',
+            border: 'none',
+            borderTopStyle: 'solid',
+            borderTopWidth: 1,
+            borderTopColor: 'rgba(255,255,255,0.04)',
           }}
           onMouseEnter={e => (e.currentTarget.style.color = COLORS.mint)}
           onMouseLeave={e => (e.currentTarget.style.color = 'rgba(125,212,160,0.50)')}
@@ -199,6 +231,10 @@ function NavLink({
         transition: 'background 0.15s, color 0.15s',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
+        border: 'none',
+        borderLeftStyle: 'solid',
+        borderLeftWidth: active ? 2 : 2,
+        borderLeftColor: active ? COLORS.sage : 'transparent',
       }}
       onMouseEnter={e => {
         if (!active) {

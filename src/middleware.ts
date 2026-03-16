@@ -14,6 +14,8 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/login') ||
       pathname.startsWith('/signup') ||
       pathname.startsWith('/auth/') ||
+      pathname.startsWith('/team/join/') ||
+      pathname.startsWith('/invite/') ||
       pathname === '/'
     if (isAuthRoute) return NextResponse.next()
     const loginUrl = request.nextUrl.clone()
@@ -50,6 +52,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/login') ||
     pathname.startsWith('/signup') ||
     pathname.startsWith('/auth/callback') ||
+    pathname.startsWith('/team/join/') ||
+    pathname.startsWith('/invite/') ||
     pathname === '/'
 
   // ── Not authenticated ───────────────────────────────────────────────────────

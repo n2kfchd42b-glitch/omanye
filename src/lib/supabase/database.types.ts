@@ -2,6 +2,8 @@
 // Keep in sync with supabase/migrations/
 
 export type OmanyeRole         = 'NGO_ADMIN' | 'NGO_STAFF' | 'NGO_VIEWER' | 'DONOR'
+export type ReportType         = 'PROGRESS' | 'QUARTERLY' | 'ANNUAL' | 'FIELD' | 'DONOR_BRIEF' | 'FINAL'
+export type ReportStatus       = 'DRAFT' | 'GENERATED' | 'SUBMITTED' | 'ARCHIVED'
 export type SubscriptionTier   = 'FREE' | 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE'
 export type ProgramStatusDB    = 'PLANNING' | 'ACTIVE' | 'COMPLETED' | 'SUSPENDED'
 export type AccessLevel        = 'SUMMARY_ONLY' | 'INDICATORS' | 'INDICATORS_AND_BUDGET' | 'FULL'
@@ -245,6 +247,10 @@ type DPARow = {
   active:               boolean
   granted_at:           string
   expires_at:           string | null
+  nickname:             string | null
+  internal_notes:       string | null
+  last_viewed_at:       string | null
+  view_count:           number
 }
 type DPAInsert = {
   id?:                   string
@@ -257,6 +263,10 @@ type DPAInsert = {
   active?:               boolean
   granted_at?:           string
   expires_at?:           string | null
+  nickname?:             string | null
+  internal_notes?:       string | null
+  last_viewed_at?:       string | null
+  view_count?:           number
 }
 type DPAUpdate = Partial<DPAInsert>
 
@@ -495,6 +505,100 @@ type DonorNotificationInsert = {
 }
 type DonorNotificationUpdate = Partial<DonorNotificationInsert>
 
+// ── Team management types ─────────────────────────────────────────────────────
+
+type TeamInvitationStatus = 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'REVOKED'
+
+type TeamInvitationRow = {
+  id:              string
+  organization_id: string
+  invited_by:      string
+  email:           string
+  full_name:       string | null
+  role:            OmanyeRole
+  token:           string
+  message:         string | null
+  status:          TeamInvitationStatus
+  expires_at:      string
+  accepted_at:     string | null
+  created_at:      string
+}
+type TeamInvitationInsert = {
+  id?:              string
+  organization_id:  string
+  invited_by:       string
+  email:            string
+  full_name?:       string | null
+  role?:            OmanyeRole
+  token?:           string
+  message?:         string | null
+  status?:          TeamInvitationStatus
+  expires_at?:      string
+  accepted_at?:     string | null
+  created_at?:      string
+}
+type TeamInvitationUpdate = Partial<TeamInvitationInsert>
+
+type ProgramAssignmentRow = {
+  id:              string
+  program_id:      string
+  profile_id:      string
+  organization_id: string
+  assigned_by:     string
+  assigned_at:     string
+}
+type ProgramAssignmentInsert = {
+  id?:              string
+  program_id:       string
+  profile_id:       string
+  organization_id:  string
+  assigned_by:      string
+  assigned_at?:     string
+}
+type ProgramAssignmentUpdate = Partial<ProgramAssignmentInsert>
+
+// ── Report types ──────────────────────────────────────────────────────────────
+
+type ReportRow = {
+  id:                     string
+  organization_id:        string
+  program_id:             string
+  title:                  string
+  report_type:            ReportType
+  status:                 ReportStatus
+  reporting_period_start: string | null
+  reporting_period_end:   string | null
+  sections:               string[]
+  content:                Record<string, unknown> | null
+  visible_to_donors:      boolean
+  challenges:             string | null
+  generated_at:           string | null
+  submitted_at:           string | null
+  created_by:             string | null
+  created_at:             string
+  updated_at:             string
+}
+type ReportInsert = {
+  id?:                     string
+  organization_id:         string
+  program_id:              string
+  title:                   string
+  report_type:             ReportType
+  status?:                 ReportStatus
+  reporting_period_start?: string | null
+  reporting_period_end?:   string | null
+  sections?:               string[]
+  content?:                Record<string, unknown> | null
+  visible_to_donors?:      boolean
+  challenges?:             string | null
+  generated_at?:           string | null
+  submitted_at?:           string | null
+  created_by?:             string | null
+  created_at?:             string
+  updated_at?:             string
+}
+type ReportUpdate = Partial<ReportInsert>
+
 // ── Database interface ────────────────────────────────────────────────────────
 
 export interface Database {
@@ -590,6 +694,24 @@ export interface Database {
         Update:        DonorNotificationUpdate
         Relationships: []
       }
+      reports: {
+        Row:           ReportRow
+        Insert:        ReportInsert
+        Update:        ReportUpdate
+        Relationships: []
+      }
+      team_invitations: {
+        Row:           TeamInvitationRow
+        Insert:        TeamInvitationInsert
+        Update:        TeamInvitationUpdate
+        Relationships: []
+      }
+      program_assignments: {
+        Row:           ProgramAssignmentRow
+        Insert:        ProgramAssignmentInsert
+        Update:        ProgramAssignmentUpdate
+        Relationships: []
+      }
     }
 
     Views: {
@@ -602,6 +724,7 @@ export interface Database {
           total_remaining: number
           burn_rate_pct:   number | null
         }
+        Relationships: []
       }
       v_category_spend: {
         Row: {
@@ -618,17 +741,22 @@ export interface Database {
           remaining:       number
           burn_rate_pct:   number | null
         }
+        Relationships: []
       }
     }
 
     Functions: {
-      current_user_role:           { Args: Record<never, never>; Returns: OmanyeRole | null }
-      current_user_org:            { Args: Record<never, never>; Returns: string | null }
-      is_ngo_member:               { Args: { org_id: string };   Returns: boolean }
-      is_ngo_admin:                { Args: { org_id: string };   Returns: boolean }
-      is_ngo_editor:               { Args: { org_id: string };   Returns: boolean }
-      donor_can_access_program:    { Args: { prog_id: string };  Returns: boolean }
-      donor_access_level_for:      { Args: { prog_id: string };  Returns: AccessLevel | null }
+      current_user_role:              { Args: Record<never, never>; Returns: OmanyeRole | null }
+      current_user_org:               { Args: Record<never, never>; Returns: string | null }
+      is_ngo_member:                  { Args: { org_id: string };   Returns: boolean }
+      is_ngo_admin:                   { Args: { org_id: string };   Returns: boolean }
+      is_ngo_editor:                  { Args: { org_id: string };   Returns: boolean }
+      donor_can_access_program:       { Args: { prog_id: string };  Returns: boolean }
+      donor_access_level_for:         { Args: { prog_id: string };  Returns: AccessLevel | null }
+      expire_pending_invitations:     { Args: Record<never, never>; Returns: undefined }
+      accept_invitation:              { Args: { p_token: string; p_donor_id: string }; Returns: { program_id: string; organization_id: string } }
+      decrement_category_budget:      { Args: { cat_id: string; amt: number }; Returns: undefined }
+      increment_category_budget:      { Args: { cat_id: string; amt: number }; Returns: undefined }
     }
 
     Enums: {
@@ -642,6 +770,7 @@ export interface Database {
       update_type:               UpdateType
       invitation_status:         InvitationStatus
       donor_notification_type:   DonorNotificationType
+      team_invitation_status:    TeamInvitationStatus
     }
 
     CompositeTypes: {

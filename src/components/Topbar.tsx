@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { Search, Bell, ChevronDown, User, Shield, LogOut } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Search, Bell, ChevronDown, User, Settings, LogOut, Building2 } from 'lucide-react'
 import { COLORS, SPACING, FONTS } from '@/lib/tokens'
 import { Avatar } from '@/components/atoms/Avatar'
 import type { ViewId, User as UserType } from '@/lib/types'
@@ -21,6 +22,18 @@ const VIEW_TITLE: Record<ViewId, string> = {
   team:             'Team',
   map:              'Field Map',
   settings:         'Settings',
+  donors:           'Donors',
+}
+
+// ── Role badge ────────────────────────────────────────────────────────────────
+
+const ROLE_BADGE: Record<string, { bg: string; text: string }> = {
+  Admin:        { bg: COLORS.forest,  text: '#ffffff'  },
+  'Field Staff': { bg: '#FEF3C7',     text: '#78350F'  },
+  'M&E Officer': { bg: '#DBEAFE',     text: '#1E40AF'  },
+  Supervisor:   { bg: '#FEF3C7',      text: '#92400E'  },
+  Viewer:       { bg: '#F1F5F9',      text: '#475569'  },
+  Donor:        { bg: '#E0F2FE',      text: '#0369A1'  },
 }
 
 // ── Topbar ────────────────────────────────────────────────────────────────────
@@ -29,13 +42,15 @@ interface TopbarProps {
   view:       ViewId
   sidebarW:   number
   user:       UserType
+  orgSlug?:   string
   onSettings: () => void
   onSignOut:  () => void
 }
 
-export function Topbar({ view, sidebarW, user, onSettings, onSignOut }: TopbarProps) {
-  const [query,       setQuery]       = useState('')
-  const [dropOpen,    setDropOpen]    = useState(false)
+export function Topbar({ view, sidebarW, user, orgSlug, onSettings, onSignOut }: TopbarProps) {
+  const router = useRouter()
+  const [query,    setQuery]    = useState('')
+  const [dropOpen, setDropOpen] = useState(false)
   const dropRef = useRef<HTMLDivElement>(null)
 
   // Close dropdown on outside click
@@ -48,6 +63,9 @@ export function Topbar({ view, sidebarW, user, onSettings, onSignOut }: TopbarPr
     document.addEventListener('mousedown', onClickOutside)
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [])
+
+  const roleStyle = ROLE_BADGE[user.role] ?? ROLE_BADGE.Viewer
+  const isAdmin   = user.role === 'Admin'
 
   return (
     <header
@@ -125,13 +143,14 @@ export function Topbar({ view, sidebarW, user, onSettings, onSignOut }: TopbarPr
             color: COLORS.stone,
             cursor: 'pointer',
             transition: 'background 0.15s',
+            background: 'transparent',
+            border: 'none',
           }}
           onMouseEnter={e => (e.currentTarget.style.background = COLORS.foam)}
           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           aria-label="Notifications"
         >
           <Bell size={15} />
-          {/* red dot */}
           <span style={{
             position: 'absolute', top: 8, right: 8,
             width: 6, height: 6, borderRadius: '50%',
@@ -150,6 +169,8 @@ export function Topbar({ view, sidebarW, user, onSettings, onSignOut }: TopbarPr
               borderRadius: 8,
               cursor: 'pointer',
               transition: 'background 0.15s',
+              background: 'transparent',
+              border: 'none',
             }}
             onMouseEnter={e => (e.currentTarget.style.background = COLORS.foam)}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
@@ -167,21 +188,61 @@ export function Topbar({ view, sidebarW, user, onSettings, onSignOut }: TopbarPr
               borderRadius: 10,
               border: `1px solid ${COLORS.mist}`,
               boxShadow: '0 8px 32px rgba(13,43,30,0.12)',
-              minWidth: 180,
+              minWidth: 220,
               zIndex: 50,
               overflow: 'hidden',
             }}>
               {/* User info */}
               <div style={{ padding: '12px 14px', borderBottom: `1px solid ${COLORS.mist}` }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.forest }}>{user.name}</p>
-                <p style={{ fontSize: 11, color: COLORS.stone, marginTop: 2 }}>{user.email}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.forest, margin: 0 }}>{user.name}</p>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20,
+                    background: roleStyle.bg, color: roleStyle.text,
+                  }}>
+                    {user.role}
+                  </span>
+                </div>
+                <p style={{ fontSize: 11, color: COLORS.stone, margin: 0 }}>{user.email}</p>
+                {user.org && (
+                  <p style={{ fontSize: 11, color: COLORS.stone, marginTop: 2 }}>{user.org}</p>
+                )}
               </div>
 
               {/* Actions */}
-              <DropItem icon={User} label="Account Settings" onClick={() => { setDropOpen(false); onSettings() }} />
-              <DropItem icon={Shield} label="Permissions" onClick={() => { setDropOpen(false); onSettings() }} />
+              <DropItem
+                icon={User}
+                label="Profile Settings"
+                onClick={() => {
+                  setDropOpen(false)
+                  router.push('/settings/profile')
+                }}
+              />
+
+              {isAdmin && orgSlug && (
+                <DropItem
+                  icon={Building2}
+                  label="Org Settings"
+                  onClick={() => {
+                    setDropOpen(false)
+                    router.push(`/org/${orgSlug}/settings`)
+                  }}
+                />
+              )}
+
+              <DropItem
+                icon={Settings}
+                label="Account Settings"
+                onClick={() => { setDropOpen(false); onSettings() }}
+              />
+
               <div style={{ margin: '4px 0', borderTop: `1px solid ${COLORS.mist}` }} />
-              <DropItem icon={LogOut} label="Sign Out" onClick={() => { setDropOpen(false); onSignOut() }} danger />
+              <DropItem
+                icon={LogOut}
+                label="Sign Out"
+                onClick={() => { setDropOpen(false); onSignOut() }}
+                danger
+              />
             </div>
           )}
         </div>
@@ -205,6 +266,9 @@ function DropItem({ icon: Icon, label, onClick, danger }: {
         color: danger ? COLORS.crimson : COLORS.slate,
         cursor: 'pointer',
         transition: 'background 0.12s',
+        background: 'transparent',
+        border: 'none',
+        fontFamily: FONTS.body,
       }}
       onMouseEnter={e => (e.currentTarget.style.background = COLORS.foam)}
       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
