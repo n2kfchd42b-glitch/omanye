@@ -83,7 +83,7 @@ export default async function DonorProgramsPage() {
     const grant = grantMap[p.id]
     const view = filterProgram(
       p,
-      grant?.access_level ?? 'SUMMARY_ONLY',
+      (grant?.access_level ?? 'SUMMARY_ONLY') as import('@/lib/supabase/database.types').AccessLevel,
       indicatorsByProgram[p.id] ?? [],
     )
     return {
@@ -92,7 +92,7 @@ export default async function DonorProgramsPage() {
       organization_id: p.organization_id,
       can_download_reports: grant?.can_download_reports ?? false,
       expires_at: grant?.expires_at ?? null,
-      pending_request: pendingByProgram[p.id] ?? null,
+      pending_request: (pendingByProgram[p.id] ?? null) as { requested_access_level: import('@/lib/supabase/database.types').AccessLevel; created_at: string } | null,
     }
   })
 

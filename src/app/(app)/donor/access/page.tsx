@@ -35,15 +35,15 @@ export default async function DonorAccessPage() {
   const requests   = requestsResult.data ?? []
 
   // Fetch program + org details
-  const programIds = [...new Set([
-    ...grants.map((g: Record<string, unknown>) => g.program_id as string),
-    ...requests.map((r: Record<string, unknown>) => r.program_id as string),
-  ])]
+  const programIds = Array.from(new Set([
+    ...grants.map(g => g.program_id),
+    ...requests.map(r => r.program_id),
+  ]))
 
-  const orgIds = [...new Set([
-    ...grants.map((g: Record<string, unknown>) => g.organization_id as string),
-    ...requests.map((r: Record<string, unknown>) => r.organization_id as string),
-  ])]
+  const orgIds = Array.from(new Set([
+    ...grants.map(g => g.organization_id),
+    ...requests.map(r => r.organization_id),
+  ]))
 
   const [programsRes, orgsRes] = await Promise.all([
     programIds.length > 0
@@ -54,25 +54,26 @@ export default async function DonorAccessPage() {
       : { data: [] },
   ])
 
-  const programMap = Object.fromEntries((programsRes.data ?? []).map((p: Record<string, unknown>) => [p.id, p]))
-  const orgMap     = Object.fromEntries((orgsRes.data    ?? []).map((o: Record<string, unknown>) => [o.id, o]))
+  const programMap = Object.fromEntries((programsRes.data ?? []).map(p => [p.id, p]))
+  const orgMap     = Object.fromEntries((orgsRes.data    ?? []).map(o => [o.id, o]))
 
-  const enrichedGrants = (grants as Record<string, unknown>[]).map(g => ({
+  const enrichedGrants = grants.map(g => ({
     ...g,
-    program_name: (programMap[g.program_id as string] as Record<string, unknown> | undefined)?.name ?? null,
-    org_name:     (orgMap[g.organization_id as string] as Record<string, unknown> | undefined)?.name ?? null,
-    org_slug:     (orgMap[g.organization_id as string] as Record<string, unknown> | undefined)?.slug ?? null,
+    program_name: programMap[g.program_id]?.name ?? null,
+    org_name:     orgMap[g.organization_id]?.name ?? null,
+    org_slug:     orgMap[g.organization_id]?.slug ?? null,
   }))
 
-  const enrichedRequests = (requests as Record<string, unknown>[]).map(r => ({
+  const enrichedRequests = (requests as unknown as (DonorAccessRequest & { program_id: string; organization_id: string })[]).map(r => ({
     ...r,
-    program_name: (programMap[r.program_id as string] as Record<string, unknown> | undefined)?.name ?? null,
-    org_name:     (orgMap[r.organization_id as string] as Record<string, unknown> | undefined)?.name ?? null,
+    program_name: programMap[r.program_id]?.name ?? null,
+    org_name:     orgMap[r.organization_id]?.name ?? null,
   })) as (DonorAccessRequest & { program_name: string | null; org_name: string | null })[]
 
   return (
     <DonorAccessClient
-      grants={enrichedGrants as (Record<string, unknown> & { program_name: string | null; org_name: string | null; org_slug: string | null })[]}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      grants={enrichedGrants as any}
       requests={enrichedRequests}
     />
   )

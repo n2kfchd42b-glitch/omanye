@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Plus, Star, Eye, EyeOff, TrendingUp, Calendar,
   MapPin, Link2, Tag, Edit2, Trash2, Loader2, Save, Globe,
-  Lock, BarChart3, FileText, Users, Settings, ChevronDown, Wallet,
+  Lock, BarChart3, FileText, Users, Settings, ChevronDown, Wallet, FileBarChart,
+  Database, Activity,
 } from 'lucide-react'
 import { COLORS, FONTS } from '@/lib/tokens'
 import { StatusBadge, GenericBadge } from '@/components/atoms/Badge'
@@ -61,14 +62,17 @@ interface Props {
   initialAmendments:    BudgetAmendment[]
 }
 
-type TabId = 'overview' | 'indicators' | 'updates' | 'budget' | 'settings'
+type TabId = 'overview' | 'indicators' | 'updates' | 'budget' | 'reports' | 'field' | 'mae' | 'settings'
 
-const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
-  { id: 'overview',   label: 'Overview',   icon: <BarChart3 size={14} /> },
-  { id: 'indicators', label: 'Indicators', icon: <TrendingUp size={14} /> },
-  { id: 'updates',    label: 'Updates',    icon: <FileText size={14} /> },
-  { id: 'budget',     label: 'Budget',     icon: <Wallet size={14} /> },
-  { id: 'settings',   label: 'Settings',   icon: <Settings size={14} /> },
+const TABS: { id: TabId; label: string; icon: React.ReactNode; external?: boolean }[] = [
+  { id: 'overview',   label: 'Overview',    icon: <BarChart3 size={14} /> },
+  { id: 'indicators', label: 'Indicators',  icon: <TrendingUp size={14} /> },
+  { id: 'updates',    label: 'Updates',     icon: <FileText size={14} /> },
+  { id: 'budget',     label: 'Budget',      icon: <Wallet size={14} /> },
+  { id: 'reports',    label: 'Reports',     icon: <FileBarChart size={14} /> },
+  { id: 'field',      label: 'Field Data',  icon: <Database size={14} />, external: true },
+  { id: 'mae',        label: 'M&E',         icon: <Activity size={14} />, external: true },
+  { id: 'settings',   label: 'Settings',    icon: <Settings size={14} /> },
 ]
 
 const CATEGORY_OPTIONS = [
@@ -212,12 +216,18 @@ export default function ProgramDetailClient({
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 2, marginBottom: 24, borderBottom: `1px solid ${COLORS.mist}` }}>
+      <div style={{ display: 'flex', gap: 2, marginBottom: 24, borderBottom: `1px solid ${COLORS.mist}`, overflowX: 'auto' }}>
         {TABS.map(t => (
           t.id === 'settings' && !isAdmin ? null : (
             <button
               key={t.id}
-              onClick={() => setTab(t.id)}
+              onClick={() => {
+                if (t.external) {
+                  router.push(`/org/${orgSlug}/programs/${program.id}/${t.id}`)
+                } else {
+                  setTab(t.id)
+                }
+              }}
               style={{
                 display:    'flex',
                 alignItems: 'center',
@@ -232,6 +242,7 @@ export default function ProgramDetailClient({
                 cursor:     'pointer',
                 marginBottom: -1,
                 transition: 'all 0.15s',
+                whiteSpace: 'nowrap',
               }}
             >
               {t.icon} {t.label}
@@ -277,6 +288,13 @@ export default function ProgramDetailClient({
           initialSummary={initialSummary}
           initialTranches={initialTranches}
           initialAmendments={initialAmendments}
+        />
+      )}
+      {tab === 'reports' && (
+        <ReportsTab
+          programId={program.id}
+          orgSlug={orgSlug}
+          canCreate={canEdit}
         />
       )}
       {tab === 'settings' && isAdmin && (
@@ -404,7 +422,7 @@ function IndicatorsTab({ programId, indicators, setIndicators, canEdit, isAdmin 
     grouped[cat].push(ind)
   }
   const categoryOrder = ['Output', 'Outcome', 'Impact', 'Input', 'Process', 'Other']
-  const sortedCategories = [...new Set([...categoryOrder.filter(c => grouped[c]), ...Object.keys(grouped).filter(c => !categoryOrder.includes(c))])]
+  const sortedCategories = Array.from(new Set([...categoryOrder.filter(c => grouped[c]), ...Object.keys(grouped).filter(c => !categoryOrder.includes(c))]))
 
   return (
     <div>
@@ -983,6 +1001,99 @@ function CreateUpdateForm({
   )
 }
 
+// ── Reports Tab ───────────────────────────────────────────────────────────────
+
+function ReportsTab({
+  programId, orgSlug, canCreate,
+}: { programId: string; orgSlug: string; canCreate: boolean }) {
+  const router = useRouter()
+  const [reports, setReports]   = React.useState<Array<Record<string, unknown>>>([])
+  const [loading, setLoading]   = React.useState(true)
+
+  React.useEffect(() => {
+    fetch(`/api/reports?program_id=${programId}`)
+      .then(r => r.json())
+      .then(json => { setReports(json.data ?? []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [programId])
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}>
+        <Loader2 size={20} style={{ color: COLORS.stone, animation: 'spin 1s linear infinite' }} />
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <p style={{ fontSize: 13, color: COLORS.stone }}>
+          {reports.length} report{reports.length !== 1 ? 's' : ''} for this program
+        </p>
+        {canCreate && (
+          <button
+            onClick={() => router.push(`/org/${orgSlug}/reports`)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+              background: COLORS.gold, color: COLORS.forest, cursor: 'pointer', border: 'none',
+            }}
+          >
+            <Plus size={13} /> New Report
+          </button>
+        )}
+      </div>
+
+      {reports.length === 0 ? (
+        <div className="card" style={{ padding: 0 }}>
+          <EmptyState
+            icon={<FileBarChart size={20} />}
+            title="No reports yet"
+            description="Generate your first report for this program to share with donors."
+          />
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {reports.map((r) => {
+            const typeColors = r.report_type
+              ? ({ PROGRESS: { bg: '#E6F5EC', text: '#1A5C3A' }, QUARTERLY: { bg: '#DBEAFE', text: '#1E40AF' }, ANNUAL: { bg: '#FEF3C7', text: '#92400E' }, FIELD: { bg: '#F0FDF4', text: '#166534' }, DONOR_BRIEF: { bg: '#FDF4FF', text: '#7E22CE' }, FINAL: { bg: '#FEE2E2', text: '#991B1B' } } as Record<string, { bg: string; text: string }>)[r.report_type as string] ?? { bg: COLORS.foam, text: COLORS.forest }
+              : { bg: COLORS.foam, text: COLORS.forest }
+            const statusLabel: Record<string, string> = { DRAFT: 'Draft', GENERATED: 'Generated', SUBMITTED: 'Submitted', ARCHIVED: 'Archived' }
+            return (
+              <div
+                key={r.id as string}
+                className="card"
+                style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}
+                onClick={() => router.push(`/org/${orgSlug}/reports/${r.id as string}`)}
+              >
+                <FileBarChart size={16} style={{ color: typeColors.text, flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.forest, marginBottom: 2 }}>{r.title as string}</p>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ padding: '1px 8px', borderRadius: 8, background: typeColors.bg, color: typeColors.text, fontSize: 11, fontWeight: 600 }}>
+                      {({ PROGRESS: 'Progress', QUARTERLY: 'Quarterly', ANNUAL: 'Annual', FIELD: 'Field', DONOR_BRIEF: 'Donor Brief', FINAL: 'Final' } as Record<string, string>)[r.report_type as string] ?? String(r.report_type)}
+                    </span>
+                    <span style={{ fontSize: 11, color: COLORS.stone }}>
+                      {statusLabel[r.status as string] ?? String(r.status)}
+                    </span>
+                    {(r.visible_to_donors as boolean) && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: COLORS.sage }}>
+                        <Eye size={10} /> Visible to donors
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Settings Tab ──────────────────────────────────────────────────────────────
 
 function SettingsTab({
@@ -1027,12 +1138,12 @@ function SettingsTab({
       const res = await updateProgram(program.id, {
         name:             name.trim(),
         status:           status as ProgramStatusDB,
-        description:      description.trim() || null,
-        objective:        objective.trim()   || null,
-        primary_funder:   funder.trim()      || null,
-        location_country: country.trim()     || null,
-        location_region:  region.trim()      || null,
-        total_budget:     budget ? parseFloat(budget) : null,
+        description:      description.trim() || undefined,
+        objective:        objective.trim()   || undefined,
+        primary_funder:   funder.trim()      || undefined,
+        location_country: country.trim()     || undefined,
+        location_region:  region.trim()      || undefined,
+        total_budget:     budget ? parseFloat(budget) : undefined,
         currency,
         visibility,
       })

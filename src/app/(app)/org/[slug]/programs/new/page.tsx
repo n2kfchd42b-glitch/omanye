@@ -106,7 +106,7 @@ export default function NewProgramPage() {
         return
       }
 
-      router.push(`/org/${params.slug}/programs/${result.data.id}`)
+      router.push(`/org/${params.slug}/programs/${result.data?.id}`)
     })
   }
 

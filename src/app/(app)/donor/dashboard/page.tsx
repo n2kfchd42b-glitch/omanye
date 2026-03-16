@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/actions/auth'
 import { COLORS } from '@/lib/tokens'
@@ -132,6 +133,30 @@ export default async function DonorDashboardPage() {
           <p style={{ fontSize: 15, color: COLORS.slate }}>
             Your programme access from NGO partners
           </p>
+        </div>
+
+        {/* Quick nav */}
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 32 }}>
+          {[
+            { href: '/donor/programs',      label: 'Programs',      emoji: '📋' },
+            { href: '/donor/reports',       label: 'Reports',       emoji: '📄' },
+            { href: '/donor/notifications', label: 'Notifications', emoji: '🔔' },
+            { href: '/donor/access',        label: 'My Access',     emoji: '🔑' },
+          ].map(item => (
+            <Link
+              key={item.href}
+              href={item.href}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '10px 16px', borderRadius: 10,
+                background: '#FFFFFF', border: '1px solid #E4EFE7',
+                fontSize: 13, fontWeight: 600, color: COLORS.forest,
+                textDecoration: 'none', transition: 'box-shadow 0.15s',
+              }}
+            >
+              <span>{item.emoji}</span> {item.label}
+            </Link>
+          ))}
         </div>
 
         {grants.length === 0 ? (

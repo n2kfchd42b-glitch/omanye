@@ -788,7 +788,7 @@ function CategoriesSection({
       setError(null)
       const { data, error } = await createBudgetCategory(programId, organizationId, form)
       if (error) { setError(error); return }
-      setCategories([...categories, data])
+      if (data) setCategories([...categories, data])
       setShowAdd(false)
       setForm({ name: '', allocated_amount: 0, currency, color: CATEGORY_COLORS[(categories.length + 1) % CATEGORY_COLORS.length] })
     })

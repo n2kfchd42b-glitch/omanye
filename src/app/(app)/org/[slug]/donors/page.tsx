@@ -35,7 +35,7 @@ export default async function DonorsPage({ params }: Props) {
   }
 
   // Expire stale invitations
-  await supabase.rpc('expire_pending_invitations').catch(() => {})
+  try { await supabase.rpc('expire_pending_invitations') } catch { /* ignore */ }
 
   // Fetch all data in parallel
   const [dpaResult, invResult, requestResult, programsResult] = await Promise.all([

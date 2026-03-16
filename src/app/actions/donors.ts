@@ -15,6 +15,7 @@ import type {
   DenyAccessRequestPayload,
 } from '@/lib/donors'
 import type { DonorAccessRequest } from '@/lib/auth/types'
+import type { AccessLevel } from '@/lib/supabase/database.types'
 
 type ActionResult<T> =
   | { data: T; error: null }
@@ -115,7 +116,7 @@ export async function listInvitations(
   const supabase = createClient()
 
   // Expire stale invitations
-  await supabase.rpc('expire_pending_invitations').catch(() => {})
+  try { await supabase.rpc('expire_pending_invitations') } catch { /* ignore */ }
 
   let query = supabase
     .from('donor_invitations')
@@ -186,8 +187,8 @@ export async function validateInviteToken(
   return {
     data: {
       ...data,
-      program_name: (data.program as { name: string } | null)?.name ?? null,
-      org_name:     (data.organization as { name: string } | null)?.name ?? null,
+      program_name: (data.program as unknown as { name: string } | null)?.name ?? null,
+      org_name:     (data.organization as unknown as { name: string } | null)?.name ?? null,
     } as DonorInvitation & { program_name: string | null; org_name: string | null },
     error: null,
   }
@@ -700,7 +701,7 @@ export async function approveAccessRequest(
       program_id:      (req as Record<string, unknown>).program_id as string,
       organization_id: organizationId,
       granted_by:      user.id,
-      access_level:    accessLevel,
+      access_level:    accessLevel as AccessLevel,
       active:          true,
       granted_at:      new Date().toISOString(),
     }, { onConflict: 'donor_id,program_id' })

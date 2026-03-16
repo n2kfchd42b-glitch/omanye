@@ -18,6 +18,7 @@ import type {
   CreateFundingTranchePayload,
   UpdateFundingTranchePayload,
 } from '@/lib/budget'
+import type { ExpenditureStatus } from '@/lib/supabase/database.types'
 import { filterBudget } from '@/lib/donorFilter'
 
 type ActionResult<T> =
@@ -156,7 +157,7 @@ export async function listExpenditures(
     .eq('program_id', programId)
     .order('transaction_date', { ascending: false })
 
-  if (filters?.status)             query = query.eq('status', filters.status)
+  if (filters?.status)             query = query.eq('status', filters.status as ExpenditureStatus)
   if (filters?.budget_category_id) query = query.eq('budget_category_id', filters.budget_category_id)
   if (filters?.from_date)          query = query.gte('transaction_date', filters.from_date)
   if (filters?.to_date)            query = query.lte('transaction_date', filters.to_date)

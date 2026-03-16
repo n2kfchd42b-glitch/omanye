@@ -141,8 +141,8 @@ export default function DonorAccessClient({ grants, requests }: Props) {
                   </div>
                   <div style={{ display: 'flex', gap: 16, fontSize: 12, color: COLORS.stone, flexWrap: 'wrap' }}>
                     <span>Granted {new Date(g.granted_at as string).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                    {g.expires_at && <span style={{ color: COLORS.amber }}>Expires {new Date(g.expires_at as string).toLocaleDateString()}</span>}
-                    {g.can_download_reports && <span>· Downloads allowed</span>}
+                    {(g.expires_at as string | null) && <span style={{ color: COLORS.amber }}>Expires {new Date(g.expires_at as string).toLocaleDateString()}</span>}
+                    {(g.can_download_reports as boolean) && <span>· Downloads allowed</span>}
                     <span>· Viewed {relativeTime(g.last_viewed_at as string | null)}</span>
                     <span>· {g.view_count as number} views</span>
                   </div>
@@ -187,7 +187,7 @@ export default function DonorAccessClient({ grants, requests }: Props) {
                       <div style={{ fontSize: 14, fontWeight: 600, color: COLORS.slate }}>{g.program_name ?? 'Unknown programme'}</div>
                       <div style={{ fontSize: 12, color: COLORS.stone }}>{g.org_name}</div>
                     </div>
-                    <span style={{ fontSize: 12, color: COLORS.stone, background: '#FEE2E2', padding: '3px 10px', borderRadius: 10, fontWeight: 600, color: '#991B1B' }}>
+                    <span style={{ fontSize: 12, background: '#FEE2E2', padding: '3px 10px', borderRadius: 10, fontWeight: 600, color: '#991B1B' }}>
                       Revoked
                     </span>
                   </div>

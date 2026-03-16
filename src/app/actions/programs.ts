@@ -149,7 +149,7 @@ export async function deleteProgram(id: string): Promise<ActionResult> {
     .from('programs')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', id)
-    .eq('organization_id', profile.organization_id)
+    .eq('organization_id', profile.organization_id!)
 
   if (dbError) return { data: null, error: dbError.message }
 
@@ -181,7 +181,7 @@ export async function updateProgramVisibility(
     .from('programs')
     .update({ visibility })
     .eq('id', id)
-    .eq('organization_id', profile.organization_id)
+    .eq('organization_id', profile.organization_id!)
     .select()
     .single()
 
