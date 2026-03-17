@@ -375,7 +375,7 @@ function InvitationsTab({ invitations, isAdmin, onRevoke }: {
           {invitations.map((inv, i) => {
             const sc = INVITATION_STATUS_COLORS[inv.status]
             return (
-              <tr key={inv.id} style={{ borderBottom: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? '#fff' : COLORS.snow }}>
+              <tr key={inv.id} style={{ borderBottom: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? '#1A2B4A' : COLORS.snow }}>
                 <td style={{ padding: '10px 14px', fontWeight: 600 }}>{inv.donor_name ?? '—'}</td>
                 <td style={{ padding: '10px 14px', color: COLORS.slate }}>{inv.email}</td>
                 <td style={{ padding: '10px 14px', color: COLORS.slate }}>{inv.organization_name ?? '—'}</td>
@@ -496,8 +496,8 @@ function RequestsTab({ requests, organizationId, isAdmin, onRefresh }: {
           {!isPendingCard && (
             <span style={{
               padding: '3px 10px', borderRadius: 10, fontSize: 11, fontWeight: 700,
-              background: req.status === 'APPROVED' ? '#E6F5EC' : '#FEE2E2',
-              color: req.status === 'APPROVED' ? '#1A5C3A' : '#991B1B',
+              background: req.status === 'APPROVED' ? '#38A16920' : '#FEE2E2',
+              color: req.status === 'APPROVED' ? '#38A169' : '#991B1B',
               flexShrink: 0,
             }}>
               {req.status}
@@ -593,7 +593,7 @@ function ApproveModal({ req, organizationId, onClose, onSuccess, setError }: {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(13,43,30,0.55)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="card" style={{ width: '100%', maxWidth: 420, padding: 28, boxShadow: SHADOW.modal }}>
         <h3 style={{ fontFamily: FONTS.heading, fontSize: 18, fontWeight: 700, color: COLORS.forest, marginBottom: 4 }}>Approve Access Request</h3>
         <p style={{ fontSize: 13, color: COLORS.slate, marginBottom: 20 }}>
@@ -606,7 +606,7 @@ function ApproveModal({ req, organizationId, onClose, onSuccess, setError }: {
           {ACCESS_LEVEL_DESCRIPTIONS[level]}
         </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#fff', color: COLORS.slate, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#1A2B4A', color: COLORS.slate, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
           <button onClick={handleApprove} disabled={isPending} style={{ padding: '9px 20px', borderRadius: 8, background: COLORS.fern, color: '#fff', border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             {isPending && <Loader2 size={13} className="animate-spin" />}
             <CheckCircle size={13} /> Approve
@@ -640,7 +640,7 @@ function DenyModal({ req, organizationId, onClose, onSuccess, setError }: {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(13,43,30,0.55)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="card" style={{ width: '100%', maxWidth: 420, padding: 28, boxShadow: SHADOW.modal }}>
         <h3 style={{ fontFamily: FONTS.heading, fontSize: 18, fontWeight: 700, color: COLORS.forest, marginBottom: 4 }}>Deny Access Request</h3>
         <p style={{ fontSize: 13, color: COLORS.slate, marginBottom: 20 }}>
@@ -655,7 +655,7 @@ function DenyModal({ req, organizationId, onClose, onSuccess, setError }: {
           />
         </FormField>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
-          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#fff', color: COLORS.slate, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#1A2B4A', color: COLORS.slate, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
           <button onClick={handleDeny} disabled={isPending || !message.trim()} style={{ padding: '9px 20px', borderRadius: 8, background: '#FEE2E2', color: COLORS.crimson, border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: !message.trim() ? 0.5 : 1 }}>
             {isPending && <Loader2 size={13} />}
             <XCircle size={13} /> Deny Request
@@ -742,7 +742,7 @@ function InviteDonorModal({ organizationId, programs, onClose, onSuccess }: {
   const STEP_LABELS = ['Donor Details', 'Program & Access', 'Review & Send']
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(13,43,30,0.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
       <div className="card" style={{ width: '100%', maxWidth: 520, padding: 0, boxShadow: SHADOW.modal, overflow: 'hidden', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
         {/* Modal header */}
         <div style={{ background: COLORS.forest, padding: '20px 24px', flexShrink: 0 }}>
@@ -835,7 +835,7 @@ function InviteDonorModal({ organizationId, programs, onClose, onSuccess }: {
           {step === 3 && (
             <div>
               {/* Email preview card */}
-              <div style={{ background: '#F4FAF6', border: `1px solid ${COLORS.mist}`, borderRadius: 12, overflow: 'hidden', marginBottom: 16 }}>
+              <div style={{ background: '#0F1B33', border: `1px solid ${COLORS.mist}`, borderRadius: 12, overflow: 'hidden', marginBottom: 16 }}>
                 <div style={{ background: COLORS.forest, padding: '16px 20px' }}>
                   <span style={{ fontFamily: 'Palatino,Georgia,serif', fontSize: 16, fontWeight: 700, color: COLORS.gold }}>OMANYE</span>
                 </div>
@@ -844,11 +844,11 @@ function InviteDonorModal({ organizationId, programs, onClose, onSuccess }: {
                     {form.donor_name ? `Hi ${form.donor_name.split(' ')[0]},` : 'Hello,'}
                   </p>
                   {form.message && (
-                    <div style={{ background: '#fff', border: `1px solid ${COLORS.mist}`, borderLeft: `3px solid ${COLORS.gold}`, padding: '10px 14px', borderRadius: '0 6px 6px 0', marginBottom: 12, fontSize: 13, color: COLORS.charcoal, fontStyle: 'italic' }}>
+                    <div style={{ background: '#1A2B4A', border: `1px solid ${COLORS.mist}`, borderLeft: `3px solid ${COLORS.gold}`, padding: '10px 14px', borderRadius: '0 6px 6px 0', marginBottom: 12, fontSize: 13, color: COLORS.charcoal, fontStyle: 'italic' }}>
                       "{form.message}"
                     </div>
                   )}
-                  <div style={{ background: '#fff', border: `1px solid ${COLORS.mist}`, borderRadius: 10, padding: '14px 16px', marginBottom: 12 }}>
+                  <div style={{ background: '#1A2B4A', border: `1px solid ${COLORS.mist}`, borderRadius: 10, padding: '14px 16px', marginBottom: 12 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.stone, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Program</div>
                     <div style={{ fontFamily: FONTS.heading, fontSize: 15, fontWeight: 700, color: COLORS.forest }}>{selectedProgram?.name ?? '—'}</div>
                   </div>
@@ -880,7 +880,7 @@ function InviteDonorModal({ organizationId, programs, onClose, onSuccess }: {
         <div style={{ padding: '16px 24px', borderTop: `1px solid ${COLORS.mist}`, display: 'flex', justifyContent: 'space-between', gap: 10, flexShrink: 0 }}>
           <button
             onClick={step === 1 ? onClose : () => setStep((step - 1) as 1 | 2 | 3)}
-            style={{ padding: '9px 18px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#fff', color: COLORS.slate, fontSize: 13, cursor: 'pointer' }}
+            style={{ padding: '9px 18px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#1A2B4A', color: COLORS.slate, fontSize: 13, cursor: 'pointer' }}
           >
             {step === 1 ? 'Cancel' : '← Back'}
           </button>

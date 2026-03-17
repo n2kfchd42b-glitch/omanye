@@ -147,13 +147,13 @@ export default function ReportDetailPage() {
       {/* Sticky action bar */}
       <div style={{
         position: 'sticky', top: 0, zIndex: 40,
-        background: '#fff',
+        background: '#1A2B4A',
         borderBottom: `1px solid ${COLORS.mist}`,
         padding: '10px 16px',
         display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
         marginBottom: 24,
         borderRadius: '0 0 8px 8px',
-        boxShadow: '0 2px 8px rgba(13,43,30,0.06)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
       }}>
         {/* Back */}
         <button
@@ -248,15 +248,15 @@ export default function ReportDetailPage() {
           style={{
             position: 'fixed', inset: 0, zIndex: 100,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: 16, background: 'rgba(10,26,16,0.6)', backdropFilter: 'blur(2px)',
+            padding: 16, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(2px)',
           }}
           onClick={() => setShowSubmitModal(false)}
         >
           <div
             style={{
               width: '100%', maxWidth: 440,
-              background: '#fff', borderRadius: 16, padding: '24px',
-              boxShadow: '0 24px 64px rgba(10,26,16,0.22)',
+              background: '#1A2B4A', borderRadius: 16, padding: '24px',
+              boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
             }}
             onClick={e => e.stopPropagation()}
           >

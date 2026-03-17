@@ -313,7 +313,7 @@ function ReportCard({ report, isAdmin, canCreate, orgSlug, onDelete, onPublish, 
         cursor: 'pointer',
         transition: 'box-shadow 0.15s',
       }}
-      onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 20px rgba(26,92,58,0.14)')}
+      onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 20px rgba(212,175,92,0.15)')}
       onMouseLeave={e => (e.currentTarget.style.boxShadow = '')}
       onClick={onView}
     >
@@ -532,15 +532,15 @@ function NewReportModal({ programs, preselectedProgramId, onClose, onCreated }: 
       style={{
         position: 'fixed', inset: 0, zIndex: 100,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 16, background: 'rgba(10,26,16,0.6)', backdropFilter: 'blur(2px)',
+        padding: 16, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(2px)',
       }}
       onClick={onClose}
     >
       <div
         style={{
           width: '100%', maxWidth: 640,
-          background: '#ffffff', borderRadius: 16,
-          boxShadow: '0 24px 64px rgba(10,26,16,0.22)',
+          background: '#1A2B4A', borderRadius: 16,
+          boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
           maxHeight: '92vh', display: 'flex', flexDirection: 'column',
         }}
         onClick={e => e.stopPropagation()}

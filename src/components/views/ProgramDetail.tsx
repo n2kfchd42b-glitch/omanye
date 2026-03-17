@@ -41,7 +41,7 @@ export function ProgramDetail({ program, onBack, onUpdate }: ProgramDetailProps)
     return (
       <div style={{ maxWidth: 960, margin: '0 auto' }}>
         <EmptyState title="Program not found" description="This program may have been deleted." action={
-          <button onClick={onBack} style={{ padding: '8px 16px', borderRadius: 8, background: COLORS.moss, color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+          <button onClick={onBack} style={{ padding: '8px 16px', borderRadius: 8, background: COLORS.moss, color: COLORS.forest, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
             Back to Programs
           </button>
         } />
@@ -88,7 +88,7 @@ export function ProgramDetail({ program, onBack, onUpdate }: ProgramDetailProps)
             )}
           </div>
           <div style={{ textAlign: 'right' }}>
-            <p style={{ fontSize: 11, color: 'rgba(125,212,160,0.6)', marginBottom: 4 }}>Progress</p>
+            <p style={{ fontSize: 11, color: 'rgba(212,175,92,0.6)', marginBottom: 4 }}>Progress</p>
             <p style={{ fontSize: 28, fontWeight: 700, color: '#fff', lineHeight: 1 }}>{program.progress}%</p>
           </div>
         </div>
@@ -182,7 +182,7 @@ function OverviewTab({ program, onUpdate }: { program: Program; onUpdate: (p: Pr
             onClick={handleSave}
             style={{
               padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-              background: COLORS.moss, color: '#fff', cursor: 'pointer',
+              background: COLORS.moss, color: COLORS.forest, cursor: 'pointer',
             }}
           >
             Save
@@ -223,7 +223,7 @@ function IndicatorsTab({ program, onUpdate }: { program: Program; onUpdate: (p: 
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '8px 14px', borderRadius: 8,
-            background: COLORS.moss, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            background: COLORS.moss, color: COLORS.forest, fontSize: 12, fontWeight: 600, cursor: 'pointer',
           }}
         >
           <Plus size={13} /> Add Indicator
@@ -271,7 +271,7 @@ function IndicatorRow({ indicator: ind, onUpdateCurrent }: {
           <span style={{ fontSize: 12, color: COLORS.stone }}>{ind.unit}</span>
           <button
             onClick={() => { onUpdateCurrent(val); setEditing(false); success('Updated') }}
-            style={{ padding: '5px 12px', borderRadius: 6, background: COLORS.sage, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+            style={{ padding: '5px 12px', borderRadius: 6, background: COLORS.sage, color: COLORS.forest, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
           >
             Save
           </button>
@@ -324,7 +324,7 @@ function AddIndicatorForm({ onSave }: { onSave: (i: Indicator) => void }) {
           style={{
             padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
             background: name.trim() && target ? COLORS.moss : COLORS.mist,
-            color: name.trim() && target ? '#fff' : COLORS.stone,
+            color: name.trim() && target ? COLORS.forest : COLORS.stone,
             cursor: name.trim() && target ? 'pointer' : 'not-allowed',
           }}
         >
@@ -369,7 +369,7 @@ function BudgetTab({ program, onUpdate }: { program: Program; onUpdate: (p: Prog
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '8px 14px', borderRadius: 8,
-            background: COLORS.moss, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            background: COLORS.moss, color: COLORS.forest, fontSize: 12, fontWeight: 600, cursor: 'pointer',
           }}
         >
           <Plus size={13} /> Add Category
@@ -390,7 +390,7 @@ function BudgetTab({ program, onUpdate }: { program: Program; onUpdate: (p: Prog
             </thead>
             <tbody>
               {program.budgetCategories.map((cat, i) => (
-                <tr key={cat.id} style={{ borderTop: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? '#fff' : COLORS.snow }}>
+                <tr key={cat.id} style={{ borderTop: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? COLORS.pearl : COLORS.snow }}>
                   <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 500, color: COLORS.forest }}>{cat.name}</td>
                   <td style={{ padding: '12px 16px', fontSize: 13, color: COLORS.slate }}>{formatCurrency(cat.allocated, program.currency)}</td>
                   <td style={{ padding: '12px 16px', fontSize: 13, color: COLORS.slate }}>{formatCurrency(cat.spent, program.currency)}</td>
@@ -444,7 +444,7 @@ function AddBudgetForm({ onSave }: { onSave: (c: BudgetCategory) => void }) {
           style={{
             padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
             background: name.trim() && allocated ? COLORS.moss : COLORS.mist,
-            color: name.trim() && allocated ? '#fff' : COLORS.stone,
+            color: name.trim() && allocated ? COLORS.forest : COLORS.stone,
             cursor: name.trim() && allocated ? 'pointer' : 'not-allowed',
           }}
         >

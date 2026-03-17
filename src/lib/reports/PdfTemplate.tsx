@@ -14,16 +14,16 @@ const C = {
   navy:    '#0F1B33',
   gold:    '#D4AF5C',
   white:   '#FFFFFF',
-  snow:    '#F4FAF6',
-  charcoal:'#2C3E35',
-  forest:  '#0D2B1E',
-  slate:   '#4A6355',
-  stone:   '#7A9688',
-  mist:    '#C8EDD8',
-  green:   '#4CAF78',
-  amber:   '#D97706',
-  red:     '#C0392B',
-  lightBg: '#F8FAFB',
+  snow:    '#0F1B33',
+  charcoal:'#FFFFFF',
+  forest:  '#0F1B33',
+  slate:   '#A0AEC0',
+  stone:   '#6B7A99',
+  mist:    '#2D3F5C',
+  green:   '#38A169',
+  amber:   '#D4AF5C',
+  red:     '#E53E3E',
+  lightBg: '#1A2B4A',
 } as const
 
 // ── Styles ────────────────────────────────────────────────────────────────────
@@ -84,12 +84,12 @@ const s = StyleSheet.create({
   tableCellRight: { fontSize: 9, color: C.charcoal, flex: 1, textAlign: 'right' },
 
   // Status badge
-  badgeGreen: { backgroundColor: '#E6F5EC', borderRadius: 4, padding: '2 5', alignSelf: 'flex-start' },
-  badgeAmber: { backgroundColor: '#FEF3C7', borderRadius: 4, padding: '2 5', alignSelf: 'flex-start' },
-  badgeRed:   { backgroundColor: '#FEE2E2', borderRadius: 4, padding: '2 5', alignSelf: 'flex-start' },
-  badgeGreenText: { fontSize: 8, color: '#1A5C3A', fontFamily: 'Helvetica-Bold' },
-  badgeAmberText: { fontSize: 8, color: '#92400E', fontFamily: 'Helvetica-Bold' },
-  badgeRedText:   { fontSize: 8, color: '#991B1B', fontFamily: 'Helvetica-Bold' },
+  badgeGreen: { backgroundColor: '#38A16920', borderRadius: 4, padding: '2 5', alignSelf: 'flex-start' },
+  badgeAmber: { backgroundColor: '#D4AF5C20', borderRadius: 4, padding: '2 5', alignSelf: 'flex-start' },
+  badgeRed:   { backgroundColor: '#E53E3E20', borderRadius: 4, padding: '2 5', alignSelf: 'flex-start' },
+  badgeGreenText: { fontSize: 8, color: '#38A169', fontFamily: 'Helvetica-Bold' },
+  badgeAmberText: { fontSize: 8, color: '#D4AF5C', fontFamily: 'Helvetica-Bold' },
+  badgeRedText:   { fontSize: 8, color: '#E53E3E', fontFamily: 'Helvetica-Bold' },
 
   // Budget bar
   barTrack: { height: 6, backgroundColor: C.mist, borderRadius: 3, flex: 1, marginTop: 3 },

@@ -25,19 +25,19 @@ type Status = LogframeRow['status']
 const LEVELS: Level[] = ['goal', 'outcome', 'output', 'activity']
 
 const LEVEL_META: Record<Level, { label: string; color: string; light: string }> = {
-  goal:     { label: 'Goal',     color: COLORS.gold,   light: '#FDF6E3' },
+  goal:     { label: 'Goal',     color: COLORS.gold,   light: '#3A2D1A' },
   outcome:  { label: 'Outcome',  color: COLORS.sage,   light: COLORS.foam },
-  output:   { label: 'Output',   color: COLORS.fern,   light: '#E8F5EE' },
-  activity: { label: 'Activity', color: COLORS.mint,   light: '#F0FAF4' },
+  output:   { label: 'Output',   color: COLORS.fern,   light: '#1A3A5C' },
+  activity: { label: 'Activity', color: COLORS.mint,   light: '#243352' },
 }
 
 const STATUS_CYCLE: Status[] = ['not_started', 'on_track', 'at_risk', 'off_track']
 
 const STATUS_META: Record<Status, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
-  not_started: { label: 'Not Started', color: COLORS.stone,   bg: '#F0F4F2', Icon: Circle },
-  on_track:    { label: 'On Track',    color: COLORS.fern,    bg: '#E8F5EE', Icon: CheckCircle2 },
-  at_risk:     { label: 'At Risk',     color: COLORS.amber,   bg: '#FEF3C7', Icon: AlertTriangle },
-  off_track:   { label: 'Off Track',   color: COLORS.crimson, bg: '#FEE2E2', Icon: XCircle },
+  not_started: { label: 'Not Started', color: COLORS.stone,   bg: COLORS.mist,     Icon: Circle },
+  on_track:    { label: 'On Track',    color: COLORS.fern,    bg: '#38A16920',     Icon: CheckCircle2 },
+  at_risk:     { label: 'At Risk',     color: COLORS.amber,   bg: '#D4AF5C20',     Icon: AlertTriangle },
+  off_track:   { label: 'Off Track',   color: COLORS.crimson, bg: '#E53E3E20',     Icon: XCircle },
 }
 
 let _nextId = Date.now()
@@ -151,7 +151,7 @@ function IndicatorDropdown({
       {open && (
         <div style={{
           position: 'absolute', top: '100%', left: 0, zIndex: 50,
-          background: '#ffffff', border: `1px solid ${COLORS.mist}`,
+          background: COLORS.pearl, border: `1px solid ${COLORS.mist}`,
           borderRadius: 8, boxShadow: SHADOW.modal, minWidth: 220, padding: 6,
         }}>
           {available.length === 0 ? (
@@ -405,7 +405,7 @@ export function LogframeMatrix({ program, onUpdate }: Props) {
                           </tr>
                         ) : rows.map((row, idx) => (
                           <tr key={row.id} style={{
-                            background: idx % 2 === 0 ? '#ffffff' : COLORS.snow,
+                            background: idx % 2 === 0 ? COLORS.pearl : COLORS.snow,
                             borderBottom: `1px solid ${COLORS.mist}`,
                           }}>
                             <td style={{ padding: '10px 14px', verticalAlign: 'top', minWidth: 220 }}>

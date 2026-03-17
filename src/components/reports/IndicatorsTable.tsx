@@ -15,9 +15,9 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 const STATUS_STYLE: Record<string, { bg: string; text: string; dot: string }> = {
-  on_track:  { bg: '#E6F5EC', text: '#1A5C3A', dot: '#4CAF78' },
-  at_risk:   { bg: '#FEF3C7', text: '#92400E', dot: '#D97706' },
-  off_track: { bg: '#FEE2E2', text: '#991B1B', dot: '#EF4444' },
+  on_track:  { bg: '#38A16920', text: '#38A169', dot: '#38A169' },
+  at_risk:   { bg: '#D4AF5C20', text: '#D4AF5C', dot: '#D4AF5C' },
+  off_track: { bg: '#E53E3E20', text: '#E53E3E', dot: '#E53E3E' },
 }
 
 export function IndicatorsTable({ indicators }: Props) {
@@ -61,7 +61,7 @@ export function IndicatorsTable({ indicators }: Props) {
               <tr
                 key={ind.id}
                 style={{
-                  background: i % 2 === 0 ? '#ffffff' : COLORS.snow,
+                  background: i % 2 === 0 ? COLORS.pearl : COLORS.snow,
                   borderBottom: `1px solid ${COLORS.mist}`,
                 }}
               >

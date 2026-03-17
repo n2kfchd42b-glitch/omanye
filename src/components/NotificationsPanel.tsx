@@ -177,7 +177,7 @@ export function NotificationsPanel({ orgSlug }: NotificationsPanelProps) {
           width:       34, height: 34,
           borderRadius: 8,
           display:     'flex', alignItems: 'center', justifyContent: 'center',
-          color:       open ? COLORS.forest : COLORS.stone,
+          color:       open ? '#D4AF5C' : '#A0AEC0',
           cursor:      'pointer',
           transition:  'background 0.15s',
           background:  open ? COLORS.foam : 'transparent',
@@ -213,9 +213,9 @@ export function NotificationsPanel({ orgSlug }: NotificationsPanelProps) {
           right:         0,
           width:         380,
           height:        'calc(100vh - 58px)',
-          background:    '#ffffff',
+          background:    '#0A1628',
           borderLeft:   `1px solid ${COLORS.mist}`,
-          boxShadow:    '-4px 0 24px rgba(13,43,30,0.10)',
+          boxShadow:    '-4px 0 24px rgba(0,0,0,0.5)',
           zIndex:        100,
           display:      'flex',
           flexDirection: 'column',
@@ -228,7 +228,7 @@ export function NotificationsPanel({ orgSlug }: NotificationsPanelProps) {
             borderBottom: `1px solid ${COLORS.mist}`,
             flexShrink:   0,
           }}>
-            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: COLORS.forest, fontFamily: FONTS.heading }}>
+            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#FFFFFF', fontFamily: FONTS.heading }}>
               Notifications
             </h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -351,16 +351,16 @@ function NotifItem({
         borderLeftColor: PRIORITY_BORDER[n.priority],
         textAlign:      'left',
       }}
-      onMouseEnter={e => (e.currentTarget.style.background = COLORS.snow)}
-      onMouseLeave={e => (e.currentTarget.style.background = n.read ? 'transparent' : COLORS.foam)}
+      onMouseEnter={e => (e.currentTarget.style.background = '#1A2B4A')}
+      onMouseLeave={e => (e.currentTarget.style.background = n.read ? 'transparent' : '#243352')}
     >
       <div style={{
         marginTop:    2,
         width:        28, height: 28, borderRadius: 7,
-        background:   COLORS.snow,
+        background:   '#1A2B4A',
         display:      'flex', alignItems: 'center', justifyContent: 'center',
         flexShrink:   0,
-        border:      `1px solid ${COLORS.mist}`,
+        border:      `1px solid #2D3F5C`,
       }}>
         <NotifIcon type={n.type} />
       </div>
@@ -369,7 +369,7 @@ function NotifItem({
           margin:      0,
           fontSize:    13,
           fontWeight:  n.read ? 400 : 600,
-          color:       n.read ? COLORS.slate : COLORS.forest,
+          color:       n.read ? '#6B7A99' : '#FFFFFF',
           fontFamily:  FONTS.body,
           lineHeight:  1.4,
           wordBreak:  'break-word',

@@ -156,7 +156,7 @@ export default function DonorProgramDetailClient({
                 onClick={() => setShowRequestModal(true)}
                 style={{
                   padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                  background: '#fff', border: `1px solid ${COLORS.mist}`,
+                  background: '#1A2B4A', border: `1px solid ${COLORS.mist}`,
                   color: COLORS.slate, cursor: 'pointer', flexShrink: 0,
                 }}
               >
@@ -325,7 +325,7 @@ function IndicatorsTab({
             onClick={onRequestAccess}
             style={{
               padding: '9px 20px', borderRadius: 8,
-              background: COLORS.moss, color: '#fff',
+              background: COLORS.moss, color: '#0F1B33',
               border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer',
             }}
           >
@@ -481,7 +481,7 @@ function DonorBudgetTab({
             onClick={onRequestAccess}
             style={{
               padding: '9px 20px', borderRadius: 8,
-              background: COLORS.moss, color: '#fff',
+              background: COLORS.moss, color: '#0F1B33',
               border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer',
             }}
           >
@@ -568,7 +568,7 @@ function DonorBudgetTab({
             </thead>
             <tbody>
               {catSpend.map((cat, i) => (
-                <tr key={cat.category_id} style={{ borderBottom: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? '#fff' : COLORS.snow }}>
+                <tr key={cat.category_id} style={{ borderBottom: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? '#1A2B4A' : COLORS.snow }}>
                   <td style={{ padding: '10px 16px' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ width: 10, height: 10, borderRadius: 2, background: cat.color, display: 'inline-block' }} />
@@ -683,7 +683,7 @@ function RequestAccessModal({
     <div style={{
       position: 'fixed', inset: 0, zIndex: 100,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'rgba(13,43,30,0.55)',
+      background: 'rgba(0,0,0,0.7)',
     }} onClick={onClose}>
       <div
         className="card"
@@ -735,7 +735,7 @@ function RequestAccessModal({
               <div style={{ marginTop: 12, padding: 10, borderRadius: 7, background: '#FEE2E2', color: '#991B1B', fontSize: 12 }}>{error}</div>
             )}
             <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
-              <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 7, fontSize: 13, background: '#fff', border: `1px solid ${COLORS.mist}`, cursor: 'pointer', color: COLORS.slate }}>
+              <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 7, fontSize: 13, background: '#1A2B4A', border: `1px solid ${COLORS.mist}`, cursor: 'pointer', color: COLORS.slate }}>
                 Cancel
               </button>
               <button

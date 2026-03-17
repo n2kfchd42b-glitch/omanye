@@ -132,7 +132,7 @@ export function AuditTrail() {
 
       {/* Filters row */}
       <div style={{
-        background: '#ffffff', borderRadius: 10, boxShadow: SHADOW.card,
+        background: COLORS.pearl, borderRadius: 10, boxShadow: SHADOW.card,
         border: `1px solid ${COLORS.mist}`, padding: '14px 18px',
         marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end',
       }}>
@@ -215,7 +215,7 @@ export function AuditTrail() {
                 padding: '5px 14px', borderRadius: 20, cursor: 'pointer',
                 fontFamily: FONTS.body, fontSize: 11, fontWeight: 600,
                 border: `1.5px solid ${active ? COLORS.fern : COLORS.mist}`,
-                background: active ? COLORS.fern : '#ffffff',
+                background: active ? COLORS.fern : COLORS.pearl,
                 color: active ? '#ffffff' : COLORS.slate,
               }}
             >
@@ -245,7 +245,7 @@ export function AuditTrail() {
       {/* Table */}
       {entries.length > 0 && (
         <div style={{
-          background: '#ffffff', borderRadius: 12, boxShadow: SHADOW.card,
+          background: COLORS.pearl, borderRadius: 12, boxShadow: SHADOW.card,
           border: `1px solid ${COLORS.mist}`, overflow: 'hidden',
         }}>
           {filtered.length === 0 ? (
@@ -269,7 +269,7 @@ export function AuditTrail() {
                 <tbody>
                   {filtered.map((entry, i) => (
                     <tr key={entry.id} style={{
-                      background: i % 2 === 0 ? '#ffffff' : COLORS.foam,
+                      background: i % 2 === 0 ? COLORS.pearl : COLORS.foam,
                       borderBottom: `1px solid ${COLORS.mist}`,
                     }}>
                       <td style={{ padding: '10px 14px', whiteSpace: 'nowrap', color: COLORS.slate, fontSize: 12, fontFamily: FONTS.mono }}>

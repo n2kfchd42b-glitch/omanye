@@ -49,7 +49,7 @@ export const REPORT_TYPE_LABELS: Record<ReportType, string> = {
 }
 
 export const REPORT_TYPE_COLORS: Record<ReportType, { bg: string; text: string }> = {
-  PROGRESS:    { bg: '#E6F5EC', text: '#1A5C3A' },
+  PROGRESS:    { bg: '#38A16920', text: '#38A169' },
   QUARTERLY:   { bg: '#DBEAFE', text: '#1E40AF' },
   ANNUAL:      { bg: '#FEF3C7', text: '#92400E' },
   FIELD:       { bg: '#F0FDF4', text: '#166534' },
@@ -67,7 +67,7 @@ export const REPORT_STATUS_LABELS: Record<ReportStatus, string> = {
 export const REPORT_STATUS_COLORS: Record<ReportStatus, { bg: string; text: string; dot: string }> = {
   DRAFT:     { bg: '#F1F5F9', text: '#475569', dot: '#94A3B8' },
   GENERATED: { bg: '#DBEAFE', text: '#1E40AF', dot: '#3B82F6' },
-  SUBMITTED: { bg: '#E6F5EC', text: '#1A5C3A', dot: '#4CAF78' },
+  SUBMITTED: { bg: '#38A16920', text: '#38A169', dot: '#38A169' },
   ARCHIVED:  { bg: '#F1F5F9', text: '#64748B', dot: '#CBD5E1' },
 }
 

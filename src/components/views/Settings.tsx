@@ -135,7 +135,7 @@ function ProfileSection({ user, setUser }: { user: User; setUser: (u: User) => v
             style={{
               padding: '9px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
               background: dirty ? COLORS.moss : COLORS.mist,
-              color: dirty ? '#fff' : COLORS.stone,
+              color: dirty ? COLORS.forest : COLORS.stone,
               cursor: dirty ? 'pointer' : 'not-allowed',
               transition: 'all 0.15s',
             }}
@@ -177,7 +177,7 @@ function OrganisationSection({ user, setUser }: { user: User; setUser: (u: User)
             onClick={handleSave}
             style={{
               padding: '9px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-              background: COLORS.moss, color: '#fff', cursor: 'pointer',
+              background: COLORS.moss, color: COLORS.forest, cursor: 'pointer',
             }}
           >
             Save Changes
@@ -238,7 +238,7 @@ function NotificationsSection() {
           onClick={() => success('Notification preferences saved')}
           style={{
             padding: '9px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-            background: COLORS.moss, color: '#fff', cursor: 'pointer',
+            background: COLORS.moss, color: COLORS.forest, cursor: 'pointer',
           }}
         >
           Save Preferences

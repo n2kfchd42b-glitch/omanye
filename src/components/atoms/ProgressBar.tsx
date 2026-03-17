@@ -5,10 +5,10 @@ type BarSize = 'xs' | 'sm' | 'md' | 'lg'
 const SIZE_H: Record<BarSize, number> = { xs: 4, sm: 6, md: 8, lg: 10 }
 
 function autoGradient(value: number): string {
-  if (value >= 75) return `linear-gradient(to right, ${COLORS.fern}, ${COLORS.sage})`
-  if (value >= 50) return `linear-gradient(to right, #1A5C3A, ${COLORS.fern})`
-  if (value >= 25) return `linear-gradient(to right, #C27012, ${COLORS.amber})`
-  return `linear-gradient(to right, #B91C1C, ${COLORS.crimson})`
+  if (value >= 75) return `linear-gradient(to right, #D4AF5C, #E8D48B)`
+  if (value >= 50) return `linear-gradient(to right, #60A5FA, #93C5FD)`
+  if (value >= 25) return `linear-gradient(to right, #D4AF5C80, #D4AF5C)`
+  return `linear-gradient(to right, #C53030, #E53E3E)`
 }
 
 interface ProgressBarProps {
@@ -40,7 +40,7 @@ export function ProgressBar({
         <div className="flex items-center justify-between">
           {label  && <span style={{ fontSize: 12, color: COLORS.slate }}>{label}</span>}
           {displayPct && (
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, color: COLORS.forest }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, color: '#FFFFFF' }}>
               {clamped}%
             </span>
           )}
@@ -48,7 +48,7 @@ export function ProgressBar({
       )}
       <div
         style={{
-          height: h, borderRadius: 99, background: '#E6F5EC',
+          height: h, borderRadius: 99, background: '#2D3F5C',
           overflow: 'hidden',
         }}
         role="progressbar"

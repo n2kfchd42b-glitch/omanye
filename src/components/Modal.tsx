@@ -64,7 +64,7 @@ function ModalRoot({
         position: 'fixed', inset: 0, zIndex: 100,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 16,
-        background: `rgba(10,26,16,0.6)`,
+        background: 'rgba(0,0,0,0.7)',
         backdropFilter: 'blur(2px)',
       }}
       className={modal.visible ? 'fade-up' : ''}
@@ -76,9 +76,9 @@ function ModalRoot({
       <div
         style={{
           width: '100%', maxWidth: maxW,
-          background: '#ffffff',
+          background: '#1A2B4A',
           borderRadius: 16,
-          boxShadow: '0 24px 64px rgba(10,26,16,0.22)',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
           maxHeight: '90vh',
           display: 'flex', flexDirection: 'column',
         }}
@@ -98,7 +98,7 @@ function ModalRoot({
             id="modal-title"
             style={{
               fontFamily: 'var(--font-fraunces), Georgia, serif',
-              fontSize: 18, fontWeight: 600, color: COLORS.forest,
+              fontSize: 18, fontWeight: 600, color: '#FFFFFF',
             }}
           >
             {modal.title}

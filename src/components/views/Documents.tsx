@@ -84,7 +84,7 @@ function NewDocForm({ programs, onSave }: { programs: Program[]; onSave: (d: Doc
           style={{
             padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
             background: name.trim() ? COLORS.moss : COLORS.mist,
-            color: name.trim() ? '#fff' : COLORS.stone,
+            color: name.trim() ? COLORS.forest : COLORS.stone,
             cursor: name.trim() ? 'pointer' : 'not-allowed',
           }}
         >
@@ -171,7 +171,7 @@ export function Documents({ documents, setDocuments, programs, user }: Documents
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '9px 16px', borderRadius: 8,
-            background: COLORS.moss, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            background: COLORS.moss, color: COLORS.forest, fontSize: 13, fontWeight: 600, cursor: 'pointer',
           }}
         >
           <Plus size={14} /> New Document
@@ -193,7 +193,7 @@ export function Documents({ documents, setDocuments, programs, user }: Documents
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 6,
                       padding: '9px 18px', borderRadius: 8,
-                      background: COLORS.moss, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                      background: COLORS.moss, color: COLORS.forest, fontSize: 13, fontWeight: 600, cursor: 'pointer',
                     }}
                   >
                     <Plus size={14} /> Create Document
@@ -210,7 +210,7 @@ export function Documents({ documents, setDocuments, programs, user }: Documents
                   style={{
                     display: 'flex', flexDirection: 'column', gap: 6,
                     padding: '14px 16px', borderRadius: 10,
-                    background: selected?.id === doc.id ? COLORS.foam : '#fff',
+                    background: selected?.id === doc.id ? COLORS.foam : COLORS.pearl,
                     border: `1px solid ${selected?.id === doc.id ? COLORS.sage : COLORS.mist}`,
                     cursor: 'pointer', textAlign: 'left',
                     transition: 'all 0.15s',
@@ -317,7 +317,7 @@ export function Documents({ documents, setDocuments, programs, user }: Documents
                   style={{
                     width: 34, height: 34, borderRadius: 8,
                     background: message.trim() ? COLORS.sage : COLORS.mist,
-                    color: message.trim() ? '#fff' : COLORS.stone,
+                    color: message.trim() ? COLORS.forest : COLORS.stone,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     cursor: message.trim() ? 'pointer' : 'not-allowed',
                     flexShrink: 0,

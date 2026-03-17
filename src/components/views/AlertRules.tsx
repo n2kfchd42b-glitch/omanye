@@ -13,10 +13,10 @@ import type { AlertRule, Program, User, TriggerType, Severity } from '@/lib/type
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const SEVERITY_META: Record<Severity, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
-  low:      { label: 'Low',      color: COLORS.stone,   bg: '#F0F4F2', Icon: Info },
-  medium:   { label: 'Medium',   color: COLORS.amber,   bg: '#FEF3C7', Icon: AlertTriangle },
-  high:     { label: 'High',     color: COLORS.fern,    bg: '#E8F5EE', Icon: AlertCircle },
-  critical: { label: 'Critical', color: COLORS.crimson, bg: '#FEE2E2', Icon: Zap },
+  low:      { label: 'Low',      color: COLORS.stone,   bg: COLORS.mist,     Icon: Info },
+  medium:   { label: 'Medium',   color: COLORS.amber,   bg: '#D4AF5C20',     Icon: AlertTriangle },
+  high:     { label: 'High',     color: COLORS.fern,    bg: '#38A16920',     Icon: AlertCircle },
+  critical: { label: 'Critical', color: COLORS.crimson, bg: '#E53E3E20',     Icon: Zap },
 }
 
 const TRIGGER_LABELS: Record<TriggerType, string> = {
@@ -197,7 +197,7 @@ function RuleModal({
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 200,
-        background: 'rgba(10,26,16,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 24,
       }}
       onClick={onClose}
@@ -205,7 +205,7 @@ function RuleModal({
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: '#ffffff', borderRadius: 14, width: '100%', maxWidth: 560,
+          background: COLORS.pearl, borderRadius: 14, width: '100%', maxWidth: 560,
           maxHeight: '90vh', overflowY: 'auto', boxShadow: SHADOW.modal, fontFamily: FONTS.body,
         }}
       >
@@ -315,7 +315,7 @@ function RuleModal({
                       padding: '7px 16px', borderRadius: 8, cursor: 'pointer',
                       fontFamily: FONTS.body, fontSize: 12, fontWeight: 600,
                       border: `2px solid ${active ? sm.color : COLORS.mist}`,
-                      background: active ? sm.bg : '#ffffff',
+                      background: active ? sm.bg : COLORS.pearl,
                       color: active ? sm.color : COLORS.stone,
                     }}
                   >
@@ -492,7 +492,7 @@ export function AlertRules({ alertRules, setAlertRules, programs, user }: Props)
           const SevIcon = sm.Icon
           return (
             <div key={rule.id} style={{
-              background: '#ffffff', borderRadius: 12, boxShadow: SHADOW.card,
+              background: COLORS.pearl, borderRadius: 12, boxShadow: SHADOW.card,
               border: `1px solid ${COLORS.mist}`, borderLeft: `4px solid ${sm.color}`,
               padding: '16px 20px', opacity: rule.active ? 1 : 0.6,
             }}>

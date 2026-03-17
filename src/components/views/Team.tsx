@@ -67,7 +67,7 @@ function InviteForm({ onSave }: { onSave: (m: TeamMember) => void }) {
           style={{
             padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
             background: name.trim() && email.trim() ? COLORS.moss : COLORS.mist,
-            color: name.trim() && email.trim() ? '#fff' : COLORS.stone,
+            color: name.trim() && email.trim() ? COLORS.forest : COLORS.stone,
             cursor: name.trim() && email.trim() ? 'pointer' : 'not-allowed',
           }}
         >
@@ -143,7 +143,7 @@ export function Team({ team, setTeam }: TeamProps) {
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '9px 16px', borderRadius: 8,
-            background: COLORS.moss, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            background: COLORS.moss, color: COLORS.forest, fontSize: 13, fontWeight: 600, cursor: 'pointer',
           }}
         >
           <Plus size={14} /> Invite Member
@@ -165,7 +165,7 @@ export function Team({ team, setTeam }: TeamProps) {
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 6,
                       padding: '9px 18px', borderRadius: 8,
-                      background: COLORS.moss, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                      background: COLORS.moss, color: COLORS.forest, fontSize: 13, fontWeight: 600, cursor: 'pointer',
                     }}
                   >
                     <Plus size={14} /> Invite First Member
@@ -185,7 +185,7 @@ export function Team({ team, setTeam }: TeamProps) {
                 </thead>
                 <tbody>
                   {team.map((m, i) => (
-                    <tr key={m.id} style={{ borderTop: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? '#fff' : COLORS.snow }}>
+                    <tr key={m.id} style={{ borderTop: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? COLORS.pearl : COLORS.snow }}>
                       <td style={{ padding: '12px 16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <Avatar name={m.name} size={32} />

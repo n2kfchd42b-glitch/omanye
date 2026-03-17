@@ -52,7 +52,7 @@ export default function InviteAcceptClient({ invitation, token, isLoggedIn, user
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F4FAF6', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
+    <div style={{ minHeight: '100vh', background: '#0F1B33', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
 
       {/* Logo */}
       <div style={{ marginBottom: 32, textAlign: 'center' }}>
@@ -62,7 +62,7 @@ export default function InviteAcceptClient({ invitation, token, isLoggedIn, user
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontFamily: FONTS.heading, fontSize: 20, fontWeight: 700, color: COLORS.gold,
           }}>O</div>
-          <span style={{ fontFamily: FONTS.heading, fontSize: 22, fontWeight: 700, color: COLORS.forest, letterSpacing: 0.5 }}>
+          <span style={{ fontFamily: FONTS.heading, fontSize: 22, fontWeight: 700, color: '#FFFFFF', letterSpacing: 0.5 }}>
             OMANYE
           </span>
         </div>
@@ -73,9 +73,9 @@ export default function InviteAcceptClient({ invitation, token, isLoggedIn, user
 
       {/* Card */}
       <div style={{
-        background: '#fff',
+        background: '#1A2B4A',
         borderRadius: 20,
-        boxShadow: '0 8px 40px rgba(13,43,30,0.12)',
+        boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
         width: '100%',
         maxWidth: 520,
         overflow: 'hidden',
@@ -85,7 +85,7 @@ export default function InviteAcceptClient({ invitation, token, isLoggedIn, user
         {errorMessage && (
           <div style={{ padding: '48px 40px', textAlign: 'center' }}>
             <div style={{ fontSize: 40, marginBottom: 16 }}>🔒</div>
-            <h1 style={{ fontFamily: FONTS.heading, fontSize: 22, fontWeight: 700, color: COLORS.forest, margin: '0 0 12px' }}>
+            <h1 style={{ fontFamily: FONTS.heading, fontSize: 22, fontWeight: 700, color: '#FFFFFF', margin: '0 0 12px' }}>
               Invitation Unavailable
             </h1>
             <p style={{ fontSize: 15, color: COLORS.slate, lineHeight: 1.6, margin: '0 0 28px' }}>
@@ -101,7 +101,7 @@ export default function InviteAcceptClient({ invitation, token, isLoggedIn, user
         {accepted && (
           <div style={{ padding: '48px 40px', textAlign: 'center' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
-            <h1 style={{ fontFamily: FONTS.heading, fontSize: 22, fontWeight: 700, color: COLORS.forest, margin: '0 0 12px' }}>
+            <h1 style={{ fontFamily: FONTS.heading, fontSize: 22, fontWeight: 700, color: '#FFFFFF', margin: '0 0 12px' }}>
               Access Granted!
             </h1>
             <p style={{ fontSize: 15, color: COLORS.slate, margin: 0 }}>
@@ -142,11 +142,11 @@ export default function InviteAcceptClient({ invitation, token, isLoggedIn, user
               )}
 
               {/* Programme card */}
-              <div style={{ background: COLORS.snow, border: `1px solid ${COLORS.mist}`, borderRadius: 12, padding: '16px 20px' }}>
+              <div style={{ background: '#243352', border: `1px solid ${COLORS.mist}`, borderRadius: 12, padding: '16px 20px' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.stone, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
                   Programme
                 </div>
-                <div style={{ fontFamily: FONTS.heading, fontSize: 18, fontWeight: 700, color: COLORS.forest, marginBottom: 4 }}>
+                <div style={{ fontFamily: FONTS.heading, fontSize: 18, fontWeight: 700, color: '#FFFFFF', marginBottom: 4 }}>
                   {invitation.program_name ?? 'Programme'}
                 </div>
                 <AccessLevelBadge level={invitation.access_level} size='sm' showTooltip />
@@ -215,7 +215,7 @@ export default function InviteAcceptClient({ invitation, token, isLoggedIn, user
                       display: 'block', textAlign: 'center', width: '100%', boxSizing: 'border-box',
                       padding: '12px 0', borderRadius: 12,
                       border: `1.5px solid ${COLORS.mist}`,
-                      background: '#fff', color: COLORS.forest, fontWeight: 600, fontSize: 15,
+                      background: '#1A2B4A', color: '#FFFFFF', fontWeight: 600, fontSize: 15,
                       textDecoration: 'none',
                     }}
                   >

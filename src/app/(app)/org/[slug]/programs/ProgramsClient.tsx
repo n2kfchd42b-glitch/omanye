@@ -32,7 +32,7 @@ const VISIBILITY_ICONS: Record<ProgramVisibility, React.ReactNode> = {
 const VISIBILITY_COLORS: Record<ProgramVisibility, { bg: string; text: string }> = {
   PRIVATE:    { bg: '#F1F5F9', text: '#475569' },
   DONOR_ONLY: { bg: '#E0F2FE', text: '#0369A1' },
-  PUBLIC:     { bg: '#E6F5EC', text: '#1A5C3A' },
+  PUBLIC:     { bg: '#38A16920', text: '#38A169' },
 }
 
 export default function ProgramsClient({ programs, userRole, orgSlug }: Props) {

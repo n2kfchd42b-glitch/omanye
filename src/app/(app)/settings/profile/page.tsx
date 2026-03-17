@@ -160,7 +160,7 @@ export default function ProfileSettingsPage() {
                   display: 'flex', alignItems: 'center', gap: 7,
                   padding: '8px 14px', border: `1px solid ${COLORS.mist}`, borderRadius: 8,
                   fontSize: 13, fontWeight: 500, color: COLORS.slate,
-                  background: '#ffffff', cursor: uploading ? 'not-allowed' : 'pointer', fontFamily: FONTS.body,
+                  background: '#1A2B4A', cursor: uploading ? 'not-allowed' : 'pointer', fontFamily: FONTS.body,
                 }}
               >
                 <Upload size={13} />

@@ -14,7 +14,7 @@ export const SUBMISSION_STATUS_LABELS: Record<SubmissionStatus, string> = {
 export const SUBMISSION_STATUS_COLORS: Record<SubmissionStatus, { bg: string; text: string; dot: string }> = {
   DRAFT:     { bg: '#FEF3C7', text: '#92400E', dot: '#D97706' },
   SUBMITTED: { bg: '#DBEAFE', text: '#1E40AF', dot: '#3B82F6' },
-  REVIEWED:  { bg: '#E6F5EC', text: '#1A5C3A', dot: '#4CAF78' },
+  REVIEWED:  { bg: '#38A16920', text: '#38A169', dot: '#38A169' },
   FLAGGED:   { bg: '#FEE2E2', text: '#991B1B', dot: '#EF4444' },
 }
 

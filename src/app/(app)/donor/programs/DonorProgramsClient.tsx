@@ -210,7 +210,7 @@ function DonorProgramCard({
               onClick={e => { e.stopPropagation(); onRequestAccess() }}
               style={{
                 padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600,
-                background: '#fff', border: `1px solid ${COLORS.mist}`,
+                background: '#1A2B4A', border: `1px solid ${COLORS.mist}`,
                 color: COLORS.slate, cursor: 'pointer',
               }}
             >
@@ -256,7 +256,7 @@ function RequestAccessModal({
     <div style={{
       position: 'fixed', inset: 0, zIndex: 100,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'rgba(13,43,30,0.55)',
+      background: 'rgba(0,0,0,0.7)',
     }} onClick={onClose}>
       <div
         className="card"
@@ -306,7 +306,7 @@ function RequestAccessModal({
               <div style={{ marginTop: 12, padding: 10, borderRadius: 7, background: '#FEE2E2', color: '#991B1B', fontSize: 12 }}>{error}</div>
             )}
             <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
-              <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 7, fontSize: 13, background: '#fff', border: `1px solid ${COLORS.mist}`, cursor: 'pointer', color: COLORS.slate }}>
+              <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 7, fontSize: 13, background: '#1A2B4A', border: `1px solid ${COLORS.mist}`, cursor: 'pointer', color: COLORS.slate }}>
                 Cancel
               </button>
               <button

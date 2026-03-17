@@ -33,7 +33,7 @@ const INTEGRATIONS: Integration[] = [
     source: 'REDCap',
     label:  'REDCap',
     desc:   'Import datasets from your REDCap project via API token.',
-    color:  '#1A5C3A',
+    color:  '#38A169',
     icon:   'R',
   },
   {
@@ -98,7 +98,7 @@ function ConnectForm({ integration, onSave }: { integration: Integration; onSave
           style={{
             padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
             background: url.trim() && token.trim() ? COLORS.moss : COLORS.mist,
-            color: url.trim() && token.trim() ? '#fff' : COLORS.stone,
+            color: url.trim() && token.trim() ? COLORS.forest : COLORS.stone,
             cursor: url.trim() && token.trim() ? 'pointer' : 'not-allowed',
           }}
         >
@@ -202,7 +202,7 @@ function UploadForm({ programs, onSave }: { programs: Program[]; onSave: (d: Dat
           style={{
             padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
             background: file ? COLORS.moss : COLORS.mist,
-            color: file ? '#fff' : COLORS.stone,
+            color: file ? COLORS.forest : COLORS.stone,
             cursor: file ? 'pointer' : 'not-allowed',
           }}
         >
@@ -268,7 +268,7 @@ export function DataHub({ datasets, setDatasets, programs }: DataHubProps) {
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '9px 16px', borderRadius: 8,
-            background: COLORS.moss, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            background: COLORS.moss, color: COLORS.forest, fontSize: 13, fontWeight: 600, cursor: 'pointer',
           }}
         >
           <Upload size={14} /> Upload Dataset
@@ -312,7 +312,7 @@ export function DataHub({ datasets, setDatasets, programs }: DataHubProps) {
               </thead>
               <tbody>
                 {datasets.map((ds, i) => (
-                  <tr key={ds.id} style={{ borderTop: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? '#fff' : COLORS.snow }}>
+                  <tr key={ds.id} style={{ borderTop: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? COLORS.pearl : COLORS.snow }}>
                     <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 500, color: COLORS.forest }}>{ds.name}</td>
                     <td style={{ padding: '12px 16px' }}><SourceBadge source={ds.source} /></td>
                     <td style={{ padding: '12px 16px', fontSize: 13, color: COLORS.slate }}>{ds.rows}</td>

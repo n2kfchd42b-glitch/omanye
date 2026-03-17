@@ -25,7 +25,7 @@ export const EXPENDITURE_STATUS_LABELS: Record<ExpenditureStatus, string> = {
 
 export const EXPENDITURE_STATUS_COLORS: Record<ExpenditureStatus, { bg: string; text: string; dot: string }> = {
   PENDING:  { bg: '#FEF3C7', text: '#78350F', dot: '#D97706' },
-  APPROVED: { bg: '#E6F5EC', text: '#1A5C3A', dot: '#4CAF78' },
+  APPROVED: { bg: '#38A16920', text: '#38A169', dot: '#38A169' },
   REJECTED: { bg: '#FEE2E2', text: '#991B1B', dot: '#EF4444' },
   VOID:     { bg: '#F1F5F9', text: '#475569', dot: '#94A3B8' },
 }
@@ -39,7 +39,7 @@ export const TRANCHE_STATUS_LABELS: Record<TrancheStatus, string> = {
 
 export const TRANCHE_STATUS_COLORS: Record<TrancheStatus, { bg: string; text: string; dot: string }> = {
   EXPECTED:  { bg: '#FEF3C7', text: '#78350F', dot: '#D97706' },
-  RECEIVED:  { bg: '#E6F5EC', text: '#1A5C3A', dot: '#4CAF78' },
+  RECEIVED:  { bg: '#38A16920', text: '#38A169', dot: '#38A169' },
   DELAYED:   { bg: '#FEE2E2', text: '#991B1B', dot: '#EF4444' },
   CANCELLED: { bg: '#F1F5F9', text: '#475569', dot: '#94A3B8' },
 }

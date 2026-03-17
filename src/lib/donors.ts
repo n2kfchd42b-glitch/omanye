@@ -34,10 +34,10 @@ export const INVITATION_STATUS_LABELS: Record<InvitationStatus, string> = {
 }
 
 export const INVITATION_STATUS_COLORS: Record<InvitationStatus, { bg: string; text: string; dot: string }> = {
-  PENDING:  { bg: '#FEF3C7', text: '#78350F', dot: '#D97706' },
-  ACCEPTED: { bg: '#E6F5EC', text: '#1A5C3A', dot: '#4CAF78' },
-  EXPIRED:  { bg: '#F1F5F9', text: '#475569', dot: '#94A3B8' },
-  REVOKED:  { bg: '#FEE2E2', text: '#991B1B', dot: '#EF4444' },
+  PENDING:  { bg: '#D4AF5C20', text: '#D4AF5C', dot: '#D4AF5C' },
+  ACCEPTED: { bg: '#38A16920', text: '#38A169', dot: '#38A169' },
+  EXPIRED:  { bg: '#2D3F5C',   text: '#A0AEC0', dot: '#6B7A99' },
+  REVOKED:  { bg: '#E53E3E20', text: '#E53E3E', dot: '#E53E3E' },
 }
 
 export const NOTIFICATION_TYPE_LABELS: Record<DonorNotificationType, string> = {
@@ -53,10 +53,10 @@ export const NOTIFICATION_TYPE_LABELS: Record<DonorNotificationType, string> = {
 
 // Access level colors for badges
 export const ACCESS_LEVEL_BADGE_COLORS: Record<AccessLevel, { bg: string; text: string; border: string }> = {
-  SUMMARY_ONLY:          { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1' },
-  INDICATORS:            { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE' },
-  INDICATORS_AND_BUDGET: { bg: '#FEF9EC', text: '#92400E', border: '#FDE68A' },
-  FULL:                  { bg: '#0F1B33', text: '#FFFFFF', border: '#0F1B33' },
+  SUMMARY_ONLY:          { bg: '#2D3F5C', text: '#A0AEC0', border: '#3D4F6C'    },
+  INDICATORS:            { bg: '#1A3A5C', text: '#60A5FA', border: '#1A3A5C'    },
+  INDICATORS_AND_BUDGET: { bg: '#3A2D1A', text: '#D4AF5C', border: '#D4AF5C40' },
+  FULL:                  { bg: '#0F1B33', text: '#FFFFFF', border: '#D4AF5C'    },
 }
 
 // ── Domain Interfaces ─────────────────────────────────────────────────────────

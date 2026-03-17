@@ -192,7 +192,7 @@ export default function NotificationPreferencesPage() {
         </div>
       ) : (
         <div style={{
-          background: '#fff', borderRadius: 12,
+          background: '#1A2B4A', borderRadius: 12,
           border: `1px solid ${COLORS.mist}`,
           padding: '4px 24px 24px',
           boxShadow: SHADOW.card,

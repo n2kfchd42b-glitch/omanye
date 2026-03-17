@@ -62,9 +62,9 @@ export function AvatarGroup({
           style={{
             width: DIM[size], height: DIM[size],
             fontSize: TEXT[size],
-            background: '#EAF7EE',
-            color: '#2E7D52',
-            border: '2px solid #7DD4A066',
+            background: '#1A2B4A',
+            color: '#D4AF5C',
+            border: '2px solid #D4AF5C66',
           }}
         >
           +{overflow}

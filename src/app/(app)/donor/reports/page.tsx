@@ -80,7 +80,7 @@ export default function DonorReportsPage() {
           }}>
             <div style={{
               width: 56, height: 56, borderRadius: '50%',
-              background: 'rgba(125,212,160,0.12)',
+              background: 'rgba(212,175,92,0.12)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 16px',
             }}>

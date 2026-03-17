@@ -311,7 +311,7 @@ function ProfileTab({ org, isAdmin, onSave, onError }: {
                   display: 'flex', alignItems: 'center', gap: 7,
                   padding: '8px 14px', border: `1px solid ${COLORS.mist}`, borderRadius: 8,
                   fontSize: 13, fontWeight: 500, color: COLORS.slate,
-                  background: '#ffffff', cursor: uploading ? 'not-allowed' : 'pointer', fontFamily: FONTS.body,
+                  background: '#1A2B4A', cursor: uploading ? 'not-allowed' : 'pointer', fontFamily: FONTS.body,
                 }}
               >
                 <Upload size={13} />
@@ -643,7 +643,7 @@ function BillingTab({ org, orgSlug }: {
 
 function StatusPill({ status }: { status: string }) {
   const styles: Record<string, { bg: string; text: string }> = {
-    ACTIVE:     { bg: '#E6F5EC', text: COLORS.moss },
+    ACTIVE:     { bg: '#38A16920', text: COLORS.moss },
     PAST_DUE:   { bg: '#FEE2E2', text: COLORS.crimson },
     CANCELLED:  { bg: '#F1F5F9', text: '#64748B' },
     TRIALING:   { bg: '#DBEAFE', text: '#1E40AF' },
@@ -1111,13 +1111,13 @@ function ModalOverlay({ children, onClose }: { children: React.ReactNode; onClos
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{
         position: 'fixed', inset: 0, zIndex: 60,
-        background: 'rgba(13,43,30,0.45)',
+        background: 'rgba(0,0,0,0.7)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 20,
       }}
     >
       <div style={{
-        background: '#ffffff', borderRadius: 16, boxShadow: SHADOW.modal,
+        background: '#1A2B4A', borderRadius: 16, boxShadow: SHADOW.modal,
         maxHeight: '90vh', overflowY: 'auto', width: '100%',
       }}>
         {children}

@@ -35,7 +35,7 @@ const FORMAT_OPTIONS: DonorReport['format'][] = ['pdf', 'word', 'both']
 
 const STATUS_META: Record<DonorReport['status'], { label: string; bg: string; color: string }> = {
   draft:     { label: 'Draft',     bg: '#FEF3C7', color: '#92400E' },
-  generated: { label: 'Generated', bg: COLORS.foam, color: COLORS.moss },
+  generated: { label: 'Generated', bg: COLORS.foam, color: COLORS.gold },
   submitted: { label: 'Submitted', bg: '#E0F2FE', color: '#0369A1' },
 }
 
@@ -84,13 +84,13 @@ function PreviewModal({
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 200,
-      background: 'rgba(10,26,16,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: 24,
     }} onClick={onClose}>
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: '#ffffff', borderRadius: 14, width: '100%', maxWidth: 780,
+          background: COLORS.pearl, borderRadius: 14, width: '100%', maxWidth: 780,
           maxHeight: '90vh', overflowY: 'auto', boxShadow: SHADOW.modal, padding: 40,
           fontFamily: FONTS.body,
         }}
@@ -143,7 +143,7 @@ function PreviewModal({
                     const status = pct >= 100 ? 'Achieved' : pct >= 70 ? 'On Track' : 'Lagging'
                     const statusColor = pct >= 100 ? COLORS.fern : pct >= 70 ? COLORS.amber : COLORS.crimson
                     return (
-                      <tr key={ind.id} style={{ background: i % 2 === 0 ? '#ffffff' : COLORS.snow }}>
+                      <tr key={ind.id} style={{ background: i % 2 === 0 ? COLORS.pearl : COLORS.snow }}>
                         <td style={{ padding: '8px 12px', color: COLORS.charcoal }}>{ind.name}</td>
                         <td style={{ padding: '8px 12px', color: COLORS.slate }}>{ind.target} {ind.unit}</td>
                         <td style={{ padding: '8px 12px', color: COLORS.slate }}>{ind.current} {ind.unit}</td>
@@ -186,7 +186,7 @@ function PreviewModal({
                     const burn = cat.allocated > 0 ? Math.round((cat.spent / cat.allocated) * 100) : 0
                     const remaining = cat.allocated - cat.spent
                     return (
-                      <tr key={cat.id} style={{ background: i % 2 === 0 ? '#ffffff' : COLORS.snow }}>
+                      <tr key={cat.id} style={{ background: i % 2 === 0 ? COLORS.pearl : COLORS.snow }}>
                         <td style={{ padding: '8px 12px', color: COLORS.charcoal }}>{cat.name}</td>
                         <td style={{ padding: '8px 12px', color: COLORS.slate }}>{prog.currency} {cat.allocated.toLocaleString()}</td>
                         <td style={{ padding: '8px 12px', color: COLORS.slate }}>{prog.currency} {cat.spent.toLocaleString()}</td>
@@ -298,13 +298,13 @@ function WizardModal({
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 200,
-      background: 'rgba(10,26,16,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: 24,
     }} onClick={onClose}>
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: '#ffffff', borderRadius: 14, width: '100%', maxWidth: 620,
+          background: COLORS.pearl, borderRadius: 14, width: '100%', maxWidth: 620,
           maxHeight: '90vh', overflowY: 'auto', boxShadow: SHADOW.modal,
           fontFamily: FONTS.body,
         }}
@@ -399,7 +399,7 @@ function WizardModal({
                         padding: '7px 18px', borderRadius: 8, cursor: 'pointer',
                         fontFamily: FONTS.body, fontSize: 13, fontWeight: 600,
                         border: `2px solid ${form.format === f ? COLORS.fern : COLORS.mist}`,
-                        background: form.format === f ? COLORS.foam : '#ffffff',
+                        background: form.format === f ? COLORS.foam : COLORS.pearl,
                         color: form.format === f ? COLORS.fern : COLORS.stone,
                       }}
                     >
@@ -675,7 +675,7 @@ export function DonorReportView({ reports, setReports, programs, user }: Props) 
           const sm = STATUS_META[r.status]
           return (
             <div key={r.id} style={{
-              background: '#ffffff', borderRadius: 12, boxShadow: SHADOW.card,
+              background: COLORS.pearl, borderRadius: 12, boxShadow: SHADOW.card,
               border: `1px solid ${COLORS.mist}`, padding: '16px 20px',
               display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
             }}>
@@ -685,7 +685,7 @@ export function DonorReportView({ reports, setReports, programs, user }: Props) 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6, alignItems: 'center' }}>
                   <span style={{
                     fontSize: 11, padding: '2px 8px', borderRadius: 20,
-                    background: COLORS.moss, color: '#ffffff', fontWeight: 600,
+                    background: COLORS.moss, color: COLORS.forest, fontWeight: 600,
                   }}>{r.programName}</span>
                   <span style={{ fontSize: 12, color: COLORS.gold, fontWeight: 600 }}>{r.funder}</span>
                   <span style={{ fontSize: 11, color: COLORS.stone }}>
@@ -750,7 +750,7 @@ function ActionBtn({
         display: 'inline-flex', alignItems: 'center', gap: 5,
         padding: '6px 12px', borderRadius: 7, cursor: 'pointer',
         border: `1px solid ${hov ? color : COLORS.mist}`,
-        background: hov ? color : '#ffffff',
+        background: hov ? color : COLORS.pearl,
         color: hov ? '#ffffff' : color,
         fontFamily: FONTS.body, fontSize: 12, fontWeight: 600,
         transition: 'all 0.15s',

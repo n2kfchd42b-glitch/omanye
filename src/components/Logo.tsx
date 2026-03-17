@@ -15,7 +15,7 @@ export function OmanyeSymbol({ size = 40, className }: { size?: number; classNam
   const half = dim / 2
   const rx   = Math.round(dim * 0.18)
   const R    = [0.46, 0.36, 0.26, 0.16, 0.07].map(f => f * dim)
-  const FILLS = ['white', '#D4AF5C', 'white', '#0D2B1E', '#D4AF5C']
+  const FILLS = ['white', '#D4AF5C', 'white', '#0F1B33', '#D4AF5C']
 
   return (
     <svg
@@ -28,7 +28,7 @@ export function OmanyeSymbol({ size = 40, className }: { size?: number; classNam
       aria-label="OMANYE Adinkrahene symbol"
       role="img"
     >
-      <rect width={dim} height={dim} rx={rx} fill="#0D2B1E" />
+      <rect width={dim} height={dim} rx={rx} fill="#0F1B33" />
       {R.map((r, i) => (
         <circle key={i} cx={half} cy={half} r={r} fill={FILLS[i]} />
       ))}
@@ -58,8 +58,8 @@ interface LogoProps {
 
 export function OmanyeLogo({ size = 'md', showTagline = true, variant = 'dark', className }: LogoProps) {
   const s = LOGO_SIZES[size]
-  const wordColor  = variant === 'dark' ? '#D4AF5C' : '#0D2B1E'
-  const tagColor   = variant === 'dark' ? 'rgba(125,212,160,0.70)' : 'rgba(46,125,82,0.60)'
+  const wordColor  = variant === 'dark' ? '#D4AF5C' : '#0F1B33'
+  const tagColor   = variant === 'dark' ? 'rgba(212,175,92,0.70)' : 'rgba(160,174,192,0.70)'
 
   return (
     <div className={cn('flex items-center', s.gap, className)}>

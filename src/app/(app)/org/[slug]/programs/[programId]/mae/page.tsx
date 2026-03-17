@@ -28,7 +28,7 @@ const PROGRAM_TABS = [
 function ProgramTabBar({ slug, programId, active }: { slug: string; programId: string; active: string }) {
   const router = useRouter()
   return (
-    <div style={{ display: 'flex', gap: 2, borderBottom: `1px solid ${COLORS.mist}`, padding: '0 24px', background: '#fff', overflowX: 'auto' }}>
+    <div style={{ display: 'flex', gap: 2, borderBottom: `1px solid ${COLORS.mist}`, padding: '0 24px', background: '#1A2B4A', overflowX: 'auto' }}>
       {PROGRAM_TABS.map(tab => (
         <button
           key={tab.id}
@@ -86,7 +86,7 @@ function StatCard({ label, value, sub }: { label: string; value: string | number
 function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string }) {
   if (!active || !payload?.length) return null
   return (
-    <div style={{ background: '#fff', border: `1px solid ${COLORS.mist}`, borderRadius: 8, padding: '8px 12px', boxShadow: '0 4px 12px rgba(13,43,30,0.1)', fontSize: 12 }}>
+    <div style={{ background: '#1A2B4A', border: `1px solid ${COLORS.mist}`, borderRadius: 8, padding: '8px 12px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', fontSize: 12 }}>
       <p style={{ fontWeight: 600, color: COLORS.forest, marginBottom: 6 }}>{label}</p>
       {payload.map((p, i) => (
         <p key={i} style={{ color: p.color, marginBottom: 2 }}>{p.name}: <strong>{p.value}</strong></p>
@@ -190,7 +190,7 @@ export default function MaeDashboardPage() {
       target:  ind.target,
       current: ind.current,
       pct:     pctVal,
-      color:   pctVal >= 75 ? '#4CAF78' : pctVal >= 50 ? '#D4AF5C' : '#C0392B',
+      color:   pctVal >= 75 ? '#38A169' : pctVal >= 50 ? '#D4AF5C' : '#C0392B',
     }
   })
 
@@ -219,7 +219,7 @@ export default function MaeDashboardPage() {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([month, count]) => ({ month, count }))
 
-  const LINE_COLORS = ['#4CAF78', '#D4AF5C', '#2563EB', '#8B5CF6', '#EC4899', '#0891B2']
+  const LINE_COLORS = ['#38A169', '#D4AF5C', '#2563EB', '#8B5CF6', '#EC4899', '#0891B2']
 
   if (loading) {
     return (
@@ -294,7 +294,7 @@ export default function MaeDashboardPage() {
             {/* Legend for colors */}
             <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 11, color: COLORS.stone }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 2, background: '#4CAF78', display: 'inline-block' }} />
+                <span style={{ width: 10, height: 10, borderRadius: 2, background: '#38A169', display: 'inline-block' }} />
                 ≥75% (On Track)
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>

@@ -114,7 +114,7 @@ export function Sidebar({ view, onNav, collapsed, onToggle, user }: SidebarProps
         {!collapsed && (
           <p style={{
             fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
-            letterSpacing: '0.1em', color: 'rgba(125,212,160,0.40)',
+            letterSpacing: '0.1em', color: 'rgba(212,175,92,0.40)',
             padding: '0 16px 8px',
           }}>
             Workspace
@@ -136,7 +136,7 @@ export function Sidebar({ view, onNav, collapsed, onToggle, user }: SidebarProps
             {!collapsed && (
               <p style={{
                 fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
-                letterSpacing: '0.1em', color: 'rgba(125,212,160,0.40)',
+                letterSpacing: '0.1em', color: 'rgba(212,175,92,0.40)',
                 padding: '0 16px 8px',
               }}>
                 System
@@ -185,7 +185,7 @@ export function Sidebar({ view, onNav, collapsed, onToggle, user }: SidebarProps
             justifyContent: collapsed ? 'center' : 'flex-start',
             gap: 8,
             padding: collapsed ? '10px 0' : '10px 16px',
-            color: 'rgba(125,212,160,0.50)',
+            color: 'rgba(212,175,92,0.50)',
             fontSize: 11,
             cursor: 'pointer',
             borderTop: `1px solid rgba(255,255,255,0.04)`,
@@ -197,7 +197,7 @@ export function Sidebar({ view, onNav, collapsed, onToggle, user }: SidebarProps
             borderTopColor: 'rgba(255,255,255,0.04)',
           }}
           onMouseEnter={e => (e.currentTarget.style.color = COLORS.mint)}
-          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(125,212,160,0.50)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(212,175,92,0.50)')}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed
@@ -227,8 +227,8 @@ function NavLink({
         padding: collapsed ? '9px 0' : '9px 16px',
         justifyContent: collapsed ? 'center' : 'flex-start',
         borderLeft: active ? `2px solid ${COLORS.sage}` : '2px solid transparent',
-        background: active ? 'rgba(26,92,58,0.22)' : 'transparent',
-        color: active ? COLORS.mint : 'rgba(125,212,160,0.60)',
+        background: active ? 'rgba(212,175,92,0.12)' : 'transparent',
+        color: active ? COLORS.mint : '#A0AEC0',
         fontSize: 13,
         fontWeight: active ? 600 : 400,
         cursor: 'pointer',
@@ -242,14 +242,14 @@ function NavLink({
       }}
       onMouseEnter={e => {
         if (!active) {
-          e.currentTarget.style.background = 'rgba(19,56,40,0.80)'
+          e.currentTarget.style.background = '#1A2B4A'
           e.currentTarget.style.color = '#ffffff'
         }
       }}
       onMouseLeave={e => {
         if (!active) {
           e.currentTarget.style.background = 'transparent'
-          e.currentTarget.style.color = 'rgba(125,212,160,0.60)'
+          e.currentTarget.style.color = '#A0AEC0'
         }
       }}
       aria-current={active ? 'page' : undefined}

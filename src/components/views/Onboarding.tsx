@@ -55,7 +55,7 @@ function DotGrid() {
     >
       <defs>
         <pattern id="dots" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
-          <circle cx="1.5" cy="1.5" r="1.5" fill="rgba(125,212,160,0.10)" />
+          <circle cx="1.5" cy="1.5" r="1.5" fill="rgba(212,175,92,0.10)" />
         </pattern>
       </defs>
       <rect width="100%" height="100%" fill="url(#dots)" />
@@ -76,7 +76,7 @@ function StepPills({ step }: { step: number }) {
             borderRadius: 99,
             transition: 'width 0.25s ease, background 0.2s',
             width: i === step ? 28 : 8,
-            background: i === step ? COLORS.sage : 'rgba(125,212,160,0.25)',
+            background: i === step ? COLORS.sage : 'rgba(212,175,92,0.25)',
           }}
         />
       ))}
@@ -141,7 +141,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         <div
           style={{
             background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(125,212,160,0.15)',
+            border: '1px solid rgba(212,175,92,0.15)',
             borderRadius: 20,
             padding: '32px 32px',
             backdropFilter: 'blur(12px)',
@@ -156,7 +156,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               }}>
                 Welcome to OMANYE
               </h2>
-              <p style={{ fontSize: 13, color: 'rgba(125,212,160,0.65)', marginBottom: 24, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 13, color: 'rgba(212,175,92,0.65)', marginBottom: 24, lineHeight: 1.5 }}>
                 Let's set up your workspace. Start with your personal details.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -190,7 +190,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               }}>
                 Your organisation
               </h2>
-              <p style={{ fontSize: 13, color: 'rgba(125,212,160,0.65)', marginBottom: 24, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 13, color: 'rgba(212,175,92,0.65)', marginBottom: 24, lineHeight: 1.5 }}>
                 Tell us about your organisation and your role.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -223,7 +223,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               }}>
                 Everything you need
               </h2>
-              <p style={{ fontSize: 13, color: 'rgba(125,212,160,0.65)', marginBottom: 24, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 13, color: 'rgba(212,175,92,0.65)', marginBottom: 24, lineHeight: 1.5 }}>
                 Your workspace for <strong style={{ color: COLORS.mint }}>{org}</strong> is ready.
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 4 }}>
@@ -234,14 +234,14 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                       key={i}
                       style={{
                         background: 'rgba(255,255,255,0.05)',
-                        border: '1px solid rgba(125,212,160,0.12)',
+                        border: '1px solid rgba(212,175,92,0.12)',
                         borderRadius: 12,
                         padding: '14px 14px',
                       }}
                     >
                       <Icon size={16} style={{ color: COLORS.sage, marginBottom: 8 }} />
                       <p style={{ fontSize: 12, fontWeight: 600, color: '#ffffff', marginBottom: 4 }}>{f.title}</p>
-                      <p style={{ fontSize: 11, color: 'rgba(125,212,160,0.55)', lineHeight: 1.5 }}>{f.description}</p>
+                      <p style={{ fontSize: 11, color: 'rgba(212,175,92,0.55)', lineHeight: 1.5 }}>{f.description}</p>
                     </div>
                   )
                 })}
@@ -256,11 +256,11 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                 onClick={() => setStep(s => s - 1)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 4,
-                  fontSize: 13, color: 'rgba(125,212,160,0.60)',
+                  fontSize: 13, color: 'rgba(212,175,92,0.60)',
                   cursor: 'pointer', transition: 'color 0.15s',
                 }}
                 onMouseEnter={e => (e.currentTarget.style.color = COLORS.mint)}
-                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(125,212,160,0.60)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(212,175,92,0.60)')}
               >
                 <ChevronLeft size={14} /> Back
               </button>
@@ -273,8 +273,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '10px 22px',
                 borderRadius: 10,
-                background: canNext ? COLORS.sage : 'rgba(125,212,160,0.15)',
-                color: canNext ? COLORS.forest : 'rgba(125,212,160,0.35)',
+                background: canNext ? COLORS.sage : 'rgba(212,175,92,0.15)',
+                color: canNext ? COLORS.forest : 'rgba(212,175,92,0.35)',
                 fontSize: 13, fontWeight: 700,
                 cursor: canNext ? 'pointer' : 'not-allowed',
                 transition: 'background 0.15s, color 0.15s',
@@ -286,7 +286,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           </div>
         </div>
 
-        <p style={{ textAlign: 'center', marginTop: 20, fontSize: 11, color: 'rgba(125,212,160,0.30)' }}>
+        <p style={{ textAlign: 'center', marginTop: 20, fontSize: 11, color: 'rgba(212,175,92,0.30)' }}>
           OMANYE NGO Workspace · Built for field teams
         </p>
       </div>

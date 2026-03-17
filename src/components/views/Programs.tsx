@@ -118,7 +118,7 @@ function NewProgramForm({ onSave }: NewProgramFormProps) {
           style={{
             padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
             background: name.trim() ? COLORS.moss : COLORS.mist,
-            color: name.trim() ? '#fff' : COLORS.stone,
+            color: name.trim() ? COLORS.forest : COLORS.stone,
             cursor: name.trim() ? 'pointer' : 'not-allowed',
           }}
         >
@@ -172,7 +172,7 @@ export function Programs({ programs, setPrograms, onSelect }: ProgramsProps) {
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '9px 16px', borderRadius: 8,
-            background: COLORS.moss, color: '#fff',
+            background: COLORS.moss, color: COLORS.forest,
             fontSize: 13, fontWeight: 600, cursor: 'pointer',
           }}
         >
@@ -191,7 +191,7 @@ export function Programs({ programs, setPrograms, onSelect }: ProgramsProps) {
                 padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 500,
                 cursor: 'pointer', transition: 'all 0.15s',
                 background: filter === f ? COLORS.moss : COLORS.foam,
-                color: filter === f ? '#fff' : COLORS.slate,
+                color: filter === f ? COLORS.forest : COLORS.slate,
                 border: `1px solid ${filter === f ? COLORS.moss : COLORS.mist}`,
               }}
             >
@@ -214,7 +214,7 @@ export function Programs({ programs, setPrograms, onSelect }: ProgramsProps) {
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                   padding: '9px 18px', borderRadius: 8,
-                  background: COLORS.moss, color: '#fff',
+                  background: COLORS.moss, color: COLORS.forest,
                   fontSize: 13, fontWeight: 600, cursor: 'pointer',
                 }}
               >

@@ -21,7 +21,7 @@ function relativeTime(iso: string | null): string {
 
 const REQUEST_STATUS_STYLES: Record<string, { bg: string; text: string; dot: string }> = {
   PENDING:  { bg: '#FEF3C7', text: '#78350F', dot: '#D97706' },
-  APPROVED: { bg: '#E6F5EC', text: '#1A5C3A', dot: '#4CAF78' },
+  APPROVED: { bg: '#38A16920', text: '#38A169', dot: '#38A169' },
   DENIED:   { bg: '#FEE2E2', text: '#991B1B', dot: '#EF4444' },
 }
 
@@ -110,7 +110,7 @@ export default function DonorAccessClient({ grants, requests }: Props) {
         {tab === 'access' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {activeGrants.length === 0 && revokedGrants.length === 0 && (
-              <div style={{ background: '#fff', border: `1px solid ${COLORS.mist}`, borderRadius: 14, padding: 48, textAlign: 'center' }}>
+              <div style={{ background: '#1A2B4A', border: `1px solid ${COLORS.mist}`, borderRadius: 14, padding: 48, textAlign: 'center' }}>
                 <p style={{ fontSize: 15, color: COLORS.stone, margin: 0 }}>You don't have access to any programmes yet.</p>
               </div>
             )}
@@ -119,7 +119,7 @@ export default function DonorAccessClient({ grants, requests }: Props) {
               <div
                 key={g.id as string}
                 style={{
-                  background: '#fff',
+                  background: '#1A2B4A',
                   border: `1px solid ${COLORS.mist}`,
                   borderRadius: 12,
                   padding: '18px 20px',
@@ -201,7 +201,7 @@ export default function DonorAccessClient({ grants, requests }: Props) {
         {tab === 'requests' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {requests.length === 0 && (
-              <div style={{ background: '#fff', border: `1px solid ${COLORS.mist}`, borderRadius: 14, padding: 48, textAlign: 'center' }}>
+              <div style={{ background: '#1A2B4A', border: `1px solid ${COLORS.mist}`, borderRadius: 14, padding: 48, textAlign: 'center' }}>
                 <p style={{ fontSize: 15, color: COLORS.stone, margin: 0 }}>You haven't made any access requests yet.</p>
               </div>
             )}
@@ -212,7 +212,7 @@ export default function DonorAccessClient({ grants, requests }: Props) {
                 <div
                   key={r.id}
                   style={{
-                    background: '#fff',
+                    background: '#1A2B4A',
                     border: `1px solid ${COLORS.mist}`,
                     borderLeft: r.status === 'PENDING' ? `3px solid ${COLORS.gold}` : `1px solid ${COLORS.mist}`,
                     borderRadius: 12,

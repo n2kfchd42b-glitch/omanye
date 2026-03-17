@@ -70,7 +70,7 @@ export default async function DonorDashboardPage() {
   }
 
   const STATUS_COLOR: Record<string, string> = {
-    ACTIVE:    '#1A5C3A',
+    ACTIVE:    '#38A169',
     PLANNING:  '#92400E',
     COMPLETED: '#475569',
     SUSPENDED: '#991B1B',

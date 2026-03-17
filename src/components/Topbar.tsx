@@ -29,12 +29,12 @@ const VIEW_TITLE: Record<ViewId, string> = {
 // ── Role badge ────────────────────────────────────────────────────────────────
 
 const ROLE_BADGE: Record<string, { bg: string; text: string }> = {
-  Admin:        { bg: COLORS.forest,  text: '#ffffff'  },
-  'Field Staff': { bg: '#FEF3C7',     text: '#78350F'  },
-  'M&E Officer': { bg: '#DBEAFE',     text: '#1E40AF'  },
-  Supervisor:   { bg: '#FEF3C7',      text: '#92400E'  },
-  Viewer:       { bg: '#F1F5F9',      text: '#475569'  },
-  Donor:        { bg: '#E0F2FE',      text: '#0369A1'  },
+  Admin:         { bg: '#0F1B33',  text: '#D4AF5C'  },
+  'Field Staff': { bg: '#1A3A5C',  text: '#60A5FA'  },
+  'M&E Officer': { bg: '#1A2B4A',  text: '#A0AEC0'  },
+  Supervisor:    { bg: '#1A2B4A',  text: '#A0AEC0'  },
+  Viewer:        { bg: '#243352',  text: '#6B7A99'  },
+  Donor:         { bg: '#1A3A5C',  text: '#60A5FA'  },
 }
 
 // ── Topbar ────────────────────────────────────────────────────────────────────
@@ -76,7 +76,7 @@ export function Topbar({ view, sidebarW, user, orgSlug, onSettings, onSignOut }:
         right: 0,
         left: sidebarW,
         height: SPACING.topbarH,
-        background: 'rgba(255,255,255,0.96)',
+        background: '#0F1B33',
         backdropFilter: 'blur(8px)',
         borderBottom: `1px solid ${COLORS.mist}`,
         zIndex: 40,
@@ -92,7 +92,7 @@ export function Topbar({ view, sidebarW, user, orgSlug, onSettings, onSignOut }:
         fontFamily: FONTS.heading,
         fontSize: 18,
         fontWeight: 600,
-        color: COLORS.forest,
+        color: '#FFFFFF',
         lineHeight: 1,
       }}>
         {VIEW_TITLE[view]}
@@ -115,8 +115,8 @@ export function Topbar({ view, sidebarW, user, orgSlug, onSettings, onSignOut }:
               fontSize: 13,
               borderRadius: 8,
               border: `1px solid ${COLORS.mist}`,
-              background: COLORS.snow,
-              color: COLORS.forest,
+              background: '#1A2B4A',
+              color: '#FFFFFF',
               outline: 'none',
               width: 160,
               fontFamily: FONTS.body,
@@ -124,7 +124,7 @@ export function Topbar({ view, sidebarW, user, orgSlug, onSettings, onSignOut }:
             onFocus={e => {
               e.target.style.width = '200px'
               e.target.style.borderColor = COLORS.sage
-              e.target.style.boxShadow = `0 0 0 3px rgba(74,207,120,0.14)`
+              e.target.style.boxShadow = `0 0 0 3px rgba(212,175,92,0.15)`
             }}
             onBlur={e => {
               e.target.style.width = '160px'
@@ -162,10 +162,10 @@ export function Topbar({ view, sidebarW, user, orgSlug, onSettings, onSignOut }:
           {dropOpen && (
             <div style={{
               position: 'absolute', top: 'calc(100% + 4px)', right: 0,
-              background: '#ffffff',
+              background: '#1A2B4A',
               borderRadius: 10,
               border: `1px solid ${COLORS.mist}`,
-              boxShadow: '0 8px 32px rgba(13,43,30,0.12)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
               minWidth: 220,
               zIndex: 50,
               overflow: 'hidden',
@@ -173,7 +173,7 @@ export function Topbar({ view, sidebarW, user, orgSlug, onSettings, onSignOut }:
               {/* User info */}
               <div style={{ padding: '12px 14px', borderBottom: `1px solid ${COLORS.mist}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.forest, margin: 0 }}>{user.name}</p>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: '#FFFFFF', margin: 0 }}>{user.name}</p>
                   <span style={{
                     fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20,
                     background: roleStyle.bg, color: roleStyle.text,

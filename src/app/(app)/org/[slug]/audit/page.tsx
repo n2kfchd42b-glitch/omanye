@@ -38,7 +38,7 @@ function formatActionLabel(action: string): string {
 }
 
 const ENTITY_TYPE_COLORS: Record<string, { bg: string; text: string }> = {
-  program:            { bg: '#E6F5EC', text: '#1A5C3A' },
+  program:            { bg: '#38A16920', text: '#38A169' },
   indicator:          { bg: '#DBEAFE', text: '#1E40AF' },
   expenditure:        { bg: '#FEF3C7', text: '#78350F' },
   budget_amendment:   { bg: '#FEF3C7', text: '#92400E' },
@@ -48,7 +48,7 @@ const ENTITY_TYPE_COLORS: Record<string, { bg: string; text: string }> = {
   donor_invitation:   { bg: '#FDE68A', text: '#78350F' },
   donor_program_access: { bg: '#FDE68A', text: '#92400E' },
   donor_access_request: { bg: '#FDE68A', text: '#78350F' },
-  field_submission:   { bg: '#E6F5EC', text: '#065F46' },
+  field_submission:   { bg: '#38A16920', text: '#065F46' },
 }
 
 const ENTITY_TYPE_LABELS: Record<string, string> = {
@@ -212,7 +212,7 @@ export default function AuditLogPage() {
             style={{
               width: '100%', paddingLeft: 30, paddingRight: 12, paddingTop: 8, paddingBottom: 8,
               fontSize: 13, borderRadius: 8, border: `1px solid ${COLORS.mist}`,
-              background: '#fff', color: COLORS.forest, fontFamily: FONTS.body, outline: 'none',
+              background: '#1A2B4A', color: COLORS.forest, fontFamily: FONTS.body, outline: 'none',
               boxSizing: 'border-box',
             }}
           />
@@ -226,7 +226,7 @@ export default function AuditLogPage() {
             style={{
               width: '100%', padding: '8px 32px 8px 12px',
               fontSize: 13, borderRadius: 8, border: `1px solid ${COLORS.mist}`,
-              background: '#fff', color: COLORS.forest, fontFamily: FONTS.body,
+              background: '#1A2B4A', color: COLORS.forest, fontFamily: FONTS.body,
               appearance: 'none', cursor: 'pointer', outline: 'none',
             }}
           >
@@ -245,7 +245,7 @@ export default function AuditLogPage() {
             style={{
               width: '100%', padding: '8px 32px 8px 12px',
               fontSize: 13, borderRadius: 8, border: `1px solid ${COLORS.mist}`,
-              background: '#fff', color: COLORS.forest, fontFamily: FONTS.body,
+              background: '#1A2B4A', color: COLORS.forest, fontFamily: FONTS.body,
               appearance: 'none', cursor: 'pointer', outline: 'none',
             }}
           >
@@ -263,7 +263,7 @@ export default function AuditLogPage() {
           style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
             fontSize: 13, borderRadius: 8, border: `1px solid ${COLORS.mist}`,
-            background: '#fff', color: COLORS.slate, cursor: 'pointer', fontFamily: FONTS.body,
+            background: '#1A2B4A', color: COLORS.slate, cursor: 'pointer', fontFamily: FONTS.body,
           }}
         >
           <RefreshCw size={13} /> Refresh
@@ -292,7 +292,7 @@ export default function AuditLogPage() {
 
       {/* Table */}
       <div style={{
-        background: '#fff', borderRadius: 12,
+        background: '#1A2B4A', borderRadius: 12,
         border: `1px solid ${COLORS.mist}`,
         overflow: 'hidden',
         boxShadow: SHADOW.card,
@@ -345,7 +345,7 @@ export default function AuditLogPage() {
               onClick={() => fetchLogs(offset + LIMIT)}
               style={{
                 padding: '8px 24px', fontSize: 13, borderRadius: 8,
-                border: `1px solid ${COLORS.mist}`, background: '#fff',
+                border: `1px solid ${COLORS.mist}`, background: '#1A2B4A',
                 color: COLORS.slate, cursor: 'pointer', fontFamily: FONTS.body,
               }}
             >
@@ -383,7 +383,7 @@ function AuditRow({
         gridTemplateColumns: '140px 1fr 160px 140px 160px 36px',
         padding: '11px 16px',
         alignItems: 'center',
-        background: '#fff',
+        background: '#1A2B4A',
         transition: 'background 0.1s',
       }}
         onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = COLORS.snow)}

@@ -97,7 +97,7 @@ function NewAnalysisForm({ datasets, onSave }: { datasets: Dataset[]; onSave: (a
           style={{
             padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
             background: title.trim() && type ? COLORS.moss : COLORS.mist,
-            color: title.trim() && type ? '#fff' : COLORS.stone,
+            color: title.trim() && type ? COLORS.forest : COLORS.stone,
             cursor: title.trim() && type ? 'pointer' : 'not-allowed',
           }}
         >
@@ -148,7 +148,7 @@ export function Analytics({ analyses, setAnalyses, datasets }: AnalyticsProps) {
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '9px 16px', borderRadius: 8,
-            background: COLORS.moss, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            background: COLORS.moss, color: COLORS.forest, fontSize: 13, fontWeight: 600, cursor: 'pointer',
           }}
         >
           <Plus size={14} /> New Analysis
@@ -202,7 +202,7 @@ export function Analytics({ analyses, setAnalyses, datasets }: AnalyticsProps) {
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 6,
                     padding: '9px 18px', borderRadius: 8,
-                    background: COLORS.moss, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    background: COLORS.moss, color: COLORS.forest, fontSize: 13, fontWeight: 600, cursor: 'pointer',
                   }}
                 >
                   <Plus size={14} /> New Analysis
@@ -225,7 +225,7 @@ export function Analytics({ analyses, setAnalyses, datasets }: AnalyticsProps) {
                   const TypeInfo = ANALYSIS_TYPES.find(t => t.id === a.type)
                   const Icon = TypeInfo?.icon ?? BarChart2
                   return (
-                    <tr key={a.id} style={{ borderTop: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? '#fff' : COLORS.snow }}>
+                    <tr key={a.id} style={{ borderTop: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? COLORS.pearl : COLORS.snow }}>
                       <td style={{ padding: '12px 16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <div style={{ width: 28, height: 28, borderRadius: 8, background: COLORS.foam, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

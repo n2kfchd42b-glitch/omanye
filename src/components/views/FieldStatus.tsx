@@ -28,10 +28,10 @@ type FilterTab = 'all' | AssignmentStatus
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_META: Record<AssignmentStatus, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
-  submitted:   { label: 'Submitted',   color: COLORS.fern,    bg: '#E8F5EE', Icon: CheckCircle2 },
-  pending:     { label: 'Pending',     color: COLORS.amber,   bg: '#FEF3C7', Icon: Clock },
-  overdue:     { label: 'Overdue',     color: COLORS.crimson, bg: '#FEE2E2', Icon: AlertTriangle },
-  not_started: { label: 'Not Started', color: COLORS.stone,   bg: '#F0F4F2', Icon: Circle },
+  submitted:   { label: 'Submitted',   color: COLORS.fern,    bg: '#38A16920', Icon: CheckCircle2 },
+  pending:     { label: 'Pending',     color: COLORS.amber,   bg: '#D4AF5C20', Icon: Clock },
+  overdue:     { label: 'Overdue',     color: COLORS.crimson, bg: '#E53E3E20', Icon: AlertTriangle },
+  not_started: { label: 'Not Started', color: COLORS.stone,   bg: COLORS.mist, Icon: Circle },
 }
 
 const FILTER_TABS: FilterTab[] = ['all', 'submitted', 'pending', 'overdue', 'not_started']
@@ -49,7 +49,7 @@ function fmtDate(iso: string) {
 function StatCard({ label, value, icon, color }: { label: string; value: number | string; icon: React.ReactNode; color: string }) {
   return (
     <div style={{
-      background: '#ffffff', borderRadius: 12, boxShadow: SHADOW.card,
+      background: COLORS.pearl, borderRadius: 12, boxShadow: SHADOW.card,
       border: `1px solid ${COLORS.mist}`, padding: '16px 20px',
       display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 140,
     }}>
@@ -151,13 +151,13 @@ function NewPeriodModal({
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 200,
-      background: 'rgba(10,26,16,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: 24,
     }} onClick={onClose}>
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: '#ffffff', borderRadius: 14, width: '100%', maxWidth: 540,
+          background: COLORS.pearl, borderRadius: 14, width: '100%', maxWidth: 540,
           maxHeight: '90vh', overflowY: 'auto', boxShadow: SHADOW.modal, fontFamily: FONTS.body,
         }}
       >
@@ -330,7 +330,7 @@ function PeriodCard({
 
   return (
     <div style={{
-      background: '#ffffff', borderRadius: 12, boxShadow: SHADOW.card,
+      background: COLORS.pearl, borderRadius: 12, boxShadow: SHADOW.card,
       border: `1px solid ${COLORS.mist}`, overflow: 'hidden',
     }}>
       {/* Card header */}
@@ -396,7 +396,7 @@ function PeriodCard({
                   const Icon = sm.Icon
                   return (
                     <tr key={a.id} style={{
-                      background: i % 2 === 0 ? '#ffffff' : COLORS.snow,
+                      background: i % 2 === 0 ? COLORS.pearl : COLORS.snow,
                       borderBottom: `1px solid ${COLORS.mist}`,
                     }}>
                       <td style={{ padding: '10px 14px', fontWeight: 600, color: COLORS.charcoal }}>{a.staffName}</td>
@@ -579,7 +579,7 @@ export function FieldStatus({ periods, setPeriods, team, user }: Props) {
                 padding: '6px 16px', borderRadius: 20, cursor: 'pointer',
                 fontFamily: FONTS.body, fontSize: 12, fontWeight: 600,
                 border: `1.5px solid ${active ? COLORS.fern : COLORS.mist}`,
-                background: active ? COLORS.fern : '#ffffff',
+                background: active ? COLORS.fern : COLORS.pearl,
                 color: active ? '#ffffff' : COLORS.slate,
               }}
             >

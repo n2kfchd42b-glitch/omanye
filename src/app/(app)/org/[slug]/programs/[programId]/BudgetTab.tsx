@@ -346,7 +346,7 @@ function OverviewSection({ summary, categorySpend, totalBudget, currency }: {
             </thead>
             <tbody>
               {categorySpend.map((cat, i) => (
-                <tr key={cat.category_id} style={{ borderBottom: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? '#fff' : COLORS.snow }}>
+                <tr key={cat.category_id} style={{ borderBottom: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? '#1A2B4A' : COLORS.snow }}>
                   <td style={{ padding: '10px 16px' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ width: 10, height: 10, borderRadius: 2, background: cat.color || CATEGORY_COLORS[i % CATEGORY_COLORS.length], display: 'inline-block' }} />
@@ -511,7 +511,7 @@ function ExpendituresSection({
             </thead>
             <tbody>
               {filtered.map((exp, i) => (
-                <tr key={exp.id} style={{ borderBottom: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? '#fff' : COLORS.snow }}>
+                <tr key={exp.id} style={{ borderBottom: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? '#1A2B4A' : COLORS.snow }}>
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>{formatDate(exp.transaction_date)}</td>
                   <td style={{ padding: '10px 14px', maxWidth: 200 }}>{exp.description}</td>
                   <td style={{ padding: '10px 14px', color: COLORS.slate }}>{exp.category_name ?? '—'}</td>
@@ -634,7 +634,7 @@ function SubmitExpenditureModal({
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(13,43,30,0.55)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="card" style={{ width: '100%', maxWidth: 520, padding: 28, boxShadow: SHADOW.modal, maxHeight: '90vh', overflowY: 'auto' }}>
         <h2 style={{ fontFamily: FONTS.heading, fontSize: 18, fontWeight: 700, color: COLORS.forest, marginBottom: 20 }}>
           Submit Expenditure
@@ -669,7 +669,7 @@ function SubmitExpenditureModal({
             </FormField>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
-            <button type="button" onClick={onClose} style={{ padding: '9px 18px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#fff', color: COLORS.slate, fontSize: 13, cursor: 'pointer' }}>
+            <button type="button" onClick={onClose} style={{ padding: '9px 18px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#1A2B4A', color: COLORS.slate, fontSize: 13, cursor: 'pointer' }}>
               Cancel
             </button>
             <button type="submit" disabled={isPending} style={{ padding: '9px 20px', borderRadius: 8, background: COLORS.fern, color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: isPending ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -697,7 +697,7 @@ function ReviewExpenditureModal({ exp, currency, onApprove, onReject, onClose, i
   const [showRejectForm, setShowRejectForm] = useState(false)
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(13,43,30,0.55)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="card" style={{ width: '100%', maxWidth: 460, padding: 28, boxShadow: SHADOW.modal }}>
         <h2 style={{ fontFamily: FONTS.heading, fontSize: 18, fontWeight: 700, color: COLORS.forest, marginBottom: 20 }}>
           Review Expenditure
@@ -732,7 +732,7 @@ function ReviewExpenditureModal({ exp, currency, onApprove, onReject, onClose, i
         )}
 
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-          <button type="button" onClick={onClose} style={{ padding: '9px 18px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#fff', color: COLORS.slate, fontSize: 13, cursor: 'pointer' }}>
+          <button type="button" onClick={onClose} style={{ padding: '9px 18px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#1A2B4A', color: COLORS.slate, fontSize: 13, cursor: 'pointer' }}>
             Cancel
           </button>
           {!showRejectForm ? (
@@ -843,7 +843,7 @@ function CategoriesSection({
               </FormField>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button type="button" onClick={() => setShowAdd(false)} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#fff', color: COLORS.slate, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button type="button" onClick={() => setShowAdd(false)} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#1A2B4A', color: COLORS.slate, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
               <button type="submit" disabled={isPending} style={{ padding: '8px 16px', borderRadius: 8, background: COLORS.fern, color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                 {isPending ? <Loader2 size={13} /> : 'Create'}
               </button>
@@ -977,7 +977,7 @@ function TranchesSection({ programId, organizationId, currency, tranches, isAdmi
               <Textarea value={newForm.notes ?? ''} onChange={e => setNew('notes', e.target.value || undefined)} rows={2} />
             </FormField>
             <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
-              <button type="button" onClick={() => setShowAdd(false)} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#fff', color: COLORS.slate, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button type="button" onClick={() => setShowAdd(false)} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#1A2B4A', color: COLORS.slate, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
               <button type="submit" disabled={isPending} style={{ padding: '8px 16px', borderRadius: 8, background: COLORS.fern, color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                 {isPending ? <Loader2 size={13} /> : 'Create'}
               </button>
@@ -1039,7 +1039,7 @@ function TranchesSection({ programId, organizationId, currency, tranches, isAdmi
                       </FormField>
                     </div>
                     <div style={{ display: 'flex', gap: 10 }}>
-                      <button type="button" onClick={() => setEditId(null)} style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#fff', color: COLORS.slate, fontSize: 12, cursor: 'pointer' }}>Cancel</button>
+                      <button type="button" onClick={() => setEditId(null)} style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#1A2B4A', color: COLORS.slate, fontSize: 12, cursor: 'pointer' }}>Cancel</button>
                       <button type="submit" disabled={isPending} style={{ padding: '7px 14px', borderRadius: 8, background: COLORS.fern, color: '#fff', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Save</button>
                     </div>
                   </form>
@@ -1135,7 +1135,7 @@ function AmendmentsSection({ programId, organizationId, currentUserId, amendment
               <Textarea value={form.reason} onChange={e => set('reason', e.target.value)} rows={2} placeholder="Why is this amendment needed?" />
             </FormField>
             <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
-              <button type="button" onClick={() => setShowForm(false)} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#fff', color: COLORS.slate, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button type="button" onClick={() => setShowForm(false)} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#1A2B4A', color: COLORS.slate, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
               <button type="submit" disabled={isPending} style={{ padding: '8px 16px', borderRadius: 8, background: COLORS.fern, color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                 {isPending ? <Loader2 size={13} /> : 'Record Amendment'}
               </button>
@@ -1162,7 +1162,7 @@ function AmendmentsSection({ programId, organizationId, currentUserId, amendment
             </thead>
             <tbody>
               {amendments.map((a, i) => (
-                <tr key={a.id} style={{ borderBottom: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? '#fff' : COLORS.snow }}>
+                <tr key={a.id} style={{ borderBottom: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? '#1A2B4A' : COLORS.snow }}>
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>{formatDate(a.created_at)}</td>
                   <td style={{ padding: '10px 14px' }}>{a.from_category_name ?? '—'}</td>
                   <td style={{ padding: '10px 14px' }}>{a.to_category_name ?? '—'}</td>

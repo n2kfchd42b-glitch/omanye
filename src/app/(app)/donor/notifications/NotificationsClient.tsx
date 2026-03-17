@@ -34,12 +34,12 @@ const TYPE_ICON: Record<DonorNotificationType, string> = {
 }
 
 const TYPE_COLOR: Record<DonorNotificationType, string> = {
-  ACCESS_GRANTED:   '#E6F5EC',
-  ACCESS_UPDATED:   '#EFF6FF',
-  ACCESS_REVOKED:   '#FEE2E2',
-  NEW_UPDATE:       '#F4FAF6',
-  NEW_REPORT:       '#F4FAF6',
-  REQUEST_APPROVED: '#E6F5EC',
+  ACCESS_GRANTED:   '#38A16920',
+  ACCESS_UPDATED:   '#1A3A5C',
+  ACCESS_REVOKED:   '#E53E3E20',
+  NEW_UPDATE:       '#1A2B4A',
+  NEW_REPORT:       '#1A2B4A',
+  REQUEST_APPROVED: '#38A16920',
   REQUEST_DENIED:   '#FEE2E2',
   TRANCHE_REMINDER: '#FEF9EC',
 }
@@ -158,14 +158,14 @@ export default function NotificationsClient({ notifications: initial }: Props) {
 
         {notifications.length === 0 ? (
           <div style={{
-            background: '#fff', border: `1px solid ${COLORS.mist}`, borderRadius: 14,
+            background: '#1A2B4A', border: `1px solid ${COLORS.mist}`, borderRadius: 14,
             padding: 48, textAlign: 'center',
           }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>🔔</div>
             <p style={{ fontSize: 15, color: COLORS.stone, margin: 0 }}>No notifications yet.</p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0, background: '#fff', border: `1px solid ${COLORS.mist}`, borderRadius: 14, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0, background: '#1A2B4A', border: `1px solid ${COLORS.mist}`, borderRadius: 14, overflow: 'hidden' }}>
             {notifications.map((n, i) => (
               <div
                 key={n.id}

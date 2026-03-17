@@ -1,32 +1,32 @@
 // ── OMANYE Design Tokens ─────────────────────────────────────────────────────
 
 export const COLORS = {
-  // Forest Green palette
-  forest:  '#0D2B1E',
-  canopy:  '#133828',
-  moss:    '#1A5C3A',
-  fern:    '#2E7D52',
-  sage:    '#4CAF78',
-  mint:    '#7DD4A0',
-  mist:    '#C8EDD8',
-  foam:    '#EAF7EE',
-  snow:    '#F4FAF6',
-  gold:    '#D4AF5C',
+  // Navy/Gold palette
+  forest:   '#0F1B33',
+  canopy:   '#0A1628',
+  moss:     '#D4AF5C',
+  fern:     '#60A5FA',
+  sage:     '#D4AF5C',
+  mint:     '#E8D48B',
+  mist:     '#2D3F5C',
+  foam:     '#243352',
+  snow:     '#0F1B33',
+  gold:     '#D4AF5C',
 
   // Extended palette
-  pearl:    '#E4EFE7',  // borders
-  stone:    '#7A9688',  // placeholder text
-  slate:    '#4A6355',  // muted text
-  charcoal: '#2C3E35',  // body text
-  sky:      '#2563EB',  // links, info
-  amber:    '#D97706',  // warnings
-  crimson:  '#C0392B',  // errors, danger
-  ink:      '#0F1A14',  // darkest text
+  pearl:    '#1A2B4A',  // navy card / input bg
+  stone:    '#6B7A99',  // subtle text
+  slate:    '#A0AEC0',  // muted text
+  charcoal: '#FFFFFF',  // primary text
+  sky:      '#60A5FA',  // links, info
+  amber:    '#D4AF5C',  // warnings
+  crimson:  '#E53E3E',  // errors, danger
+  ink:      '#0F1B33',  // darkest text
 } as const
 
 export const FONTS = {
   heading: 'var(--font-fraunces), Palatino, Georgia, serif',
-  body:    'var(--font-instrument), "Instrument Sans", system-ui, sans-serif',
+  body:    'var(--font-instrument), "DM Sans", system-ui, sans-serif',
   mono:    'var(--font-mono), "JetBrains Mono", Consolas, monospace',
   logo:    'Palatino, "Palatino Linotype", Georgia, serif',
 } as const
@@ -42,70 +42,70 @@ export const SPACING = {
 
 export const STATUS_MAP: Record<string, { bg: string; text: string; dot: string }> = {
   // Program statuses
-  active:     { bg: '#E6F5EC', text: '#1A5C3A', dot: '#4CAF78' },
-  planning:   { bg: '#FEF3C7', text: '#92400E', dot: '#D97706' },
-  paused:     { bg: '#F1F5F9', text: '#475569', dot: '#94A3B8' },
-  completed:  { bg: '#F1F5F9', text: '#64748B', dot: '#94A3B8' },
+  active:     { bg: '#D4AF5C22', text: '#D4AF5C', dot: '#D4AF5C' },
+  planning:   { bg: '#1A2B4A',   text: '#A0AEC0', dot: '#6B7A99' },
+  paused:     { bg: '#1A2B4A',   text: '#6B7A99', dot: '#6B7A99' },
+  completed:  { bg: '#38A16920', text: '#38A169', dot: '#38A169' },
   // Document statuses
-  draft:      { bg: '#FEF3C7', text: '#92400E', dot: '#D97706' },
-  in_review:  { bg: '#DBEAFE', text: '#1E40AF', dot: '#3B82F6' },
-  approved:   { bg: '#E6F5EC', text: '#1A5C3A', dot: '#4CAF78' },
-  submitted:  { bg: '#E0F2FE', text: '#0369A1', dot: '#0EA5E9' },
+  draft:      { bg: '#1A2B4A',   text: '#A0AEC0', dot: '#6B7A99' },
+  in_review:  { bg: '#1A3A5C',   text: '#60A5FA', dot: '#60A5FA' },
+  approved:   { bg: '#38A16920', text: '#38A169', dot: '#38A169' },
+  submitted:  { bg: '#1A3A5C',   text: '#60A5FA', dot: '#60A5FA' },
   // Dataset statuses
-  clean:      { bg: '#E6F5EC', text: '#1A5C3A', dot: '#4CAF78' },
-  processing: { bg: '#FEF3C7', text: '#92400E', dot: '#D97706' },
-  review:     { bg: '#DBEAFE', text: '#1E40AF', dot: '#3B82F6' },
-  error:      { bg: '#FEE2E2', text: '#991B1B', dot: '#EF4444' },
+  clean:      { bg: '#38A16920', text: '#38A169', dot: '#38A169' },
+  processing: { bg: '#1A2B4A',   text: '#A0AEC0', dot: '#6B7A99' },
+  review:     { bg: '#1A3A5C',   text: '#60A5FA', dot: '#60A5FA' },
+  error:      { bg: '#E53E3E20', text: '#E53E3E', dot: '#E53E3E' },
   // Analysis statuses
-  running:    { bg: '#E0F2FE', text: '#0369A1', dot: '#0EA5E9' },
-  done:       { bg: '#E6F5EC', text: '#1A5C3A', dot: '#4CAF78' },
+  running:    { bg: '#1A3A5C',   text: '#60A5FA', dot: '#60A5FA' },
+  done:       { bg: '#38A16920', text: '#38A169', dot: '#38A169' },
 }
 
 // ── Role colors ───────────────────────────────────────────────────────────────
 
 export const ROLE_MAP: Record<string, { bg: string; text: string }> = {
-  'Project Lead':  { bg: '#E6F5EC', text: '#1A5C3A' },
-  'Field Staff':   { bg: '#E0F2FE', text: '#0369A1' },
-  'M&E Officer':   { bg: '#E6F5EC', text: '#1A5C3A' },
-  'Donor':         { bg: '#FEF3C7', text: '#78350F' },
-  'Supervisor':    { bg: '#FEF3C7', text: '#92400E' },
-  'Viewer':        { bg: '#F1F5F9', text: '#475569' },
-  'Admin':         { bg: '#FEE2E2', text: '#991B1B' },
+  'Project Lead':  { bg: '#1A2B4A', text: '#D4AF5C' },
+  'Field Staff':   { bg: '#1A3A5C', text: '#60A5FA' },
+  'M&E Officer':   { bg: '#1A2B4A', text: '#D4AF5C' },
+  'Donor':         { bg: '#1A3A5C', text: '#60A5FA' },
+  'Supervisor':    { bg: '#1A2B4A', text: '#A0AEC0' },
+  'Viewer':        { bg: '#243352', text: '#A0AEC0' },
+  'Admin':         { bg: '#0F1B33', text: '#D4AF5C' },
 }
 
 // ── Source colors ──────────────────────────────────────────────────────────────
 
 export const SOURCE_MAP: Record<string, { bg: string; text: string }> = {
-  'KoBoToolbox':   { bg: '#E0F2FE', text: '#0369A1' },
-  'REDCap':        { bg: '#E6F5EC', text: '#1A5C3A' },
-  'ODK Central':   { bg: '#FEF3C7', text: '#92400E' },
-  'Upload':        { bg: '#F1F5F9', text: '#475569' },
-  'Google Sheets': { bg: '#E6F5EC', text: '#1A5C3A' },
+  'KoBoToolbox':   { bg: '#1A3A5C', text: '#60A5FA' },
+  'REDCap':        { bg: '#1A2B4A', text: '#D4AF5C' },
+  'ODK Central':   { bg: '#1A2B4A', text: '#A0AEC0' },
+  'Upload':        { bg: '#243352', text: '#A0AEC0' },
+  'Google Sheets': { bg: '#1A2B4A', text: '#D4AF5C' },
 }
 
 // ── DocType colors ─────────────────────────────────────────────────────────────
 
 export const DOCTYPE_MAP: Record<string, { bg: string; text: string }> = {
-  logframe:   { bg: '#E6F5EC', text: '#1A5C3A' },
-  report:     { bg: '#E0F2FE', text: '#0369A1' },
-  framework:  { bg: '#FEF3C7', text: '#92400E' },
-  manual:     { bg: '#F1F5F9', text: '#475569' },
-  proposal:   { bg: '#FEE2E2', text: '#991B1B' },
-  other:      { bg: '#F1F5F9', text: '#64748B' },
+  logframe:   { bg: '#1A2B4A', text: '#D4AF5C' },
+  report:     { bg: '#1A3A5C', text: '#60A5FA' },
+  framework:  { bg: '#1A2B4A', text: '#A0AEC0' },
+  manual:     { bg: '#243352', text: '#A0AEC0' },
+  proposal:   { bg: '#E53E3E20', text: '#E53E3E' },
+  other:      { bg: '#243352', text: '#A0AEC0' },
 }
 
 // ── Avatar palette ─────────────────────────────────────────────────────────────
 
 export const AVATAR_PALETTE = [
-  '#1A5C3A', '#2E7D52', '#4CAF78', '#D4AF5C',
-  '#0EA5E9', '#8B5CF6', '#EC4899', '#0891B2',
+  '#D4AF5C', '#60A5FA', '#38A169', '#E53E3E',
+  '#A78BFA', '#FB923C', '#E8D48B', '#93C5FD',
 ] as const
 
 // ── Shadows ───────────────────────────────────────────────────────────────────
 
 export const SHADOW = {
-  card:    '0 1px 3px rgba(13,43,30,0.06), 0 1px 2px -1px rgba(13,43,30,0.04)',
-  cardHov: '0 4px 20px rgba(26,92,58,0.14)',
-  modal:   '0 24px 64px rgba(10,26,16,0.22)',
-  toast:   '0 8px 24px rgba(13,43,30,0.14)',
+  card:    '0 4px 24px rgba(0,0,0,0.3)',
+  cardHov: '0 4px 20px rgba(212,175,92,0.15)',
+  modal:   '0 25px 60px rgba(0,0,0,0.5)',
+  toast:   '0 8px 24px rgba(0,0,0,0.3)',
 } as const

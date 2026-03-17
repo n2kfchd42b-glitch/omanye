@@ -100,7 +100,7 @@ export function AccessLevelBadge({ level, showTooltip = false, size = 'md' }: Pr
           borderRadius: 10,
           padding:      '12px 14px',
           minWidth:     200,
-          boxShadow:    '0 8px 24px rgba(13,43,30,0.25)',
+          boxShadow:    '0 8px 24px rgba(0,0,0,0.5)',
           zIndex:       100,
           pointerEvents:'none',
         }}>

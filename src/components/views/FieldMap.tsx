@@ -36,7 +36,7 @@ export function FieldMap() {
         >
           <defs>
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(125,212,160,0.5)" strokeWidth="0.5" />
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(212,175,92,0.5)" strokeWidth="0.5" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#grid)" />
@@ -69,7 +69,7 @@ export function FieldMap() {
           <p style={{ fontFamily: FONTS.heading, fontSize: 18, fontWeight: 600, color: '#fff', marginBottom: 6 }}>
             Interactive Map
           </p>
-          <p style={{ fontSize: 12, color: 'rgba(125,212,160,0.65)', marginBottom: 20, maxWidth: 280 }}>
+          <p style={{ fontSize: 12, color: 'rgba(212,175,92,0.65)', marginBottom: 20, maxWidth: 280 }}>
             Connect program data to visualize field coverage and activities.
           </p>
           <button
@@ -77,7 +77,7 @@ export function FieldMap() {
               display: 'inline-flex', alignItems: 'center', gap: 8,
               padding: '10px 20px', borderRadius: 10,
               background: 'rgba(255,255,255,0.10)',
-              border: '1px solid rgba(125,212,160,0.30)',
+              border: '1px solid rgba(212,175,92,0.30)',
               color: COLORS.mint, fontSize: 13, fontWeight: 600,
               cursor: 'pointer', transition: 'background 0.15s',
             }}

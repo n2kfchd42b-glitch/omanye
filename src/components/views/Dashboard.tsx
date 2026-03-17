@@ -35,7 +35,7 @@ const ACTIVITY_COLORS: Record<ActivityItem['type'], string> = {
   indicator_update: COLORS.sage,
   program_update:   COLORS.fern,
   expenditure:      COLORS.gold,
-  access_request:   '#E05252',
+  access_request:   '#E53E3E',
 }
 
 export function Dashboard({
@@ -109,7 +109,7 @@ export function Dashboard({
           icon={Bell}
           label="Pending Requests"
           value={stats?.pendingRequests ?? '—'}
-          color={(stats?.pendingRequests ?? 0) > 0 ? '#E05252' : COLORS.gold}
+          color={(stats?.pendingRequests ?? 0) > 0 ? '#E53E3E' : COLORS.gold}
         />
       </div>
 
@@ -140,7 +140,7 @@ export function Dashboard({
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 6,
                     padding: '7px 14px', borderRadius: 8,
-                    background: COLORS.moss, color: '#fff',
+                    background: COLORS.moss, color: COLORS.forest,
                     fontSize: 12, fontWeight: 600, cursor: 'pointer',
                   }}
                 >

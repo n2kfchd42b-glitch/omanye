@@ -420,7 +420,7 @@ function MemberCard({
                 padding: '6px 10px',
                 border: `1px solid ${COLORS.mist}`, borderRadius: 7,
                 fontSize: 12, fontWeight: 500, color: COLORS.slate,
-                background: '#ffffff', cursor: 'pointer', fontFamily: FONTS.body,
+                background: '#1A2B4A', cursor: 'pointer', fontFamily: FONTS.body,
               }}
             >
               Change Role <ChevronDown size={12} />
@@ -428,7 +428,7 @@ function MemberCard({
             {roleDropOpen && (
               <div style={{
                 position: 'absolute', top: 'calc(100% + 4px)', right: 0,
-                background: '#ffffff', border: `1px solid ${COLORS.mist}`,
+                background: '#1A2B4A', border: `1px solid ${COLORS.mist}`,
                 borderRadius: 10, boxShadow: SHADOW.modal, minWidth: 220, zIndex: 50,
                 overflow: 'hidden',
               }}>
@@ -462,7 +462,7 @@ function MemberCard({
             style={{
               padding: '6px 10px', border: `1px solid ${COLORS.mist}`, borderRadius: 7,
               fontSize: 12, fontWeight: 500, color: COLORS.slate,
-              background: '#ffffff', cursor: 'pointer', fontFamily: FONTS.body,
+              background: '#1A2B4A', cursor: 'pointer', fontFamily: FONTS.body,
             }}
           >
             Programs
@@ -474,7 +474,7 @@ function MemberCard({
               style={{
                 padding: '6px 10px', border: `1px solid ${COLORS.crimson}20`, borderRadius: 7,
                 fontSize: 12, fontWeight: 500, color: COLORS.crimson,
-                background: '#ffffff', cursor: 'pointer', fontFamily: FONTS.body,
+                background: '#1A2B4A', cursor: 'pointer', fontFamily: FONTS.body,
               }}
             >
               Remove
@@ -555,7 +555,7 @@ function InvitationsTab({
                         style={{
                           fontSize: 12, padding: '4px 10px',
                           border: `1px solid ${COLORS.mist}`, borderRadius: 6,
-                          color: COLORS.slate, background: '#ffffff',
+                          color: COLORS.slate, background: '#1A2B4A',
                           cursor: 'pointer', fontFamily: FONTS.body,
                         }}
                       >
@@ -568,7 +568,7 @@ function InvitationsTab({
                         style={{
                           fontSize: 12, padding: '4px 10px',
                           border: `1px solid ${COLORS.crimson}20`, borderRadius: 6,
-                          color: COLORS.crimson, background: '#ffffff',
+                          color: COLORS.crimson, background: '#1A2B4A',
                           cursor: 'pointer', fontFamily: FONTS.body,
                         }}
                       >
@@ -1000,13 +1000,13 @@ function ModalOverlay({ children, onClose }: { children: React.ReactNode; onClos
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{
         position: 'fixed', inset: 0, zIndex: 60,
-        background: 'rgba(13,43,30,0.45)',
+        background: 'rgba(0,0,0,0.7)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 20,
       }}
     >
       <div style={{
-        background: '#ffffff', borderRadius: 16,
+        background: '#1A2B4A', borderRadius: 16,
         boxShadow: SHADOW.modal,
         maxHeight: '90vh', overflowY: 'auto',
         width: '100%',

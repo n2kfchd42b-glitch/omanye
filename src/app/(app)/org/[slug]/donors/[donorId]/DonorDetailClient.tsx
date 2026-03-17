@@ -105,8 +105,8 @@ function AddAccessModal({ organizationId, donorId, programs, existingIds, onClos
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(13,43,30,0.55)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: '100%', maxWidth: 480, boxShadow: '0 20px 60px rgba(13,43,30,0.25)' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ background: '#1A2B4A', borderRadius: 16, padding: 32, width: '100%', maxWidth: 480, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
           <h2 style={{ fontFamily: FONTS.heading, fontSize: 20, fontWeight: 700, color: COLORS.forest, margin: 0 }}>
             Add Program Access
@@ -126,7 +126,7 @@ function AddAccessModal({ organizationId, donorId, programs, existingIds, onClos
               <select
                 value={programId}
                 onChange={e => setProgramId(e.target.value)}
-                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, fontSize: 14, color: COLORS.charcoal, background: '#fff', outline: 'none' }}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, fontSize: 14, color: COLORS.charcoal, background: '#1A2B4A', outline: 'none' }}
               >
                 <option value=''>Select a program…</option>
                 {available.map(p => (
@@ -186,7 +186,7 @@ function AddAccessModal({ organizationId, donorId, programs, existingIds, onClos
           {error && <p style={{ fontSize: 13, color: COLORS.crimson, margin: 0 }}>{error}</p>}
 
           <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 4 }}>
-            <button type='button' onClick={onClose} style={{ padding: '10px 20px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#fff', fontSize: 14, color: COLORS.slate, cursor: 'pointer' }}>
+            <button type='button' onClick={onClose} style={{ padding: '10px 20px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#1A2B4A', fontSize: 14, color: COLORS.slate, cursor: 'pointer' }}>
               Cancel
             </button>
             <button
@@ -390,7 +390,7 @@ function AccessCard({ access, organizationId, donorId, initialNotes, canEdit, on
                   <span style={{ fontSize: 13, color: COLORS.crimson }}>Revoke access to this program?</span>
                   <button
                     onClick={() => setConfirmRevoke(false)}
-                    style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#fff', fontSize: 13, cursor: 'pointer', color: COLORS.slate }}
+                    style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, background: '#1A2B4A', fontSize: 13, cursor: 'pointer', color: COLORS.slate }}
                   >
                     Cancel
                   </button>
@@ -496,7 +496,7 @@ export default function DonorDetailClient({
         <div style={{
           width: 280,
           flexShrink: 0,
-          background: '#fff',
+          background: '#1A2B4A',
           borderRadius: 14,
           border: `1px solid ${COLORS.mist}`,
           padding: 24,
@@ -573,7 +573,7 @@ export default function DonorDetailClient({
           {/* Access cards */}
           {accessList.length === 0 ? (
             <div style={{
-              background: '#fff', border: `1px solid ${COLORS.mist}`, borderRadius: 12,
+              background: '#1A2B4A', border: `1px solid ${COLORS.mist}`, borderRadius: 12,
               padding: 48, textAlign: 'center',
             }}>
               <p style={{ fontSize: 15, color: COLORS.stone, margin: '0 0 16px' }}>No program access yet.</p>

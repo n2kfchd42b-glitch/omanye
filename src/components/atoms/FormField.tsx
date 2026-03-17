@@ -22,7 +22,7 @@ export function FormField({ label, htmlFor, required, hint, error, children, cla
           display: 'block',
           fontSize: 12,
           fontWeight: 700,
-          color: COLORS.stone,
+          color: '#D4AF5C',
           textTransform: 'uppercase',
           letterSpacing: '0.04em',
         }}
@@ -46,7 +46,7 @@ const baseInput: React.CSSProperties = {
   borderRadius: 8,
   border: `1px solid ${COLORS.mist}`,
   background: COLORS.pearl,
-  color: COLORS.forest,
+  color: '#FFFFFF',
   outline: 'none',
   transition: 'border-color 0.15s, box-shadow 0.15s',
   fontFamily: 'var(--font-instrument), system-ui, sans-serif',
@@ -54,7 +54,7 @@ const baseInput: React.CSSProperties = {
 
 function focusStyle(el: HTMLElement) {
   el.style.borderColor = COLORS.sage
-  el.style.boxShadow = `0 0 0 3px rgba(74,207,120,0.18)`
+  el.style.boxShadow = `0 0 0 3px rgba(212,175,92,0.15)`
 }
 function blurStyle(el: HTMLElement) {
   el.style.borderColor = COLORS.mist

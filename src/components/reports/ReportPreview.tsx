@@ -62,9 +62,9 @@ export function ReportPreview({ report, accessLevel }: Props) {
       style={{
         maxWidth: 800,
         margin: '0 auto',
-        background: '#ffffff',
+        background: COLORS.pearl,
         borderRadius: 12,
-        boxShadow: '0 1px 3px rgba(13,43,30,0.06)',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
         padding: '40px 48px',
         fontFamily: FONTS.body,
       }}
@@ -300,7 +300,7 @@ export function ReportPreview({ report, accessLevel }: Props) {
                   </thead>
                   <tbody>
                     {content.appendix.indicator_updates.map((u, i) => (
-                      <tr key={i} style={{ borderBottom: `1px solid ${COLORS.foam}`, background: i % 2 === 0 ? '#fff' : COLORS.snow }}>
+                      <tr key={i} style={{ borderBottom: `1px solid ${COLORS.foam}`, background: i % 2 === 0 ? COLORS.pearl : COLORS.snow }}>
                         <td style={{ padding: '6px 10px', color: COLORS.charcoal }}>{u.indicator_name}</td>
                         <td style={{ padding: '6px 10px', color: COLORS.charcoal }}>{u.new_value.toLocaleString()} {u.unit}</td>
                         <td style={{ padding: '6px 10px', color: COLORS.stone }}>{formatDate(u.recorded_at)}</td>
@@ -334,7 +334,7 @@ export function ReportPreview({ report, accessLevel }: Props) {
                   </thead>
                   <tbody>
                     {content.appendix.expenditure_totals.map((e, i) => (
-                      <tr key={i} style={{ borderBottom: `1px solid ${COLORS.foam}`, background: i % 2 === 0 ? '#fff' : COLORS.snow }}>
+                      <tr key={i} style={{ borderBottom: `1px solid ${COLORS.foam}`, background: i % 2 === 0 ? COLORS.pearl : COLORS.snow }}>
                         <td style={{ padding: '6px 10px', color: COLORS.charcoal }}>{e.category_name}</td>
                         <td style={{ padding: '6px 10px', textAlign: 'right', color: COLORS.charcoal }}>
                           {formatCurrency(e.total_spent, e.currency)}

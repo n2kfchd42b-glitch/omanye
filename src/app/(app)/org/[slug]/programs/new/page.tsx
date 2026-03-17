@@ -352,7 +352,7 @@ export default function NewProgramPage() {
                   alignItems:    'center',
                   justifyContent: 'center',
                 }}>
-                  {visibility === v && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#fff' }} />}
+                  {visibility === v && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#1A2B4A' }} />}
                 </div>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.forest, marginBottom: 3 }}>
@@ -406,7 +406,7 @@ export default function NewProgramPage() {
             gap:        6,
             padding:    '9px 16px',
             borderRadius: 8,
-            background: '#fff',
+            background: '#1A2B4A',
             border:     `1px solid ${COLORS.mist}`,
             fontSize:   13,
             color:      COLORS.slate,

@@ -437,7 +437,7 @@ function IndicatorsTab({ programId, indicators, setIndicators, canEdit, isAdmin 
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '8px 16px', borderRadius: 8,
-              background: COLORS.moss, color: '#fff',
+              background: COLORS.moss, color: '#0F1B33',
               fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none',
             }}
           >
@@ -695,7 +695,7 @@ function CreateIndicatorForm({
         <div style={{ marginTop: 12, padding: 10, borderRadius: 7, background: '#FEE2E2', color: '#991B1B', fontSize: 12 }}>{error}</div>
       )}
       <div style={{ display: 'flex', gap: 10, marginTop: 16, justifyContent: 'flex-end' }}>
-        <button onClick={onCancel} style={{ padding: '7px 14px', borderRadius: 7, fontSize: 12, background: '#fff', border: `1px solid ${COLORS.mist}`, cursor: 'pointer', color: COLORS.slate }}>
+        <button onClick={onCancel} style={{ padding: '7px 14px', borderRadius: 7, fontSize: 12, background: '#1A2B4A', border: `1px solid ${COLORS.mist}`, cursor: 'pointer', color: COLORS.slate }}>
           Cancel
         </button>
         <button
@@ -753,7 +753,7 @@ function UpdateValueModal({
     <div style={{
       position: 'fixed', inset: 0, zIndex: 100,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'rgba(13,43,30,0.55)',
+      background: 'rgba(0,0,0,0.7)',
     }} onClick={onClose}>
       <div
         className="card"
@@ -791,7 +791,7 @@ function UpdateValueModal({
           <div style={{ marginTop: 12, padding: 10, borderRadius: 7, background: '#FEE2E2', color: '#991B1B', fontSize: 12 }}>{error}</div>
         )}
         <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 7, fontSize: 13, background: '#fff', border: `1px solid ${COLORS.mist}`, cursor: 'pointer', color: COLORS.slate }}>
+          <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 7, fontSize: 13, background: '#1A2B4A', border: `1px solid ${COLORS.mist}`, cursor: 'pointer', color: COLORS.slate }}>
             Cancel
           </button>
           <button
@@ -836,7 +836,7 @@ function UpdatesTab({ programId, updates, setUpdates, canEdit, isAdmin }: Update
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '8px 16px', borderRadius: 8,
-              background: COLORS.moss, color: '#fff',
+              background: COLORS.moss, color: '#0F1B33',
               fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none',
             }}
           >
@@ -985,7 +985,7 @@ function CreateUpdateForm({
         <div style={{ marginTop: 12, padding: 10, borderRadius: 7, background: '#FEE2E2', color: '#991B1B', fontSize: 12 }}>{error}</div>
       )}
       <div style={{ display: 'flex', gap: 10, marginTop: 16, justifyContent: 'flex-end' }}>
-        <button onClick={onCancel} style={{ padding: '7px 14px', borderRadius: 7, fontSize: 12, background: '#fff', border: `1px solid ${COLORS.mist}`, cursor: 'pointer', color: COLORS.slate }}>Cancel</button>
+        <button onClick={onCancel} style={{ padding: '7px 14px', borderRadius: 7, fontSize: 12, background: '#1A2B4A', border: `1px solid ${COLORS.mist}`, cursor: 'pointer', color: COLORS.slate }}>Cancel</button>
         <button
           onClick={handleSave}
           disabled={!title.trim() || isPending}
@@ -1062,7 +1062,7 @@ function ReportsTab({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {reports.map((r) => {
             const typeColors = r.report_type
-              ? ({ PROGRESS: { bg: '#E6F5EC', text: '#1A5C3A' }, QUARTERLY: { bg: '#DBEAFE', text: '#1E40AF' }, ANNUAL: { bg: '#FEF3C7', text: '#92400E' }, FIELD: { bg: '#F0FDF4', text: '#166534' }, DONOR_BRIEF: { bg: '#FDF4FF', text: '#7E22CE' }, FINAL: { bg: '#FEE2E2', text: '#991B1B' } } as Record<string, { bg: string; text: string }>)[r.report_type as string] ?? { bg: COLORS.foam, text: COLORS.forest }
+              ? ({ PROGRESS: { bg: '#38A16920', text: '#38A169' }, QUARTERLY: { bg: '#DBEAFE', text: '#1E40AF' }, ANNUAL: { bg: '#FEF3C7', text: '#92400E' }, FIELD: { bg: '#F0FDF4', text: '#166534' }, DONOR_BRIEF: { bg: '#FDF4FF', text: '#7E22CE' }, FINAL: { bg: '#FEE2E2', text: '#991B1B' } } as Record<string, { bg: string; text: string }>)[r.report_type as string] ?? { bg: COLORS.foam, text: COLORS.forest }
               : { bg: COLORS.foam, text: COLORS.forest }
             const statusLabel: Record<string, string> = { DRAFT: 'Draft', GENERATED: 'Generated', SUBMITTED: 'Submitted', ARCHIVED: 'Archived' }
             return (
@@ -1221,7 +1221,7 @@ function SettingsTab({
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     flexShrink: 0,
                   }}>
-                    {visibility === v && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
+                    {visibility === v && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#1A2B4A' }} />}
                   </div>
                   <div>
                     <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.forest }}>{VISIBILITY_LABELS[v]}</span>
@@ -1273,7 +1273,7 @@ function SettingsTab({
             <button onClick={handleDelete} disabled={isPending} style={{ padding: '7px 14px', borderRadius: 7, background: '#DC2626', color: '#fff', border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
               {isPending ? 'Deleting…' : 'Yes, Delete'}
             </button>
-            <button onClick={() => setShowDelete(false)} style={{ padding: '7px 12px', borderRadius: 7, background: '#fff', border: `1px solid ${COLORS.mist}`, fontSize: 12, cursor: 'pointer', color: COLORS.slate }}>
+            <button onClick={() => setShowDelete(false)} style={{ padding: '7px 12px', borderRadius: 7, background: '#1A2B4A', border: `1px solid ${COLORS.mist}`, fontSize: 12, cursor: 'pointer', color: COLORS.slate }}>
               Cancel
             </button>
           </div>
@@ -1392,7 +1392,7 @@ function ActivityTab({ programId }: { programId: string }) {
 
             {/* Card */}
             <div style={{
-              background: '#fff',
+              background: '#1A2B4A',
               border: `1px solid ${COLORS.mist}`,
               borderRadius: 8, padding: '12px 16px',
             }}>

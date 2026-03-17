@@ -19,7 +19,7 @@ export default function NotificationsLoading() {
         <div style={{ marginBottom: 28 }}><Skeleton h={14} w={280} /></div>
 
         <div style={{
-          background: '#fff', border: `1px solid ${COLORS.mist}`,
+          background: '#1A2B4A', border: `1px solid ${COLORS.mist}`,
           borderRadius: 14, overflow: 'hidden',
         }}>
           {Array.from({ length: 6 }).map((_, i) => (

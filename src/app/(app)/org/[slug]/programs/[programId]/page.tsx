@@ -69,8 +69,8 @@ async function PublicProgramView({
           <div
             className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold mb-4"
             style={{
-              background: program.status === 'ACTIVE' ? 'rgba(76,175,120,0.2)' : 'rgba(212,175,92,0.2)',
-              color: program.status === 'ACTIVE' ? '#7DD4A0' : '#D4AF5C',
+              background: program.status === 'ACTIVE' ? 'rgba(212,175,92,0.2)' : 'rgba(160,174,192,0.15)',
+              color: program.status === 'ACTIVE' ? '#D4AF5C' : '#A0AEC0',
               fontFamily: sans,
             }}
           >

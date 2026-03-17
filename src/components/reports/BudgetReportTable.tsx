@@ -51,13 +51,13 @@ export function BudgetReportTable({ categories, currency }: Props) {
                 ? '#EF4444'
                 : cat.burn_rate_pct >= 70
                 ? '#D97706'
-                : '#4CAF78'
+                : '#38A169'
 
             return (
               <tr
                 key={cat.name}
                 style={{
-                  background: i % 2 === 0 ? '#ffffff' : COLORS.snow,
+                  background: i % 2 === 0 ? COLORS.pearl : COLORS.snow,
                   borderBottom: `1px solid ${COLORS.mist}`,
                 }}
               >

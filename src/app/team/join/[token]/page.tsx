@@ -25,11 +25,11 @@ const ROLE_DESCRIPTION: Record<string, string> = {
 const inputStyle: React.CSSProperties = {
   width:        '100%',
   padding:      '10px 14px',
-  border:       `1px solid #C8EDD8`,
+  border:       `1px solid #2D3F5C`,
   borderRadius: 8,
   fontSize:     15,
-  color:        COLORS.ink,
-  background:   '#ffffff',
+  color:        '#FFFFFF',
+  background:   '#1A2B4A',
   outline:      'none',
   boxSizing:    'border-box',
   fontFamily:   FONTS.body,
@@ -216,7 +216,7 @@ export default function TeamJoinPage() {
       <PageShell>
         <div style={{ textAlign: 'center' }}>
           <CheckCircle size={48} style={{ color: COLORS.sage, margin: '0 auto 16px' }} />
-          <h2 style={{ fontFamily: FONTS.heading, fontSize: 22, color: COLORS.forest, marginBottom: 8 }}>
+          <h2 style={{ fontFamily: FONTS.heading, fontSize: 22, color: '#FFFFFF', marginBottom: 8 }}>
             Welcome to {invitation.org_name}!
           </h2>
           <p style={{ fontSize: 14, color: COLORS.stone }}>Redirecting you to your dashboard…</p>
@@ -246,7 +246,7 @@ export default function TeamJoinPage() {
           </div>
         )}
 
-        <h1 style={{ fontFamily: FONTS.heading, fontSize: 24, fontWeight: 700, color: COLORS.forest, margin: '0 0 8px' }}>
+        <h1 style={{ fontFamily: FONTS.heading, fontSize: 24, fontWeight: 700, color: '#FFFFFF', margin: '0 0 8px' }}>
           You&apos;ve been invited to join {invitation.org_name}
         </h1>
         <p style={{ fontSize: 14, color: COLORS.stone, margin: 0 }}>
@@ -295,8 +295,8 @@ export default function TeamJoinPage() {
             disabled={accepting}
             style={{
               width: '100%', padding: '13px 0',
-              background: accepting ? COLORS.mist : COLORS.forest,
-              color: accepting ? COLORS.stone : '#ffffff',
+              background: accepting ? COLORS.mist : COLORS.gold,
+              color: accepting ? COLORS.stone : COLORS.forest,
               border: 'none', borderRadius: 10, fontSize: 16, fontWeight: 700,
               cursor: accepting ? 'not-allowed' : 'pointer', fontFamily: FONTS.body,
             }}
@@ -331,15 +331,15 @@ export default function TeamJoinPage() {
           )}
 
           <div>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2C3E35', marginBottom: 6 }}>Full Name</label>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#D4AF5C', marginBottom: 6 }}>Full Name</label>
             <input style={inputStyle} value={signupName} onChange={e => setSignupName(e.target.value)} placeholder="Your full name" />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2C3E35', marginBottom: 6 }}>Email Address</label>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#D4AF5C', marginBottom: 6 }}>Email Address</label>
             <input style={{ ...inputStyle, background: COLORS.foam }} value={signupEmail} disabled />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#2C3E35', marginBottom: 6 }}>Password</label>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#D4AF5C', marginBottom: 6 }}>Password</label>
             <input
               style={inputStyle} type="password" value={signupPassword}
               onChange={e => setSignupPassword(e.target.value)}
@@ -352,8 +352,8 @@ export default function TeamJoinPage() {
             disabled={signupLoading || !signupPassword}
             style={{
               width: '100%', padding: '13px 0',
-              background: signupLoading || !signupPassword ? COLORS.mist : COLORS.forest,
-              color: signupLoading || !signupPassword ? COLORS.stone : '#ffffff',
+              background: signupLoading || !signupPassword ? COLORS.mist : COLORS.gold,
+              color: signupLoading || !signupPassword ? COLORS.stone : COLORS.forest,
               border: 'none', borderRadius: 10, fontSize: 16, fontWeight: 700,
               cursor: signupLoading || !signupPassword ? 'not-allowed' : 'pointer', fontFamily: FONTS.body,
             }}
@@ -384,7 +384,7 @@ function PageShell({ children }: { children: React.ReactNode }) {
           <OmanyeLogo size="sm" showTagline={false} />
         </div>
         {/* Card */}
-        <div style={{ background: '#ffffff', borderRadius: 16, padding: '32px 36px', boxShadow: SHADOW.modal }}>
+        <div style={{ background: '#1A2B4A', borderRadius: 16, padding: '32px 36px', boxShadow: SHADOW.modal, border: '1px solid #2D3F5C' }}>
           {children}
         </div>
       </div>
@@ -409,7 +409,7 @@ function ErrorState({ icon, title, message, action }: {
   return (
     <div style={{ textAlign: 'center' }}>
       <div style={{ marginBottom: 16 }}>{icon}</div>
-      <h2 style={{ fontFamily: FONTS.heading, fontSize: 20, color: COLORS.forest, marginBottom: 8 }}>{title}</h2>
+      <h2 style={{ fontFamily: FONTS.heading, fontSize: 20, color: '#FFFFFF', marginBottom: 8 }}>{title}</h2>
       <p style={{ fontSize: 14, color: COLORS.stone, marginBottom: action ? 20 : 0 }}>{message}</p>
       {action}
     </div>

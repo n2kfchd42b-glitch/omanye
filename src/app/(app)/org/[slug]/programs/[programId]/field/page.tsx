@@ -35,7 +35,7 @@ function ProgramTabBar({ slug, programId, active }: { slug: string; programId: s
   return (
     <div style={{
       display: 'flex', gap: 2, borderBottom: `1px solid ${COLORS.mist}`,
-      padding: '0 24px', background: '#fff', overflowX: 'auto',
+      padding: '0 24px', background: '#1A2B4A', overflowX: 'auto',
     }}>
       {PROGRAM_TABS.map(tab => (
         <button
@@ -151,7 +151,7 @@ function FormBuilderModal({
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 100,
-        background: 'rgba(10,26,16,0.6)', backdropFilter: 'blur(2px)',
+        background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(2px)',
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
         padding: '32px 16px', overflowY: 'auto',
       }}
@@ -159,8 +159,8 @@ function FormBuilderModal({
     >
       <div
         style={{
-          width: '100%', maxWidth: 680, background: '#fff',
-          borderRadius: 16, boxShadow: '0 24px 64px rgba(10,26,16,0.22)',
+          width: '100%', maxWidth: 680, background: '#1A2B4A',
+          borderRadius: 16, boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
         }}
         onClick={e => e.stopPropagation()}
       >
@@ -250,7 +250,7 @@ function FormBuilderModal({
                       <select
                         value={field.type}
                         onChange={e => updateField(i, { type: e.target.value as FormFieldType, options: undefined })}
-                        style={{ width: '100%', padding: '7px 10px', borderRadius: 6, border: `1px solid ${COLORS.mist}`, fontSize: 12, background: '#fff' }}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: 6, border: `1px solid ${COLORS.mist}`, fontSize: 12, background: '#1A2B4A' }}
                       >
                         {typeOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
@@ -426,7 +426,7 @@ function SubmitDataModal({
           <select
             value={(value as string) ?? ''}
             onChange={e => set(e.target.value)}
-            style={{ ...inputStyle, background: '#fff' }}
+            style={{ ...inputStyle, background: '#1A2B4A' }}
           >
             <option value="">Select…</option>
             {(field.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}
@@ -441,14 +441,14 @@ function SubmitDataModal({
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 100,
-        background: 'rgba(10,26,16,0.6)', backdropFilter: 'blur(2px)',
+        background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(2px)',
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
         padding: '32px 16px', overflowY: 'auto',
       }}
       onClick={onClose}
     >
       <div
-        style={{ width: '100%', maxWidth: 560, background: '#fff', borderRadius: 16, boxShadow: '0 24px 64px rgba(10,26,16,0.22)' }}
+        style={{ width: '100%', maxWidth: 560, background: '#1A2B4A', borderRadius: 16, boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}
         onClick={e => e.stopPropagation()}
       >
         <div style={{ padding: '18px 24px', borderBottom: `1px solid ${COLORS.mist}`, display: 'flex', justifyContent: 'space-between' }}>
@@ -467,7 +467,7 @@ function SubmitDataModal({
               <select
                 value={selectedFormId}
                 onChange={e => { setSelectedFormId(e.target.value); setFieldData({}) }}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, fontSize: 13, background: '#fff' }}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, fontSize: 13, background: '#1A2B4A' }}
               >
                 <option value="">No form / free-form</option>
                 {forms.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
@@ -575,13 +575,13 @@ function ViewSubmissionModal({
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 100,
-        background: 'rgba(10,26,16,0.6)', backdropFilter: 'blur(2px)',
+        background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(2px)',
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
         padding: '32px 16px', overflowY: 'auto',
       }}
       onClick={onClose}
     >
-      <div style={{ width: '100%', maxWidth: 560, background: '#fff', borderRadius: 16, boxShadow: '0 24px 64px rgba(10,26,16,0.22)' }}
+      <div style={{ width: '100%', maxWidth: 560, background: '#1A2B4A', borderRadius: 16, boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}
         onClick={e => e.stopPropagation()}>
         <div style={{ padding: '18px 24px', borderBottom: `1px solid ${COLORS.mist}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
@@ -839,8 +839,8 @@ export default function FieldDataPage() {
                     </div>
                     <span style={{
                       padding: '2px 8px', borderRadius: 8, fontSize: 10, fontWeight: 600, flexShrink: 0, marginLeft: 8,
-                      background: form.active ? '#E6F5EC' : '#F1F5F9',
-                      color: form.active ? '#1A5C3A' : '#64748B',
+                      background: form.active ? '#38A16920' : '#F1F5F9',
+                      color: form.active ? '#38A169' : '#64748B',
                     }}>
                       {form.active ? 'Active' : 'Inactive'}
                     </span>
@@ -940,7 +940,7 @@ export default function FieldDataPage() {
                     return (
                       <tr
                         key={sub.id}
-                        style={{ borderBottom: `1px solid ${COLORS.foam}`, background: i % 2 === 0 ? '#fff' : COLORS.snow }}
+                        style={{ borderBottom: `1px solid ${COLORS.foam}`, background: i % 2 === 0 ? '#1A2B4A' : COLORS.snow }}
                       >
                         <td style={{ padding: '10px 14px', fontSize: 13, color: COLORS.charcoal }}>{formatDate(sub.submission_date)}</td>
                         <td style={{ padding: '10px 14px', fontSize: 13, color: COLORS.charcoal }}>{sub.location_name || '—'}</td>
@@ -966,7 +966,7 @@ export default function FieldDataPage() {
                                     const res = await fetch(`/api/field/submissions/${sub.id}/review`, { method: 'PATCH' })
                                     if (res.ok) setSubmissions(prev => prev.map(s => s.id === sub.id ? { ...s, status: 'REVIEWED' } : s))
                                   }}
-                                  style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 500, background: '#E6F5EC', color: '#1A5C3A', cursor: 'pointer', border: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+                                  style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 500, background: '#38A16920', color: '#38A169', cursor: 'pointer', border: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
                                 >
                                   <CheckCircle2 size={11} /> Review
                                 </button>

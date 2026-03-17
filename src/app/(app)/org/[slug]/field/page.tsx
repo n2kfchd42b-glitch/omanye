@@ -271,7 +271,7 @@ function FormWizard({
             </h2>
             <p style={{ fontSize: 14, color: COLORS.stone, marginBottom: 20 }}>Check your entries before submitting</p>
 
-            <div style={{ background: '#fff', borderRadius: 12, padding: '16px', marginBottom: 16, boxShadow: '0 1px 4px rgba(13,43,30,0.06)' }}>
+            <div style={{ background: '#1A2B4A', borderRadius: 12, padding: '16px', marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }}>
               <div style={{ display: 'flex', gap: 10, marginBottom: 10, paddingBottom: 10, borderBottom: `1px solid ${COLORS.mist}` }}>
                 <span style={{ fontSize: 13, color: COLORS.stone, minWidth: 120 }}>Location</span>
                 <span style={{ fontSize: 13, color: COLORS.charcoal, fontWeight: 500 }}>{locationName}</span>
@@ -321,7 +321,7 @@ function FormWizard({
       </div>
 
       {/* Bottom action */}
-      <div style={{ padding: '16px 20px', background: '#fff', borderTop: `1px solid ${COLORS.mist}` }}>
+      <div style={{ padding: '16px 20px', background: '#1A2B4A', borderTop: `1px solid ${COLORS.mist}` }}>
         {isLastStep ? (
           <button
             onClick={submit}
@@ -457,7 +457,7 @@ export default function FieldStaffPage() {
               border: '1px solid rgba(255,255,255,0.2)', fontSize: 14,
             }}
           >
-            {programs.map(p => <option key={p.id} value={p.id} style={{ color: COLORS.forest, background: '#fff' }}>{p.name}</option>)}
+            {programs.map(p => <option key={p.id} value={p.id} style={{ color: COLORS.forest, background: '#1A2B4A' }}>{p.name}</option>)}
           </select>
         )}
         {programs.length === 1 && (
@@ -466,7 +466,7 @@ export default function FieldStaffPage() {
       </div>
 
       {/* Tab bar */}
-      <div style={{ display: 'flex', background: '#fff', borderBottom: `1px solid ${COLORS.mist}` }}>
+      <div style={{ display: 'flex', background: '#1A2B4A', borderBottom: `1px solid ${COLORS.mist}` }}>
         {([
           { id: 'forms',   label: 'Collection Forms', icon: <ClipboardList size={15} /> },
           { id: 'history', label: 'My Submissions',   icon: <History size={15} /> },
@@ -504,9 +504,9 @@ export default function FieldStaffPage() {
                     key={form.id}
                     onClick={() => setWizard(form)}
                     style={{
-                      background: '#fff',
+                      background: '#1A2B4A',
                       borderRadius: 16, padding: '18px 20px',
-                      boxShadow: '0 1px 4px rgba(13,43,30,0.08)',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
                       border: `1px solid ${COLORS.mist}`,
                       cursor: 'pointer', textAlign: 'left', width: '100%',
                       display: 'flex', alignItems: 'center', gap: 14,
@@ -559,8 +559,8 @@ export default function FieldStaffPage() {
                   const statusStyle = SUBMISSION_STATUS_COLORS[sub.status]
                   return (
                     <div key={sub.id} style={{
-                      background: '#fff', borderRadius: 14, padding: '14px 16px',
-                      boxShadow: '0 1px 4px rgba(13,43,30,0.06)', border: `1px solid ${COLORS.mist}`,
+                      background: '#1A2B4A', borderRadius: 14, padding: '14px 16px',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.2)', border: `1px solid ${COLORS.mist}`,
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                         <div>

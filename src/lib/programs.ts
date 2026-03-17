@@ -63,7 +63,7 @@ export const UPDATE_TYPE_LABELS: Record<UpdateType, string> = {
 }
 
 export const UPDATE_TYPE_COLORS: Record<UpdateType, { bg: string; text: string }> = {
-  PROGRESS:       { bg: '#E6F5EC', text: '#1A5C3A' },
+  PROGRESS:       { bg: '#38A16920', text: '#38A169' },
   MILESTONE:      { bg: '#FEF3C7', text: '#78350F' },
   CHALLENGE:      { bg: '#FEE2E2', text: '#991B1B' },
   DONOR_REPORT:   { bg: '#DBEAFE', text: '#1E40AF' },
