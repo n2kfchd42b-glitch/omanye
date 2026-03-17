@@ -4,11 +4,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { CreateFormPayload } from '@/types/field'
+import { checkLimit } from '@/lib/billing/limits'
 
 export async function GET(req: NextRequest) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+
+  // Require NGO role and org scoping
+  const { data: profileRaw } = await supabase
+    .from('profiles')
+    .select('role, organization_id')
+    .eq('id', user.id)
+    .single()
+
+  const profile = profileRaw as { role: string; organization_id: string } | null
+  if (!profile?.organization_id) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+  if (!['NGO_ADMIN', 'NGO_STAFF', 'NGO_VIEWER'].includes(profile.role)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   const programId = req.nextUrl.searchParams.get('program_id')
 
@@ -17,6 +31,7 @@ export async function GET(req: NextRequest) {
   let query = db
     .from('field_collection_forms')
     .select('*, profiles!created_by(full_name)')
+    .eq('organization_id', profile.organization_id)
     .order('created_at', { ascending: false })
 
   if (programId) query = query.eq('program_id', programId)
@@ -53,6 +68,22 @@ export async function POST(req: NextRequest) {
   const body: CreateFormPayload = await req.json()
   if (!body.program_id || !body.name?.trim()) {
     return NextResponse.json({ error: 'program_id and name are required' }, { status: 400 })
+  }
+
+  // ── Plan limit check ───────────────────────────────────────────────────────
+  const limitCheck = await checkLimit(profile.organization_id, 'field_forms')
+  if (!limitCheck.allowed) {
+    return NextResponse.json(
+      {
+        error:           'LIMIT_EXCEEDED',
+        message:         `You've reached your field forms limit (${limitCheck.current}/${limitCheck.limit}). Upgrade to add more forms.`,
+        limitType:       'field_forms',
+        current:         limitCheck.current,
+        limit:           limitCheck.limit,
+        upgradeRequired: limitCheck.upgradeRequired,
+      },
+      { status: 402 }
+    )
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

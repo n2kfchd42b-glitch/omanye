@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { OmanyeRole } from '@/lib/supabase/database.types'
 import { logAction } from '@/lib/audit/logger'
+import { checkLimit } from '@/lib/billing/limits'
 
 interface InviteBody {
   email:       string
@@ -39,6 +40,22 @@ export async function POST(req: NextRequest) {
   }
   if (!VALID_ROLES.includes(body.role)) {
     return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+  }
+
+  // ── Plan limit check ───────────────────────────────────────────────────────
+  const limitCheck = await checkLimit(orgId, 'team_members')
+  if (!limitCheck.allowed) {
+    return NextResponse.json(
+      {
+        error:           'LIMIT_EXCEEDED',
+        message:         `You've reached your team member limit (${limitCheck.current}/${limitCheck.limit}). Upgrade to add more members.`,
+        limitType:       'team_members',
+        current:         limitCheck.current,
+        limit:           limitCheck.limit,
+        upgradeRequired: limitCheck.upgradeRequired,
+      },
+      { status: 402 }
+    )
   }
 
   // Check if user with this email is already a member

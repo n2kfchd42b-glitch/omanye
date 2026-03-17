@@ -11,6 +11,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        navy:    '#0F1B33',
         forest:  '#0D2B1E',
         canopy:  '#133828',
         moss:    '#1A5C3A',

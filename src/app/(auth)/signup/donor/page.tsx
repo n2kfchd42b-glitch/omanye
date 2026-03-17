@@ -61,47 +61,34 @@ export default function DonorSignupPage() {
 
   const onSubmit = async (values: FormValues) => {
     setServerError(null)
-    const supabase = createClient()
 
-    // 1. Create auth user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email:    values.email,
-      password: values.password,
-      options:  { data: { full_name: values.fullName } },
+    // 1. Create user + profile via server route (uses service role to bypass RLS)
+    const res = await fetch('/api/auth/signup/donor', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        fullName:     values.fullName,
+        email:        values.email,
+        password:     values.password,
+        donorOrgName: values.donorOrgName,
+      }),
     })
 
-    if (authError || !authData.user) {
-      setServerError(authError?.message ?? 'Failed to create account.')
+    if (!res.ok) {
+      const { error } = await res.json()
+      setServerError(error ?? 'Failed to create account.')
       return
     }
 
-    const userId = authData.user.id
+    // 2. Sign in to establish a session (user is already confirmed)
+    const supabase = createClient()
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email:    values.email,
+      password: values.password,
+    })
 
-    // 2. Create profile
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({
-        id:        userId,
-        full_name: values.fullName,
-        role:      'DONOR',
-      })
-
-    if (profileError) {
-      setServerError('Failed to create profile.')
-      return
-    }
-
-    // 3. Create donor_profiles row
-    const { error: donorProfileError } = await supabase
-      .from('donor_profiles')
-      .insert({
-        id:                userId,
-        organization_name: values.donorOrgName || null,
-        contact_email:     values.email,
-      })
-
-    if (donorProfileError) {
-      setServerError('Failed to create donor profile.')
+    if (signInError) {
+      setServerError(signInError.message)
       return
     }
 

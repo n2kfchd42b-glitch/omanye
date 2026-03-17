@@ -3,8 +3,6 @@
 // Auth: NGO team member OR donor with can_download_reports=true
 
 import { NextRequest, NextResponse } from 'next/server'
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { renderToBuffer } = require('@react-pdf/renderer')
 import React from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { PdfTemplate } from '@/lib/reports/PdfTemplate'
@@ -83,7 +81,8 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Access denied' }, { status: 403 })
   }
 
-  // Generate PDF
+  // Generate PDF — dynamic import because @react-pdf/renderer is ESM-only
+  const { renderToBuffer } = await import('@react-pdf/renderer')
   const element = React.createElement(PdfTemplate, {
     report,
     orgName:   orgData?.name ?? 'OMANYE',

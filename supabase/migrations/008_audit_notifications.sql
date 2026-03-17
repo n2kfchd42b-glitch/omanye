@@ -147,7 +147,7 @@ CREATE POLICY "notifications_team_insert"
   ON notifications FOR INSERT
   WITH CHECK (
     organization_id = current_user_org()
-    AND is_ngo_member()
+    AND public.is_ngo_member(organization_id)
   );
 
 -- No deletes — archive by marking read

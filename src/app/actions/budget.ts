@@ -288,7 +288,7 @@ export async function approveExpenditure(
         .eq('category_id', d.budget_category_id as string)
         .maybeSingle()
       if (catSpend) {
-        const cs = catSpend as Record<string, unknown>
+        const cs = catSpend as unknown as Record<string, unknown>
         if ((cs.burn_rate_pct as number) > 80) {
           const admins = await getOrgAdmins(orgId)
           await Promise.all(admins.map(a => sendNotification({

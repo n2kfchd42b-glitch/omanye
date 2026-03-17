@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { CreateReportPayload } from '@/types/reports'
 import { logActionForUser } from '@/lib/audit/logger'
+import { checkLimit } from '@/lib/billing/limits'
 
 export async function GET(req: NextRequest) {
   const supabase = createClient()
@@ -50,6 +51,22 @@ export async function POST(req: NextRequest) {
 
   if (!program) return NextResponse.json({ error: 'Program not found' }, { status: 404 })
   const prog = program as unknown as { organization_id: string }
+
+  // ── Plan limit check ───────────────────────────────────────────────────────
+  const limitCheck = await checkLimit(prog.organization_id, 'reports_per_month')
+  if (!limitCheck.allowed) {
+    return NextResponse.json(
+      {
+        error:           'LIMIT_EXCEEDED',
+        message:         `You've reached your monthly report limit (${limitCheck.current}/${limitCheck.limit}). Upgrade to generate more reports.`,
+        limitType:       'reports_per_month',
+        current:         limitCheck.current,
+        limit:           limitCheck.limit,
+        upgradeRequired: limitCheck.upgradeRequired,
+      },
+      { status: 402 }
+    )
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db: any = supabase

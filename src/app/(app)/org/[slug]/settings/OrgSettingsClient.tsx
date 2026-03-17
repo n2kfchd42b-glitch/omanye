@@ -1,10 +1,13 @@
 'use client'
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Save, Upload, AlertTriangle, X } from 'lucide-react'
+import { Save, Upload, AlertTriangle, X, CreditCard, TrendingUp, ExternalLink } from 'lucide-react'
 import { COLORS, FONTS, SHADOW } from '@/lib/tokens'
 import { createClient } from '@/lib/supabase/client'
+import { PlanBadge } from '@/components/billing/PlanBadge'
+import type { SubscriptionResponse, Subscription } from '@/types/billing'
+import type { SubscriptionTier } from '@/lib/supabase/database.types'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -32,19 +35,6 @@ interface Props {
   teamMembers:   { id: string; full_name: string | null; role: string }[]
 }
 
-const PLAN_LIMITS: Record<string, { members: number; programs: number; storage: string }> = {
-  FREE:         { members: 5,    programs: 3,   storage: '1 GB'  },
-  STARTER:      { members: 15,   programs: 10,  storage: '10 GB' },
-  PROFESSIONAL: { members: 50,   programs: 50,  storage: '50 GB' },
-  ENTERPRISE:   { members: 9999, programs: 9999, storage: 'Unlimited' },
-}
-
-const PLAN_FEATURES: Record<string, string[]> = {
-  FREE:         ['3 programs', '5 team members', 'Basic indicators', '1 GB storage'],
-  STARTER:      ['10 programs', '15 team members', 'Advanced indicators', 'Budget tracking', '10 GB storage'],
-  PROFESSIONAL: ['50 programs', '50 team members', 'Field data collection', 'Custom reports', 'Priority support', '50 GB storage'],
-  ENTERPRISE:   ['Unlimited programs', 'Unlimited team', 'Dedicated support', 'Custom integrations', 'Unlimited storage'],
-}
 
 const inputStyle: React.CSSProperties = {
   width:        '100%',
@@ -132,7 +122,7 @@ export default function OrgSettingsClient({
         <ProfileTab org={org} isAdmin={isAdmin} onSave={() => { router.refresh(); showToast('Profile saved') }} onError={showToast} />
       )}
       {tab === 'billing' && (
-        <BillingTab org={org} memberCount={memberCount} programCount={programCount} />
+        <BillingTab org={org} orgSlug={orgSlug} />
       )}
       {tab === 'danger' && isAdmin && (
         <DangerTab
@@ -378,101 +368,453 @@ function ProfileTab({ org, isAdmin, onSave, onError }: {
 
 // ── BillingTab ────────────────────────────────────────────────────────────────
 
-function BillingTab({ org, memberCount, programCount }: {
-  org:          OrgRow
-  memberCount:  number
-  programCount: number
+function BillingTab({ org, orgSlug }: {
+  org:     OrgRow
+  orgSlug: string
 }) {
-  const tier   = org.subscription_tier ?? 'FREE'
-  const limits = PLAN_LIMITS[tier] ?? PLAN_LIMITS.FREE
-  const features = PLAN_FEATURES[tier] ?? PLAN_FEATURES.FREE
+  const router = useRouter()
+  const [subData,  setSubData]  = useState<SubscriptionResponse | null>(null)
+  const [loading,  setLoading]  = useState(true)
+  const [actionLoading, setActionLoading] = useState(false)
+  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
 
-  const tierStyle: Record<string, { bg: string; text: string }> = {
-    FREE:         { bg: '#F1F5F9', text: '#475569' },
-    STARTER:      { bg: '#DBEAFE', text: '#1E40AF' },
-    PROFESSIONAL: { bg: '#D4AF5C20', text: '#78350F' },
-    ENTERPRISE:   { bg: COLORS.forest, text: '#ffffff' },
+  const tier = (subData?.subscription?.plan ?? org.subscription_tier ?? 'FREE') as SubscriptionTier
+
+  useEffect(() => {
+    fetch('/api/billing/subscription')
+      .then(r => r.json())
+      .then((d: SubscriptionResponse) => setSubData(d))
+      .catch(() => {/* silently ignore */})
+      .finally(() => setLoading(false))
+  }, [])
+
+  function showToast(msg: string, ok = true) {
+    setToast({ msg, ok })
+    setTimeout(() => setToast(null), 3500)
   }
-  const ts = tierStyle[tier] ?? tierStyle.FREE
+
+  async function handleCheckout(priceId: string) {
+    setActionLoading(true)
+    try {
+      const res  = await fetch('/api/billing/checkout', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ priceId, organizationId: org.id }),
+      })
+      const json = await res.json()
+      if (json.url) window.location.href = json.url
+      else showToast(json.message ?? 'Failed to start checkout', false)
+    } catch {
+      showToast('Failed to start checkout', false)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  async function handlePortal() {
+    setActionLoading(true)
+    try {
+      const res  = await fetch('/api/billing/portal', { method: 'POST' })
+      const json = await res.json()
+      if (json.url) window.location.href = json.url
+      else showToast(json.message ?? 'Failed to open portal', false)
+    } catch {
+      showToast('Failed to open billing portal', false)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const sub         = subData?.subscription
+  const plan        = subData?.plan
+  const usage       = subData?.usage
+  const limits      = subData?.limits
+  const isPastDue   = sub?.status === 'PAST_DUE'
+  const isCancelled = sub?.status === 'CANCELLED'
+  const isTrialing  = sub?.status === 'TRIALING'
+  const cancelSoon  = sub?.cancel_at_period_end
+  const periodEnd   = sub?.current_period_end
+    ? new Date(sub.current_period_end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : null
+  const trialEnd    = sub?.trial_ends_at
+    ? new Date(sub.trial_ends_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : null
+
+  const hasStripeSubscription = !!sub?.stripe_subscription_id
+  const isEnterprise          = tier === 'ENTERPRISE'
+  const isFree                = tier === 'FREE'
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {[1,2,3].map(i => (
+          <div key={i} style={{ height: 64, background: COLORS.foam, borderRadius: 10, animation: 'pulse 1.5s infinite' }} />
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {/* Current plan */}
-      <div style={{ background: COLORS.foam, border: `1px solid ${COLORS.mist}`, borderRadius: 12, padding: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 80, right: 24, zIndex: 100,
+          background: toast.ok ? COLORS.forest : COLORS.crimson,
+          color: '#ffffff', padding: '12px 20px', borderRadius: 10,
+          fontSize: 14, fontWeight: 500, boxShadow: SHADOW.toast,
+        }}>{toast.msg}</div>
+      )}
+
+      {/* Payment failed warning */}
+      {isPastDue && (
+        <div style={{
+          background: '#FEF2F2', border: `1px solid ${COLORS.crimson}40`,
+          borderRadius: 12, padding: '14px 18px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        }}>
           <div>
-            <p style={{ fontSize: 11, fontWeight: 700, color: COLORS.stone, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
-              Current Plan
+            <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.crimson, margin: '0 0 2px' }}>
+              Your last payment failed
             </p>
-            <span style={{
-              fontSize: 14, fontWeight: 700, padding: '4px 12px', borderRadius: 20,
-              background: ts.bg, color: ts.text,
-            }}>
-              {tier}
-            </span>
+            <p style={{ fontSize: 13, color: COLORS.slate, margin: 0 }}>
+              Update your payment method to avoid losing access.
+            </p>
           </div>
-          <div style={{ position: 'relative' }}>
-            <button
-              disabled
-              style={{
-                padding: '9px 18px', background: COLORS.mist,
-                color: COLORS.stone, border: 'none', borderRadius: 9,
-                fontSize: 14, fontWeight: 600, cursor: 'not-allowed', fontFamily: FONTS.body,
-              }}
-              title="Coming soon"
-            >
-              Upgrade Plan
-            </button>
-            <span style={{
-              position: 'absolute', top: -8, right: -8,
-              background: COLORS.gold, color: COLORS.forest,
-              fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 10,
-            }}>
-              Soon
-            </span>
-          </div>
+          <button
+            onClick={handlePortal}
+            disabled={actionLoading}
+            style={{
+              flexShrink: 0, padding: '8px 16px', background: COLORS.crimson,
+              color: '#ffffff', border: 'none', borderRadius: 8,
+              fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: FONTS.body,
+            }}
+          >
+            Update Payment
+          </button>
         </div>
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {features.map((f, i) => (
-            <li key={i} style={{ fontSize: 13, color: COLORS.slate, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ color: COLORS.sage }}>✓</span> {f}
-            </li>
-          ))}
-        </ul>
+      )}
+
+      {/* Cancel-at-period-end warning */}
+      {cancelSoon && !isPastDue && (
+        <div style={{
+          background: '#FFFBEB', border: `1px solid ${COLORS.amber}40`,
+          borderRadius: 12, padding: '14px 18px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        }}>
+          <p style={{ fontSize: 13, color: COLORS.charcoal, margin: 0 }}>
+            Your subscription will cancel on <strong>{periodEnd}</strong>.
+          </p>
+          <button
+            onClick={handlePortal}
+            disabled={actionLoading}
+            style={{
+              flexShrink: 0, padding: '8px 16px', background: COLORS.amber,
+              color: '#ffffff', border: 'none', borderRadius: 8,
+              fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: FONTS.body,
+            }}
+          >
+            Resume Subscription
+          </button>
+        </div>
+      )}
+
+      {/* Current plan card */}
+      <div style={{ background: COLORS.foam, border: `1px solid ${COLORS.mist}`, borderRadius: 12, padding: 20 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: COLORS.stone, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+          Current Plan
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <PlanBadge tier={tier} size="lg" />
+            {isTrialing && trialEnd && (
+              <span style={{ fontSize: 12, color: COLORS.amber, fontWeight: 500 }}>
+                Trial ends {trialEnd}
+              </span>
+            )}
+            {sub?.status && !isTrialing && (
+              <StatusPill status={sub.status} />
+            )}
+          </div>
+
+          {/* Pricing info */}
+          {plan && plan.price_monthly !== null && plan.price_monthly > 0 && (
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ fontSize: 18, fontWeight: 700, color: COLORS.forest, margin: 0 }}>
+                ${sub?.billing_cycle === 'ANNUAL' ? plan.price_annual : plan.price_monthly}
+                <span style={{ fontSize: 12, fontWeight: 400, color: COLORS.stone }}>/mo</span>
+              </p>
+              {sub?.billing_cycle === 'ANNUAL' && (
+                <p style={{ fontSize: 11, color: COLORS.stone, margin: '2px 0 0' }}>Billed annually</p>
+              )}
+              {periodEnd && (
+                <p style={{ fontSize: 11, color: COLORS.stone, margin: '2px 0 0' }}>
+                  Next billing: {periodEnd}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Plan features */}
+        {plan?.features && (
+          <ul style={{ listStyle: 'none', padding: 0, margin: '16px 0 0', display: 'flex', flexDirection: 'column', gap: 5 }}>
+            {plan.features.map((f, i) => (
+              <li key={i} style={{ fontSize: 13, color: COLORS.slate, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ color: COLORS.sage }}>✓</span> {f}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
-      {/* Usage stats */}
-      <div>
-        <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.charcoal, marginBottom: 12 }}>Usage</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <UsageStat label="Team members" value={memberCount} max={limits.members} />
-          <UsageStat label="Programs" value={programCount} max={limits.programs} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: `1px solid ${COLORS.foam}` }}>
-            <span style={{ fontSize: 13, color: COLORS.slate }}>Storage used</span>
-            <span style={{ fontSize: 13, color: COLORS.stone }}>— / {limits.storage}</span>
+      {/* Usage bars */}
+      {usage && limits && (
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.charcoal, marginBottom: 12 }}>
+            Usage
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <UsageStat label="Programs"            value={usage.programs_used}      max={limits.programs}          />
+            <UsageStat label="Team Members"        value={usage.members_used}       max={limits.team_members}      />
+            <UsageStat label="Donor Connections"   value={usage.donors_used}        max={limits.donors}            />
+            <UsageStat label="Reports This Month"  value={usage.reports_this_month} max={limits.reports_per_month} />
+            <UsageStat label="Field Forms"         value={usage.field_forms_used}   max={limits.field_forms}       />
           </div>
         </div>
+      )}
+
+      {/* Actions */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+        {hasStripeSubscription && (
+          <button
+            onClick={handlePortal}
+            disabled={actionLoading}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              padding: '9px 18px', background: COLORS.forest,
+              color: '#ffffff', border: 'none', borderRadius: 9,
+              fontSize: 14, fontWeight: 600, cursor: actionLoading ? 'not-allowed' : 'pointer',
+              fontFamily: FONTS.body, opacity: actionLoading ? 0.7 : 1,
+            }}
+          >
+            <CreditCard size={14} />
+            Manage Billing
+            <ExternalLink size={12} />
+          </button>
+        )}
+
+        {!isEnterprise && (isFree || isCancelled) && (
+          <button
+            onClick={() => router.push('/pricing')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              padding: '9px 18px', background: COLORS.gold,
+              color: COLORS.forest, border: 'none', borderRadius: 9,
+              fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: FONTS.body,
+            }}
+          >
+            <TrendingUp size={14} />
+            Upgrade Plan
+          </button>
+        )}
+
+        {isEnterprise && (
+          <a
+            href="/contact"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7,
+              padding: '9px 18px', background: COLORS.gold,
+              color: COLORS.forest, borderRadius: 9, textDecoration: 'none',
+              fontSize: 14, fontWeight: 600, fontFamily: FONTS.body,
+            }}
+          >
+            Contact Sales
+          </a>
+        )}
       </div>
+
+      {/* Plan comparison mini-table */}
+      <PlanComparisonTable currentTier={tier} orgId={org.id} onCheckout={handleCheckout} actionLoading={actionLoading} />
     </div>
   )
 }
 
+// ── StatusPill ─────────────────────────────────────────────────────────────────
+
+function StatusPill({ status }: { status: string }) {
+  const styles: Record<string, { bg: string; text: string }> = {
+    ACTIVE:     { bg: '#E6F5EC', text: COLORS.moss },
+    PAST_DUE:   { bg: '#FEE2E2', text: COLORS.crimson },
+    CANCELLED:  { bg: '#F1F5F9', text: '#64748B' },
+    TRIALING:   { bg: '#DBEAFE', text: '#1E40AF' },
+    INCOMPLETE: { bg: '#FEF3C7', text: '#92400E' },
+  }
+  const s = styles[status] ?? styles.ACTIVE
+  return (
+    <span style={{
+      fontSize: 11, fontWeight: 700, padding: '3px 10px',
+      borderRadius: 12, background: s.bg, color: s.text,
+      fontFamily: FONTS.body, letterSpacing: '0.04em',
+    }}>
+      {status.replace(/_/g, ' ')}
+    </span>
+  )
+}
+
+// ── UsageStat ─────────────────────────────────────────────────────────────────
+
 function UsageStat({ label, value, max }: { label: string; value: number; max: number }) {
-  const pct = max === 9999 ? 0 : Math.min((value / max) * 100, 100)
-  const over = value >= max && max !== 9999
+  const unlimited = max === -1
+  const pct       = unlimited ? 0 : Math.min((value / max) * 100, 100)
+  const color     = pct >= 90 ? COLORS.crimson : pct >= 70 ? COLORS.amber : COLORS.sage
+
   return (
     <div style={{ padding: '8px 0', borderBottom: `1px solid ${COLORS.foam}` }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
         <span style={{ fontSize: 13, color: COLORS.slate }}>{label}</span>
-        <span style={{ fontSize: 13, color: over ? COLORS.crimson : COLORS.stone, fontWeight: over ? 600 : 400 }}>
-          {value} / {max === 9999 ? 'Unlimited' : max}
+        <span style={{ fontSize: 13, color: pct >= 90 ? COLORS.crimson : COLORS.stone, fontWeight: pct >= 90 ? 600 : 400 }}>
+          {value} / {unlimited ? 'Unlimited' : max}
         </span>
       </div>
-      {max !== 9999 && (
+      {!unlimited && (
         <div style={{ height: 4, background: COLORS.mist, borderRadius: 4, overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${pct}%`, background: over ? COLORS.crimson : COLORS.sage, borderRadius: 4 }} />
+          <div style={{
+            height: '100%', width: `${pct}%`,
+            background: color, borderRadius: 4,
+            transition: 'width 0.4s ease',
+          }} />
         </div>
       )}
+    </div>
+  )
+}
+
+// ── PlanComparisonTable ───────────────────────────────────────────────────────
+
+import { PLANS } from '@/lib/billing/plans'
+import type { LimitType } from '@/types/billing'
+
+const ALL_TIERS: SubscriptionTier[] = ['FREE', 'STARTER', 'PROFESSIONAL', 'ENTERPRISE']
+const LIMIT_ROWS: { key: LimitType; label: string; format: (v: number) => string }[] = [
+  { key: 'programs',          label: 'Programs',       format: v => v === -1 ? 'Unlimited' : String(v) },
+  { key: 'team_members',      label: 'Team Members',   format: v => v === -1 ? 'Unlimited' : String(v) },
+  { key: 'donors',            label: 'Donors',         format: v => v === -1 ? 'Unlimited' : String(v) },
+  { key: 'reports_per_month', label: 'Reports/mo',     format: v => v === -1 ? 'Unlimited' : String(v) },
+  { key: 'field_forms',       label: 'Field Forms',    format: v => v === -1 ? 'Unlimited' : String(v) },
+]
+
+function PlanComparisonTable({ currentTier, orgId, onCheckout, actionLoading }: {
+  currentTier:   SubscriptionTier
+  orgId:         string
+  onCheckout:    (priceId: string) => void
+  actionLoading: boolean
+}) {
+  const thStyle: React.CSSProperties = {
+    padding: '10px 12px', fontSize: 12, fontWeight: 700,
+    color: COLORS.stone, textAlign: 'center', fontFamily: FONTS.body,
+  }
+  const tdStyle: React.CSSProperties = {
+    padding: '8px 12px', fontSize: 12, color: COLORS.slate,
+    textAlign: 'center', fontFamily: FONTS.body,
+  }
+
+  return (
+    <div>
+      <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.charcoal, marginBottom: 12 }}>
+        Plan Comparison
+      </p>
+      <div style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${COLORS.mist}` }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: COLORS.forest }}>
+              <th style={{ ...thStyle, textAlign: 'left', color: 'rgba(255,255,255,0.5)' }}>Feature</th>
+              {ALL_TIERS.map(t => (
+                <th
+                  key={t}
+                  style={{
+                    ...thStyle,
+                    color: t === currentTier ? COLORS.gold : 'rgba(255,255,255,0.7)',
+                    background: t === currentTier ? 'rgba(212,175,92,0.12)' : undefined,
+                  }}
+                >
+                  {PLANS[t].name}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {/* Price row */}
+            <tr style={{ background: COLORS.foam }}>
+              <td style={{ ...tdStyle, textAlign: 'left', color: COLORS.charcoal, fontWeight: 600 }}>Price/mo</td>
+              {ALL_TIERS.map(t => (
+                <td key={t} style={{ ...tdStyle, background: t === currentTier ? `${COLORS.gold}08` : undefined }}>
+                  {PLANS[t].price_monthly === null
+                    ? 'Custom'
+                    : PLANS[t].price_monthly === 0
+                      ? 'Free'
+                      : `$${PLANS[t].price_monthly}`}
+                </td>
+              ))}
+            </tr>
+            {/* Limit rows */}
+            {LIMIT_ROWS.map(({ key, label, format }, ri) => (
+              <tr
+                key={key}
+                style={{ background: ri % 2 === 0 ? '#ffffff' : COLORS.foam }}
+              >
+                <td style={{ ...tdStyle, textAlign: 'left', color: COLORS.slate }}>{label}</td>
+                {ALL_TIERS.map(t => (
+                  <td key={t} style={{ ...tdStyle, background: t === currentTier ? `${COLORS.gold}08` : undefined }}>
+                    {format(PLANS[t].limits[key])}
+                  </td>
+                ))}
+              </tr>
+            ))}
+            {/* CTA row */}
+            <tr style={{ background: COLORS.foam }}>
+              <td style={tdStyle} />
+              {ALL_TIERS.map(t => {
+                const isCurrent = t === currentTier
+                const plan      = PLANS[t]
+                const isHigher  = ALL_TIERS.indexOf(t) > ALL_TIERS.indexOf(currentTier)
+                const priceId   = plan.stripe_price_id_monthly
+
+                if (isCurrent) {
+                  return <td key={t} style={{ ...tdStyle, fontWeight: 600, color: COLORS.sage }}>Current</td>
+                }
+                if (t === 'ENTERPRISE') {
+                  return (
+                    <td key={t} style={tdStyle}>
+                      <a href="/contact" style={{ fontSize: 12, color: COLORS.sky, fontFamily: FONTS.body, textDecoration: 'none' }}>
+                        Contact
+                      </a>
+                    </td>
+                  )
+                }
+                if (isHigher && priceId) {
+                  return (
+                    <td key={t} style={tdStyle}>
+                      <button
+                        onClick={() => onCheckout(priceId)}
+                        disabled={actionLoading}
+                        style={{
+                          padding: '5px 12px', background: COLORS.gold,
+                          color: COLORS.forest, border: 'none', borderRadius: 6,
+                          fontSize: 11, fontWeight: 700, cursor: actionLoading ? 'not-allowed' : 'pointer',
+                          fontFamily: FONTS.body,
+                        }}
+                      >
+                        Upgrade
+                      </button>
+                    </td>
+                  )
+                }
+                return <td key={t} style={{ ...tdStyle, color: COLORS.stone }}>—</td>
+              })}
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

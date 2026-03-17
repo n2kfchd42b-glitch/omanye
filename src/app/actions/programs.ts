@@ -6,6 +6,7 @@ import { filterProgram } from '@/lib/donorFilter'
 import type { Program, CreateProgramPayload, UpdateProgramPayload, DonorProgramView } from '@/lib/programs'
 import type { ProgramVisibility } from '@/lib/supabase/database.types'
 import { logAction } from '@/lib/audit/logger'
+import { checkLimit } from '@/lib/billing/limits'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -37,6 +38,15 @@ export async function createProgram(
   const { user, profile, supabase, error } = await requireNGOEditor()
   if (error || !profile?.organization_id) {
     return { data: null, error: error ?? 'No organization' }
+  }
+
+  // ── Plan limit check ───────────────────────────────────────────────────────
+  const limitCheck = await checkLimit(profile.organization_id, 'programs')
+  if (!limitCheck.allowed) {
+    return {
+      data:  null,
+      error: `LIMIT_EXCEEDED:programs:${limitCheck.current}:${limitCheck.limit}:${limitCheck.upgradeRequired ?? 'ENTERPRISE'}`,
+    }
   }
 
   const { data, error: dbError } = await supabase

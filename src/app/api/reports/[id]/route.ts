@@ -1,32 +1,53 @@
-// GET    /api/reports/:id  — get single report
-// PATCH  /api/reports/:id  — update report metadata
-// DELETE /api/reports/:id  — delete DRAFT only
+// GET    /api/reports/:id  — get single report (org-scoped)
+// PATCH  /api/reports/:id  — update report metadata (NGO_ADMIN | NGO_STAFF)
+// DELETE /api/reports/:id  — delete DRAFT only (NGO_ADMIN)
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { UpdateReportPayload } from '@/types/reports'
+import { unauthorized, forbidden, notFound, internalError } from '@/lib/api/errors'
 
 interface RouteParams { params: { id: string } }
 
+async function requireNGOProfile(supabase: ReturnType<typeof createClient>) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { user: null, profile: null }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, organization_id')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.organization_id) return { user, profile: null }
+  return { user, profile: profile as { role: string; organization_id: string } }
+}
+
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+  const { user, profile } = await requireNGOProfile(supabase)
+  if (!user) return unauthorized()
+  if (!profile) return unauthorized()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db: any = supabase
   const { data, error } = await db
     .from('reports')
-    .select('*, programs(name), profiles(full_name), organizations(name)')
+    .select('*, programs(name, organization_id), profiles(full_name), organizations(name)')
     .eq('id', params.id)
     .single()
 
-  if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (error || !data) return notFound()
 
   const r = data as Record<string, unknown>
+
+  // ── Org scoping: ensure report belongs to caller's org ────────────────────
+  const prog = r.programs as { name: string; organization_id: string } | null
+  if (prog?.organization_id !== profile.organization_id) return notFound()
+
   const report = {
     ...r,
-    program_name:      (r.programs      as { name: string } | null)?.name ?? null,
+    program_name:      prog?.name ?? null,
     creator_name:      (r.profiles      as { full_name: string } | null)?.full_name ?? null,
     organization_name: (r.organizations as { name: string } | null)?.name ?? null,
     programs:      undefined,
@@ -39,8 +60,23 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+  const { user, profile } = await requireNGOProfile(supabase)
+  if (!user) return unauthorized()
+  if (!profile) return unauthorized()
+  if (!['NGO_ADMIN', 'NGO_STAFF'].includes(profile.role)) return forbidden()
+
+  // Verify report belongs to org
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db: any = supabase
+  const { data: existing } = await db
+    .from('reports')
+    .select('id, programs(organization_id)')
+    .eq('id', params.id)
+    .single()
+
+  if (!existing) return notFound()
+  const prog = (existing as Record<string, unknown>).programs as { organization_id: string } | null
+  if (prog?.organization_id !== profile.organization_id) return notFound()
 
   const body: UpdateReportPayload = await req.json()
 
@@ -52,23 +88,36 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   if (body.sections               !== undefined) updates.sections                = body.sections
   if (body.challenges             !== undefined) updates.challenges              = body.challenges
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db: any = supabase
   const { data, error } = await db.from('reports').update(updates).eq('id', params.id).select().single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return internalError(error.message)
   return NextResponse.json({ data })
 }
 
 export async function DELETE(_req: NextRequest, { params }: RouteParams) {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+  const { user, profile } = await requireNGOProfile(supabase)
+  if (!user) return unauthorized()
+  if (!profile) return unauthorized()
+  if (profile.role !== 'NGO_ADMIN') return forbidden()
 
+  // Verify report belongs to org and is a DRAFT
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db: any = supabase
-  const { error } = await db.from('reports').delete().eq('id', params.id).eq('status', 'DRAFT')
+  const { data: existing } = await db
+    .from('reports')
+    .select('id, status, programs(organization_id)')
+    .eq('id', params.id)
+    .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (!existing) return notFound()
+  const r = existing as Record<string, unknown>
+  const prog = r.programs as { organization_id: string } | null
+  if (prog?.organization_id !== profile.organization_id) return notFound()
+  if (r.status !== 'DRAFT') return NextResponse.json({ error: 'Only DRAFT reports can be deleted' }, { status: 409 })
+
+  const { error } = await db.from('reports').delete().eq('id', params.id)
+
+  if (error) return internalError(error.message)
   return NextResponse.json({ success: true })
 }

@@ -11,6 +11,19 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
 
+  // Require NGO role and org scoping
+  const { data: profileRaw } = await supabase
+    .from('profiles')
+    .select('role, organization_id')
+    .eq('id', user.id)
+    .single()
+
+  const profile = profileRaw as { role: string; organization_id: string } | null
+  if (!profile?.organization_id) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+  if (!['NGO_ADMIN', 'NGO_STAFF', 'NGO_VIEWER'].includes(profile.role)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   const programId = req.nextUrl.searchParams.get('program_id')
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -23,6 +36,7 @@ export async function GET(req: NextRequest) {
       reviewer:profiles!reviewed_by(full_name),
       form:field_collection_forms!form_id(id, name)
     `)
+    .eq('organization_id', profile.organization_id)
     .order('submission_date', { ascending: false })
     .order('created_at', { ascending: false })
 

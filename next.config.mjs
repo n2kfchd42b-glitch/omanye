@@ -3,11 +3,33 @@ const nextConfig = {
   experimental: {
     serverActions: {
       allowedOrigins: [
-        'sturdy-engine-r495455jjpr4f5qvx-3000.app.github.dev',
+        'omanye.io',
+        'www.omanye.io',
+        '*.vercel.app',
+        '*.app.github.dev',
         'localhost:3000',
         'localhost:3001',
       ],
     },
+  },
+
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
+  },
+
+  // @react-pdf/renderer is ESM-only — exclude from Next.js bundling
+  serverExternalPackages: ['@react-pdf/renderer'],
+
+  // Silence noisy peer-dep warnings from @react-pdf/renderer
+  webpack: (config) => {
+    config.resolve.alias.canvas = false
+    return config
   },
 }
 
