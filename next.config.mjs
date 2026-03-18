@@ -11,6 +11,7 @@ const nextConfig = {
         'localhost:3001',
       ],
     },
+    serverComponentsExternalPackages: ['@react-pdf/renderer'],
   },
 
   images: {
@@ -22,9 +23,6 @@ const nextConfig = {
       },
     ],
   },
-
-  // @react-pdf/renderer is ESM-only — exclude from Next.js bundling
-  serverExternalPackages: ['@react-pdf/renderer'],
 
   // Silence noisy peer-dep warnings from @react-pdf/renderer
   webpack: (config) => {

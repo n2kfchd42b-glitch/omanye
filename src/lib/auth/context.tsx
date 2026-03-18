@@ -2,14 +2,13 @@
 
 import React, {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useState,
 } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
-import type { OmanyeRole, Organization, Profile } from './types'
+import type { Organization, Profile } from './types'
 
 // ── Context shape ─────────────────────────────────────────────────────────────
 
@@ -41,14 +40,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   })
 
   useEffect(() => {
-    // Only initialise Supabase client in the browser, after env vars are confirmed present.
-    // This prevents SSR crashes when credentials have not yet been configured.
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
       setState(s => ({ ...s, loading: false }))
       return
     }
 
-    const supabase = createClient()
+    // Catch unhandled rejections from the Supabase SDK's internal auto-refresh
+    // timer (setInterval / setTimeout in _startAutoRefresh). The SDK's GoTrue
+    // client force-enables autoRefreshToken in the browser and fires background
+    // promises that can reject outside any user-controlled try/catch.
+    const onUnhandledRejection = (e: PromiseRejectionEvent) => {
+      const msg = e.reason?.message ?? String(e.reason ?? '')
+      const isSdkError =
+        msg.includes('did not match the expected pattern') ||
+        msg.includes('Invalid URL') ||
+        msg.includes('JSON') ||
+        msg.includes('AuthRetryableFetchError') ||
+        msg.includes('AuthUnknownError')
+      if (isSdkError) {
+        e.preventDefault()
+      }
+    }
+    window.addEventListener('unhandledrejection', onUnhandledRejection)
+
+    let supabase: ReturnType<typeof createClient>
+    try {
+      supabase = createClient()
+    } catch {
+      setState(s => ({ ...s, loading: false }))
+      window.removeEventListener('unhandledrejection', onUnhandledRejection)
+      return
+    }
 
     const loadProfile = async (userId: string) => {
       const { data: profile } = await supabase
@@ -102,7 +124,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      subscription.unsubscribe()
+      window.removeEventListener('unhandledrejection', onUnhandledRejection)
+    }
   }, [])
 
   return (
