@@ -200,8 +200,11 @@ export async function middleware(request: NextRequest) {
   // Public program detail: /org/[slug]/programs/[id] (exact, no deeper sub-path)
   const isPublicProgramDetail = /^\/org\/[^/]+\/programs\/[^/]+$/.test(pathname)
 
+  // API routes handle their own auth — never redirect them to /login
+  const isApiRoute = pathname.startsWith('/api/')
+
   const isAlwaysPublic =
-    isAuthRoute || pathname === '/' ||
+    isAuthRoute || pathname === '/' || isApiRoute ||
     isMarketingRoute || isPublicOrgProfile || isPublicProgramDetail
 
   // ── Not authenticated ───────────────────────────────────────────────────────
