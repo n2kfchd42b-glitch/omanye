@@ -2,20 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-
-const schema = z.object({
-  email:    z.string().email('Enter a valid email address'),
-  password: z.string().min(1, 'Password is required'),
-})
-
-type FormValues = z.infer<typeof schema>
-
-// ── Shared input style ────────────────────────────────────────────────────────
 
 const inputStyle: React.CSSProperties = {
   width:        '100%',
@@ -38,85 +26,91 @@ const labelStyle: React.CSSProperties = {
   marginBottom: 6,
 }
 
-const errorStyle: React.CSSProperties = {
-  fontSize:   12,
-  color:      '#C0392B',
-  marginTop:  4,
-}
-
 export default function LoginPage() {
   const router = useRouter()
-  const [serverError, setServerError] = useState<string | null>(null)
+
+  const [email,         setEmail]         = useState('')
+  const [password,      setPassword]      = useState('')
+  const [loading,       setLoading]       = useState(false)
+  const [error,         setError]         = useState<string | null>(null)
   const [googleLoading, setGoogleLoading] = useState(false)
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) })
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
 
-  const onSubmit = async (values: FormValues) => {
-    setServerError(null)
-    const supabase = createClient()
+    try {
+      const supabase = createClient()
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email:    values.email,
-      password: values.password,
-    })
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    if (error) {
-      setServerError(error.message)
-      return
-    }
+      if (signInError) {
+        setError(signInError.message)
+        setLoading(false)
+        return
+      }
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setServerError('Authentication failed.'); return }
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, onboarding_complete, organization_id')
+        .eq('id', data.user.id)
+        .single()
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role, onboarding_complete, organization_id')
-      .eq('id', user.id)
-      .single()
+      if (!profile?.onboarding_complete) {
+        router.push('/onboarding')
+        return
+      }
 
-    if (!profile) { setServerError('Profile not found.'); return }
+      if (profile.role === 'DONOR') {
+        router.push('/donor/dashboard')
+        return
+      }
 
-    if (!profile.onboarding_complete) {
-      router.push('/onboarding')
-      return
-    }
+      if (!profile.organization_id) {
+        setError('No organisation found for your account. Please contact support.')
+        setLoading(false)
+        return
+      }
 
-    if (profile.role === 'DONOR') {
-      router.push('/donor/dashboard')
-      return
-    }
-
-    if (profile.organization_id) {
-      const { data: org } = await supabase
+      const { data: org, error: orgError } = await supabase
         .from('organizations')
         .select('slug')
         .eq('id', profile.organization_id)
         .single()
 
-      if (org?.slug) {
-        router.push(`/org/${org.slug}/dashboard`)
+      if (orgError || !org?.slug) {
+        setError('Could not load your organisation. Please try again.')
+        setLoading(false)
         return
       }
-    }
 
-    router.push('/onboarding')
+      router.push(`/org/${org.slug}/dashboard`)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred.'
+      setError(message)
+      setLoading(false)
+    }
   }
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true)
-    // createClient() is called here (inside a browser event handler) so it
-    // never runs during SSR and won't crash when env vars are not yet set.
-    const supabase = createClient()
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
+    try {
+      const supabase = createClient()
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Google sign-in failed.'
+      setError(message)
+      setGoogleLoading(false)
+    }
   }
 
   return (
@@ -125,17 +119,17 @@ export default function LoginPage() {
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
           <div style={{
-            width:        32,
-            height:       32,
-            borderRadius: 8,
-            background:   '#0D2B1E',
-            display:      'flex',
-            alignItems:   'center',
+            width:          32,
+            height:         32,
+            borderRadius:   8,
+            background:     '#0D2B1E',
+            display:        'flex',
+            alignItems:     'center',
             justifyContent: 'center',
-            fontFamily:   'Palatino, Georgia, serif',
-            fontWeight:   700,
-            fontSize:     16,
-            color:        '#D4AF5C',
+            fontFamily:     'Palatino, Georgia, serif',
+            fontWeight:     700,
+            fontSize:       16,
+            color:          '#D4AF5C',
           }}>
             O
           </div>
@@ -191,20 +185,7 @@ export default function LoginPage() {
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        {serverError && (
-          <div style={{
-            padding:      '10px 14px',
-            borderRadius: 8,
-            background:   '#FEE2E2',
-            color:        '#991B1B',
-            fontSize:     13,
-            marginBottom: 16,
-          }}>
-            {serverError}
-          </div>
-        )}
-
+      <form onSubmit={handleFormSubmit} noValidate>
         <div style={{ marginBottom: 16 }}>
           <label htmlFor="email" style={labelStyle}>Email address</label>
           <input
@@ -212,46 +193,59 @@ export default function LoginPage() {
             type="email"
             autoComplete="email"
             placeholder="you@organisation.org"
-            style={{ ...inputStyle, borderColor: errors.email ? '#C0392B' : '#C8EDD8' }}
-            {...register('email')}
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            style={inputStyle}
+            required
           />
-          {errors.email && <p style={errorStyle}>{errors.email.message}</p>}
         </div>
 
         <div style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-            <label htmlFor="password" style={{ ...labelStyle, marginBottom: 0 }}>Password</label>
-          </div>
+          <label htmlFor="password" style={labelStyle}>Password</label>
           <input
             id="password"
             type="password"
             autoComplete="current-password"
             placeholder="••••••••"
-            style={{ ...inputStyle, borderColor: errors.password ? '#C0392B' : '#C8EDD8' }}
-            {...register('password')}
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            style={inputStyle}
+            required
           />
-          {errors.password && <p style={errorStyle}>{errors.password.message}</p>}
         </div>
 
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={loading}
           style={{
-            width:        '100%',
-            padding:      '11px 16px',
-            borderRadius: 8,
-            border:       'none',
-            background:   isSubmitting ? '#4CAF78' : '#0D2B1E',
-            color:        '#D4AF5C',
-            fontSize:     15,
-            fontWeight:   700,
-            cursor:       isSubmitting ? 'not-allowed' : 'pointer',
+            width:         '100%',
+            padding:       '11px 16px',
+            borderRadius:  8,
+            border:        'none',
+            background:    loading ? '#4CAF78' : '#0D2B1E',
+            color:         '#D4AF5C',
+            fontSize:      15,
+            fontWeight:    700,
+            cursor:        loading ? 'not-allowed' : 'pointer',
             letterSpacing: 0.3,
-            transition:   'background 0.15s',
+            transition:    'background 0.15s',
           }}
         >
-          {isSubmitting ? 'Signing in…' : 'Sign In'}
+          {loading ? 'Signing in…' : 'Sign In'}
         </button>
+
+        {error && (
+          <div style={{
+            padding:      '10px 14px',
+            borderRadius: 8,
+            background:   '#FEE2E2',
+            color:        '#991B1B',
+            fontSize:     13,
+            marginTop:    12,
+          }}>
+            {error}
+          </div>
+        )}
       </form>
 
       {/* Footer links */}

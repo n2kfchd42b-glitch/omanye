@@ -50,10 +50,17 @@ export async function POST(req: NextRequest) {
   const slug    = (org as { slug: string } | null)?.slug ?? ''
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
-  const portalSession = await stripe.billingPortal.sessions.create({
-    customer:   customerId,
-    return_url: `${baseUrl}/org/${slug}/settings?tab=billing`,
-  })
+  let portalSession: Awaited<ReturnType<typeof stripe.billingPortal.sessions.create>>
+  try {
+    portalSession = await stripe.billingPortal.sessions.create({
+      customer:   customerId,
+      return_url: `${baseUrl}/org/${slug}/settings?tab=billing`,
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Stripe error'
+    console.error('[billing/portal] Stripe error:', err)
+    return NextResponse.json({ error: 'STRIPE_ERROR', message: msg }, { status: 502 })
+  }
 
   return NextResponse.json({ url: portalSession.url })
 }

@@ -55,6 +55,7 @@ const fieldStyle: React.CSSProperties = { marginBottom: 14 }
 export default function NGOSignupPage() {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
+  const [infoMessage, setInfoMessage] = useState<string | null>(null)
   const [step, setStep] = useState<1 | 2>(1)
 
   const {
@@ -71,6 +72,7 @@ export default function NGOSignupPage() {
 
   const onSubmit = async (values: FormValues) => {
     setServerError(null)
+    setInfoMessage(null)
 
     // 1. Create user + org + profile via server route (uses service role to bypass RLS)
     const res = await fetch('/api/auth/signup/ngo', {
@@ -86,13 +88,23 @@ export default function NGOSignupPage() {
       }),
     })
 
+    const body = await res.json()
+
     if (!res.ok) {
-      const { error } = await res.json()
-      setServerError(error ?? 'Failed to create account.')
+      setServerError(body.error ?? 'Failed to create account.')
       return
     }
 
-    // 2. Sign in to establish a session (user is already confirmed)
+    if (!body.canSignInNow) {
+      // Email confirmation is enabled and the service-role key could not
+      // bypass it. The user must confirm via inbox before signing in.
+      setInfoMessage(
+        'Account created! Please check your email and click the confirmation link, then sign in.'
+      )
+      return
+    }
+
+    // Sign in to establish a browser session
     const supabase = createClient()
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email:    values.email,
@@ -147,6 +159,19 @@ export default function NGOSignupPage() {
           </div>
         ))}
       </div>
+
+      {infoMessage && (
+        <div style={{
+          padding:      '10px 14px',
+          borderRadius: 8,
+          background:   '#ECFDF5',
+          color:        '#065F46',
+          fontSize:     13,
+          marginBottom: 16,
+        }}>
+          {infoMessage}
+        </div>
+      )}
 
       {serverError && (
         <div style={{

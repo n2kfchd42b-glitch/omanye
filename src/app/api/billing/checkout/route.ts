@@ -72,19 +72,26 @@ export async function POST(req: NextRequest) {
   const slug = (org as { name: string; slug: string } | null)?.slug ?? ''
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
-  const session = await stripe.checkout.sessions.create({
-    customer:    customerId,
-    mode:        'subscription',
-    line_items:  [{ price: priceId, quantity: 1 }],
-    success_url: `${baseUrl}/org/${slug}/settings?tab=billing&billing=success`,
-    cancel_url:  `${baseUrl}/org/${slug}/settings?tab=billing`,
-    subscription_data: {
-      trial_period_days: 14,
+  let session: Awaited<ReturnType<typeof stripe.checkout.sessions.create>>
+  try {
+    session = await stripe.checkout.sessions.create({
+      customer:    customerId,
+      mode:        'subscription',
+      line_items:  [{ price: priceId, quantity: 1 }],
+      success_url: `${baseUrl}/org/${slug}/settings?tab=billing&billing=success`,
+      cancel_url:  `${baseUrl}/org/${slug}/settings?tab=billing`,
+      subscription_data: {
+        trial_period_days: 14,
+        metadata: { organization_id: orgId },
+      },
       metadata: { organization_id: orgId },
-    },
-    metadata: { organization_id: orgId },
-    allow_promotion_codes: true,
-  })
+      allow_promotion_codes: true,
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Stripe error'
+    console.error('[billing/checkout] Stripe error:', err)
+    return NextResponse.json({ error: 'STRIPE_ERROR', message: msg }, { status: 502 })
+  }
 
   return NextResponse.json({ url: session.url })
 }

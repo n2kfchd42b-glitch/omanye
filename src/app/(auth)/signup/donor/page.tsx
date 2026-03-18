@@ -52,6 +52,7 @@ const fieldStyle: React.CSSProperties = { marginBottom: 14 }
 export default function DonorSignupPage() {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
+  const [infoMessage, setInfoMessage] = useState<string | null>(null)
 
   const {
     register,
@@ -61,6 +62,7 @@ export default function DonorSignupPage() {
 
   const onSubmit = async (values: FormValues) => {
     setServerError(null)
+    setInfoMessage(null)
 
     // 1. Create user + profile via server route (uses service role to bypass RLS)
     const res = await fetch('/api/auth/signup/donor', {
@@ -74,13 +76,21 @@ export default function DonorSignupPage() {
       }),
     })
 
+    const body = await res.json()
+
     if (!res.ok) {
-      const { error } = await res.json()
-      setServerError(error ?? 'Failed to create account.')
+      setServerError(body.error ?? 'Failed to create account.')
       return
     }
 
-    // 2. Sign in to establish a session (user is already confirmed)
+    if (!body.canSignInNow) {
+      setInfoMessage(
+        'Account created! Please check your email and click the confirmation link, then sign in.'
+      )
+      return
+    }
+
+    // Sign in to establish a browser session
     const supabase = createClient()
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email:    values.email,
@@ -125,6 +135,19 @@ export default function DonorSignupPage() {
         view their programs at the level they choose. You can also request access to
         specific programs directly from the donor portal.
       </div>
+
+      {infoMessage && (
+        <div style={{
+          padding:      '10px 14px',
+          borderRadius: 8,
+          background:   '#ECFDF5',
+          color:        '#065F46',
+          fontSize:     13,
+          marginBottom: 16,
+        }}>
+          {infoMessage}
+        </div>
+      )}
 
       {serverError && (
         <div style={{
