@@ -1,5 +1,4 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { requireOrgAuth } from '@/lib/auth/server'
 import OmanyeWorkspace from './OmanyeWorkspace'
 import type { UserRole } from '@/lib/types'
 
@@ -23,41 +22,11 @@ export interface ActivityItem {
 }
 
 export default async function OrgDashboardPage({ params }: Props) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user, org } = await requireOrgAuth(params.slug)
 
-  if (!user) redirect('/login')
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, role, organization_id')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || !['NGO_ADMIN', 'NGO_STAFF', 'NGO_VIEWER'].includes(profile.role)) {
-    redirect('/login')
-  }
-
-  // Fetch org to validate slug and get org name
-  let orgName = ''
-  let orgSlug = params.slug
-  const orgId = profile.organization_id ?? ''
-
-  if (orgId) {
-    const { data: org } = await supabase
-      .from('organizations')
-      .select('slug, name')
-      .eq('id', orgId)
-      .single()
-
-    if (org) {
-      orgName = org.name
-      orgSlug = org.slug
-      if (org.slug !== params.slug) {
-        redirect(`/org/${org.slug}/dashboard`)
-      }
-    }
-  }
+  const orgId   = org.id
+  const orgName = org.name
+  const orgSlug = org.slug
 
   // ── Fetch dashboard stats in parallel ───────────────────────────────────────
   const [
@@ -184,10 +153,10 @@ export default async function OrgDashboardPage({ params }: Props) {
   return (
     <OmanyeWorkspace
       initialUser={{
-        name:  profile.full_name  ?? user.email ?? 'User',
-        email: user.email         ?? '',
+        name:  user.profile.full_name ?? orgName,
+        email: user.email,
         org:   orgName,
-        role:  mapRole(profile.role) as UserRole,
+        role:  mapRole(user.profile.role) as UserRole,
       }}
       orgSlug={orgSlug}
       orgId={orgId}

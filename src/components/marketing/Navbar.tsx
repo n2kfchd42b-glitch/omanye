@@ -59,18 +59,6 @@ export function Navbar() {
         {/* Desktop CTA */}
         <div className="hidden md:flex items-center gap-3">
           <Link
-            href="/login"
-            className="text-sm font-medium transition-colors duration-150"
-            style={{
-              color: 'rgba(255,255,255,0.75)',
-              fontFamily: 'var(--font-instrument),system-ui,sans-serif',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = 'white')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.75)')}
-          >
-            Sign In
-          </Link>
-          <Link
             href="/signup"
             className="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-150"
             style={{
@@ -114,14 +102,6 @@ export function Navbar() {
             </Link>
           ))}
           <hr style={{ borderColor: 'rgba(212,175,92,0.15)' }} />
-          <Link
-            href="/login"
-            className="text-sm font-medium py-1"
-            style={{ color: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-instrument),system-ui,sans-serif' }}
-            onClick={() => setMobileOpen(false)}
-          >
-            Sign In
-          </Link>
           <Link
             href="/signup"
             className="px-4 py-2 rounded-lg text-sm font-semibold text-center"

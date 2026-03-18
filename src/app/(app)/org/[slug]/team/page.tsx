@@ -1,41 +1,18 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { requireOrgAuth } from '@/lib/auth/server'
+import { adminClient } from '@/lib/supabase/admin'
 import TeamClient from './TeamClient'
 import type { TeamMemberDB, TeamInvitation } from '@/types/team'
 
 interface Props { params: { slug: string } }
 
 export default async function TeamPage({ params }: Props) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, organization_id, full_name')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || !['NGO_ADMIN', 'NGO_STAFF', 'NGO_VIEWER'].includes(profile.role)) {
-    redirect('/login')
-  }
-  if (!profile.organization_id) redirect('/onboarding')
-
-  const { data: org } = await supabase
-    .from('organizations')
-    .select('id, slug, name')
-    .eq('id', profile.organization_id)
-    .single()
-
-  if (!org || org.slug !== params.slug) {
-    redirect(org ? `/org/${org.slug}/team` : '/login')
-  }
+  const { supabase, user, org } = await requireOrgAuth(params.slug)
 
   // Fetch team members
   const { data: members } = await supabase
     .from('profiles')
     .select('id, full_name, avatar_url, role, organization_id, job_title, created_at')
-    .eq('organization_id', profile.organization_id)
+    .eq('organization_id', org.id)
     .in('role', ['NGO_ADMIN', 'NGO_STAFF', 'NGO_VIEWER'])
     .order('created_at', { ascending: true })
 
@@ -45,7 +22,7 @@ export default async function TeamPage({ params }: Props) {
   const { data: assignments } = await db
     .from('program_assignments')
     .select('id, program_id, profile_id, organization_id, assigned_by, assigned_at, programs(name, status)')
-    .eq('organization_id', profile.organization_id)
+    .eq('organization_id', org.id)
 
   const assignmentsByProfile: Record<string, unknown[]> = {}
   for (const a of (assignments ?? []) as Record<string, unknown>[]) {
@@ -64,12 +41,11 @@ export default async function TeamPage({ params }: Props) {
     })
   }
 
-  // Fetch emails via admin
+  // Fetch emails via admin (requires service role)
   let emailMap: Record<string, string> = {}
   const memberIds = (members ?? []).map((m: Record<string, unknown>) => m.id as string)
   if (memberIds.length > 0) {
     try {
-      const { adminClient } = await import('@/lib/supabase/admin')
       const { data: { users } } = await adminClient.auth.admin.listUsers({ perPage: 1000 })
       for (const u of users) {
         if (memberIds.includes(u.id)) emailMap[u.id] = u.email ?? ''
@@ -94,7 +70,7 @@ export default async function TeamPage({ params }: Props) {
     await db
       .from('team_invitations')
       .update({ status: 'EXPIRED' })
-      .eq('organization_id', profile.organization_id)
+      .eq('organization_id', org.id)
       .eq('status', 'PENDING')
       .lt('expires_at', new Date().toISOString())
   } catch { /* ignore */ }
@@ -103,7 +79,7 @@ export default async function TeamPage({ params }: Props) {
   const { data: invitationsRaw } = await db
     .from('team_invitations')
     .select('*, inviter:invited_by(full_name)')
-    .eq('organization_id', profile.organization_id)
+    .eq('organization_id', org.id)
     .order('created_at', { ascending: false })
 
   const invitations: TeamInvitation[] = (invitationsRaw ?? []).map((inv: Record<string, unknown>) => {
@@ -129,15 +105,15 @@ export default async function TeamPage({ params }: Props) {
   const { data: programs } = await supabase
     .from('programs')
     .select('id, name, status')
-    .eq('organization_id', profile.organization_id)
+    .eq('organization_id', org.id)
     .is('deleted_at', null)
     .order('name', { ascending: true })
 
   return (
     <TeamClient
       orgSlug={params.slug}
-      organizationId={profile.organization_id}
-      userRole={profile.role as TeamMemberDB['role']}
+      organizationId={org.id}
+      userRole={user.profile.role}
       currentUserId={user.id}
       members={teamMembers}
       invitations={invitations}

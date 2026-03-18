@@ -1,5 +1,4 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { requireOrgAuth } from '@/lib/auth/server'
 import DonorsClient from './DonorsClient'
 import type { DonorRelationship, DonorInvitation } from '@/lib/donors'
 import type { DonorAccessRequest } from '@/lib/auth/types'
@@ -9,63 +8,36 @@ interface Props {
 }
 
 export default async function DonorsPage({ params }: Props) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, organization_id')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || !['NGO_ADMIN', 'NGO_STAFF', 'NGO_VIEWER'].includes(profile.role)) {
-    redirect('/login')
-  }
-  if (!profile.organization_id) redirect('/onboarding')
-
-  const { data: org } = await supabase
-    .from('organizations')
-    .select('id, slug, name')
-    .eq('id', profile.organization_id)
-    .single()
-
-  if (!org || org.slug !== params.slug) {
-    redirect(org ? `/org/${org.slug}/donors` : '/login')
-  }
+  const { supabase, user, org } = await requireOrgAuth(params.slug)
 
   // Expire stale invitations
   try { await supabase.rpc('expire_pending_invitations') } catch { /* ignore */ }
 
   // Fetch all data in parallel
   const [dpaResult, invResult, requestResult, programsResult] = await Promise.all([
-    // All active DPA rows
     supabase
       .from('donor_program_access')
       .select('id, donor_id, program_id, organization_id, granted_by, access_level, can_download_reports, active, granted_at, expires_at, nickname, last_viewed_at, view_count')
-      .eq('organization_id', profile.organization_id)
+      .eq('organization_id', org.id)
       .eq('active', true)
       .order('granted_at', { ascending: false }),
 
-    // All invitations
     supabase
       .from('donor_invitations')
       .select('*')
-      .eq('organization_id', profile.organization_id)
+      .eq('organization_id', org.id)
       .order('created_at', { ascending: false }),
 
-    // All access requests
     supabase
       .from('donor_access_requests')
       .select('*')
-      .eq('organization_id', profile.organization_id)
+      .eq('organization_id', org.id)
       .order('created_at', { ascending: false }),
 
-    // Programs for dropdowns
     supabase
       .from('programs')
       .select('id, name, status')
-      .eq('organization_id', profile.organization_id)
+      .eq('organization_id', org.id)
       .is('deleted_at', null)
       .order('name', { ascending: true }),
   ])
@@ -161,8 +133,8 @@ export default async function DonorsPage({ params }: Props) {
   return (
     <DonorsClient
       orgSlug={params.slug}
-      organizationId={profile.organization_id}
-      userRole={profile.role}
+      organizationId={org.id}
+      userRole={user.profile.role}
       donors={donorRelationships}
       invitations={invitations}
       accessRequests={accessRequests}

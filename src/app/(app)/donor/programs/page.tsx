@@ -1,23 +1,12 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { requireDonorAuth } from '@/lib/auth/server'
 import DonorProgramsClient from './DonorProgramsClient'
 import { filterProgram } from '@/lib/donorFilter'
 import type { Program, Indicator } from '@/lib/programs'
 
 export default async function DonorProgramsPage() {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const { supabase, user } = await requireDonorAuth()
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, full_name')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || profile.role !== 'DONOR') redirect('/login')
-
-  // Get all active grants
+  // Get all active grants for this donor
   const { data: grants } = await supabase
     .from('donor_program_access')
     .select('program_id, access_level, organization_id, can_download_reports, granted_at, expires_at')
@@ -99,7 +88,7 @@ export default async function DonorProgramsPage() {
   return (
     <DonorProgramsClient
       programs={programViews}
-      donorName={profile.full_name ?? 'Donor'}
+      donorName={user.profile.full_name ?? 'Donor'}
     />
   )
 }

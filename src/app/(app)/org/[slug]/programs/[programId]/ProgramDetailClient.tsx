@@ -114,32 +114,37 @@ export default function ProgramDetailClient({
 
   // ── Realtime: live indicator value updates ──────────────────────────────────
   useEffect(() => {
-    const supabase = createClient()
-
-    const channel = supabase
-      .channel('indicator-updates-' + initialProgram.id)
-      .on(
-        'postgres_changes',
-        {
-          event:  'INSERT',
-          schema: 'public',
-          table:  'indicator_updates',
-          filter: `program_id=eq.${initialProgram.id}`,
-        },
-        (payload) => {
-          const update = payload.new as { indicator_id: string; new_value: number }
-          setIndicators(prev =>
-            prev.map(ind =>
-              ind.id === update.indicator_id
-                ? { ...ind, current_value: update.new_value }
-                : ind
+    let supabase: ReturnType<typeof createClient> | null = null
+    let channel: ReturnType<ReturnType<typeof createClient>['channel']> | null = null
+    try {
+      supabase = createClient()
+      channel = supabase
+        .channel('indicator-updates-' + initialProgram.id)
+        .on(
+          'postgres_changes',
+          {
+            event:  'INSERT',
+            schema: 'public',
+            table:  'indicator_updates',
+            filter: `program_id=eq.${initialProgram.id}`,
+          },
+          (payload) => {
+            const update = payload.new as { indicator_id: string; new_value: number }
+            setIndicators(prev =>
+              prev.map(ind =>
+                ind.id === update.indicator_id
+                  ? { ...ind, current_value: update.new_value }
+                  : ind
+              )
             )
-          )
-        }
-      )
-      .subscribe()
+          }
+        )
+        .subscribe()
+    } catch { /* Realtime unavailable (e.g. insecure WebSocket in dev) */ }
 
-    return () => { supabase.removeChannel(channel) }
+    return () => {
+      if (supabase && channel) supabase.removeChannel(channel)
+    }
   }, [initialProgram.id])
 
   return (

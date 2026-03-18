@@ -56,7 +56,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         msg.includes('Invalid URL') ||
         msg.includes('JSON') ||
         msg.includes('AuthRetryableFetchError') ||
-        msg.includes('AuthUnknownError')
+        msg.includes('AuthUnknownError') ||
+        msg.includes('WebSocket') ||
+        msg.includes('insecure')
       if (isSdkError) {
         e.preventDefault()
       }

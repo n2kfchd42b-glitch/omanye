@@ -1,39 +1,20 @@
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { signOut } from '@/app/actions/auth'
+import { requireDonorAuth } from '@/lib/auth/server'
 import { COLORS } from '@/lib/tokens'
 import type { AccessLevel } from '@/lib/supabase/database.types'
 
 export default async function DonorDashboardPage() {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await requireDonorAuth()
 
-  if (!user) redirect('/login')
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, role')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || profile.role !== 'DONOR') redirect('/login')
-
-  const { data: donorProfile } = await supabase
-    .from('donor_profiles')
-    .select('organization_name')
-    .eq('id', user.id)
-    .single()
-
-  // Fetch active program access grants (only the base table — avoid join type errors)
+  // Fetch active grants for this donor
   const { data: rawGrants } = await supabase
     .from('donor_program_access')
-    .select('id, access_level, can_download_reports, granted_at, expires_at, program_id')
+    .select('id, access_level, can_download_reports, granted_at, expires_at, program_id, donor_id')
     .eq('donor_id', user.id)
     .eq('active', true)
     .order('granted_at', { ascending: false })
+    .limit(20)
 
-  // Fetch program details for each grant in a separate query
   const programIds = (rawGrants ?? []).map(g => g.program_id)
   const programMap: Record<string, { name: string; status: string; orgName: string; orgSlug: string }> = {}
 
@@ -105,22 +86,7 @@ export default async function DonorDashboardPage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
-            {profile.full_name ?? user.email}
-            {donorProfile?.organization_name && (
-              <span style={{ color: 'rgba(255,255,255,0.45)', marginLeft: 6 }}>
-                · {donorProfile.organization_name}
-              </span>
-            )}
-          </span>
-          <form action={signOut}>
-            <button type="submit" style={{
-              padding: '6px 12px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)',
-              background: 'transparent', color: 'rgba(255,255,255,0.7)', fontSize: 12, cursor: 'pointer', fontWeight: 500,
-            }}>
-              Sign out
-            </button>
-          </form>
+          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>{user.profile.full_name ?? user.email}</span>
         </div>
       </div>
 
@@ -128,10 +94,10 @@ export default async function DonorDashboardPage() {
       <main style={{ paddingTop: 82, padding: '82px 24px 40px', maxWidth: 900, margin: '0 auto' }}>
         <div style={{ marginBottom: 32 }}>
           <h1 style={{ fontSize: 26, fontWeight: 700, color: COLORS.ink, fontFamily: 'Palatino, Georgia, serif', marginBottom: 6 }}>
-            Welcome, {profile.full_name?.split(' ')[0] ?? 'there'}
+            Donor Portal
           </h1>
           <p style={{ fontSize: 15, color: COLORS.slate }}>
-            Your programme access from NGO partners
+            Your active programme access grants
           </p>
         </div>
 
@@ -168,14 +134,13 @@ export default async function DonorDashboardPage() {
               No programme access yet
             </h2>
             <p style={{ fontSize: 14, color: COLORS.slate, maxWidth: 380, margin: '0 auto', lineHeight: 1.6 }}>
-              NGOs will grant you access as they onboard you as a funder.
-              You can also request access to specific programmes once you know the NGO&apos;s programme ID.
+              NGOs will grant donor access once they onboard funders.
             </p>
           </div>
         ) : (
           <div>
             <h2 style={{ fontSize: 16, fontWeight: 700, color: COLORS.charcoal, marginBottom: 16 }}>
-              Programmes you can access ({grants.length})
+              Programmes with active access ({grants.length})
             </h2>
             <div style={{ display: 'grid', gap: 14 }}>
               {grants.map(grant => (

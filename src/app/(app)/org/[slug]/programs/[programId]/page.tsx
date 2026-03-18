@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { requireOrgAuth } from '@/lib/auth/server'
+import { adminClient } from '@/lib/supabase/admin'
 import ProgramDetailClient from './ProgramDetailClient'
 import type { Program, Indicator, ProgramUpdate } from '@/lib/programs'
 import type { BudgetCategory, Expenditure, BudgetAmendment, FundingTranche, BudgetSummary, CategorySpend } from '@/lib/budget'
@@ -21,17 +22,15 @@ async function PublicProgramView({
   orgSlug: string
   orgName: string
 }) {
-  const supabase = createClient()
-
   const [indicatorsResult, updatesResult] = await Promise.all([
-    supabase
+    adminClient
       .from('indicators')
       .select('id, name, current_value, target_value, unit, description')
       .eq('program_id', program.id)
       .eq('is_key_indicator', true)
       .eq('visible_to_donors', true)
       .order('sort_order', { ascending: true }),
-    supabase
+    adminClient
       .from('program_updates')
       .select('id, title, body, update_type, published_at, visible_to_donors')
       .eq('program_id', program.id)
@@ -42,7 +41,7 @@ async function PublicProgramView({
   ])
 
   const keyIndicators = indicatorsResult.data ?? []
-  const publicUpdates = updatesResult.data ?? []
+  const publicUpdates = (updatesResult.data ?? []) as { id: string; title: string; body: string | null; update_type: string; published_at: string | null; visible_to_donors: boolean }[]
 
   const serif = 'var(--font-fraunces),Georgia,serif'
   const sans  = 'var(--font-instrument),system-ui,sans-serif'
@@ -194,80 +193,16 @@ async function PublicProgramView({
   )
 }
 
-// ── Main page — handles both public + authenticated NGO views ─────────────────
+// ── Main page — internal NGO view ───────────────────────────────────────────
 
 export default async function ProgramDetailPage({ params }: Props) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  // ── Unauthenticated: show public view if program.visibility = PUBLIC ──────
-  if (!user) {
-    // Resolve org by slug to validate
-    const { data: org } = await supabase
-      .from('organizations')
-      .select('id, name, slug')
-      .eq('slug', params.slug)
-      .single()
-
-    if (!org) redirect(`/org/${params.slug}`)
-
-    const { data: program } = await supabase
-      .from('programs')
-      .select('*')
-      .eq('id', params.programId)
-      .eq('organization_id', org.id)
-      .is('deleted_at', null)
-      .single()
-
-    if (!program || program.visibility !== 'PUBLIC') {
-      redirect(`/org/${params.slug}`)
-    }
-
-    return (
-      <>
-        {/* Minimal nav header since no auth layout wraps this (app) route */}
-        <div style={{ background: '#0F1B33', borderBottom: '1px solid rgba(212,175,92,0.1)' }}>
-          <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-            <Link href={`/org/${params.slug}`} className="text-sm" style={{ color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-instrument),system-ui,sans-serif' }}>
-              ← {org.name}
-            </Link>
-            <Link href="/login" className="text-sm font-medium" style={{ color: '#D4AF5C', fontFamily: 'var(--font-instrument),system-ui,sans-serif' }}>
-              Sign In
-            </Link>
-          </div>
-        </div>
-        <PublicProgramView program={program as unknown as Program} orgSlug={params.slug} orgName={org.name} />
-      </>
-    )
-  }
-
-  // ── Authenticated: validate NGO role ────────────────────────────────────────
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, organization_id, full_name, avatar_url')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || !['NGO_ADMIN', 'NGO_STAFF', 'NGO_VIEWER'].includes(profile.role)) {
-    redirect('/login')
-  }
-  if (!profile.organization_id) redirect('/onboarding')
-
-  const { data: org } = await supabase
-    .from('organizations')
-    .select('id, slug, name')
-    .eq('id', profile.organization_id)
-    .single()
-
-  if (!org || org.slug !== params.slug) {
-    redirect(org ? `/org/${org.slug}/programs` : '/login')
-  }
+  const { supabase, user, org } = await requireOrgAuth(params.slug)
 
   const { data: program } = await supabase
     .from('programs')
     .select('*')
     .eq('id', params.programId)
-    .eq('organization_id', profile.organization_id)
+    .eq('organization_id', org.id)
     .is('deleted_at', null)
     .single()
 
@@ -298,7 +233,7 @@ export default async function ProgramDetailPage({ params }: Props) {
       program={program as Program}
       indicators={(indicatorsResult.data ?? []) as Indicator[]}
       updates={(updatesResult.data ?? []) as ProgramUpdate[]}
-      userRole={profile.role}
+      userRole={user.profile.role}
       orgSlug={params.slug}
       currentUserId={user.id}
       initialCategories={(categoriesResult.data ?? []) as BudgetCategory[]}

@@ -63,31 +63,36 @@ export default function DonorsClient({
 
   // ── Realtime: pending access request badge ─────────────────────────────────
   useEffect(() => {
-    const supabase = createClient()
+    let supabase: ReturnType<typeof createClient> | null = null
+    let channel: ReturnType<ReturnType<typeof createClient>['channel']> | null = null
+    try {
+      supabase = createClient()
+      channel = supabase
+        .channel('ngo-access-requests-' + organizationId)
+        .on(
+          'postgres_changes',
+          {
+            event:  '*',
+            schema: 'public',
+            table:  'donor_access_requests',
+            filter: `organization_id=eq.${organizationId}`,
+          },
+          async () => {
+            if (!supabase) return
+            const { count } = await supabase
+              .from('donor_access_requests')
+              .select('id', { count: 'exact', head: true })
+              .eq('organization_id', organizationId)
+              .eq('status', 'PENDING')
+            setLivePendingCount(count ?? 0)
+          }
+        )
+        .subscribe()
+    } catch { /* Realtime unavailable (e.g. insecure WebSocket in dev) */ }
 
-    const channel = supabase
-      .channel('ngo-access-requests-' + organizationId)
-      .on(
-        'postgres_changes',
-        {
-          event:  '*',
-          schema: 'public',
-          table:  'donor_access_requests',
-          filter: `organization_id=eq.${organizationId}`,
-        },
-        async () => {
-          // Re-fetch live pending count
-          const { count } = await supabase
-            .from('donor_access_requests')
-            .select('id', { count: 'exact', head: true })
-            .eq('organization_id', organizationId)
-            .eq('status', 'PENDING')
-          setLivePendingCount(count ?? 0)
-        }
-      )
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
+    return () => {
+      if (supabase && channel) supabase.removeChannel(channel)
+    }
   }, [organizationId])
 
   const totalDonors      = donors.length

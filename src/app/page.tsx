@@ -77,14 +77,14 @@ const PLANS = [
     price: { monthly: 0, annual: 0 },
     description: 'For small NGOs getting started with transparent program management.',
     features: ['1 program', '3 team members', 'Core indicators', 'Basic donor portal', 'Community support'],
-    cta: { label: 'Start Free', href: '/signup/ngo' },
+    cta: { label: 'Start Free', href: '/signup' },
   },
   {
     name: 'Starter',
     price: { monthly: 49, annual: 470 },
     description: 'For growing NGOs managing multiple programs and donor relationships.',
     features: ['5 programs', '10 team members', 'Donor access control', 'Report generation', 'Budget tracking', 'Email support'],
-    cta: { label: 'Start Free Trial', href: '/signup/ngo' },
+    cta: { label: 'Start Free Trial', href: '/signup' },
     highlighted: true,
     badge: 'Most Popular',
   },
@@ -93,7 +93,7 @@ const PLANS = [
     price: { monthly: 149, annual: 1430 },
     description: 'For established NGOs that need full power, compliance, and scale.',
     features: ['Unlimited programs', 'Unlimited team members', 'All features', 'Field data collection', 'Audit trail & compliance', 'Priority support', 'API access'],
-    cta: { label: 'Start Free Trial', href: '/signup/ngo' },
+    cta: { label: 'Start Free Trial', href: '/signup' },
   },
 ]
 
@@ -142,11 +142,11 @@ function HeroSection() {
 
             <div className="flex flex-wrap gap-3 pt-2">
               <Link
-                href="/signup/ngo"
+                href="/signup"
                 className="px-7 py-3.5 rounded-xl text-base font-semibold transition-all duration-150 inline-flex items-center gap-2"
                 style={{ background: '#D4AF5C', color: '#0F1B33', ...sans }}
               >
-                Start Free — No Card Required <ChevronRight size={18} />
+                Get Started <ChevronRight size={18} />
               </Link>
               <a
                 href="#how-it-works"
@@ -523,11 +523,11 @@ function CTABannerSection() {
         </p>
         <div className="flex flex-wrap gap-4 justify-center">
           <Link
-            href="/signup/ngo"
+            href="/signup"
             className="px-8 py-4 rounded-xl text-base font-semibold transition-all duration-150 inline-flex items-center gap-2"
             style={{ background: '#0F1B33', color: '#D4AF5C', ...sans }}
           >
-            Get Started <ChevronRight size={18} />
+            Try the App <ChevronRight size={18} />
           </Link>
           <Link
             href="/contact"

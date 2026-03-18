@@ -1,26 +1,20 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { requireDonorAuth } from '@/lib/auth/server'
 import NotificationsClient from './NotificationsClient'
-import { listNotifications } from '@/app/actions/notifications'
 
 export default async function DonorNotificationsPage() {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const { supabase, user } = await requireDonorAuth()
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, full_name')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || profile.role !== 'DONOR') redirect('/login')
-
-  const notificationsResult = await listNotifications()
+  // Fetch notifications for this donor
+  const { data: notifications } = await supabase
+    .from('donor_notifications')
+    .select('*')
+    .eq('donor_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(50)
 
   return (
     <NotificationsClient
-      notifications={notificationsResult.data ?? []}
+      notifications={(notifications ?? []) as any}
     />
   )
 }

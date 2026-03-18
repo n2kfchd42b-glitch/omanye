@@ -1,33 +1,27 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { requireOrgAuth } from '@/lib/auth/server'
+import { adminClient } from '@/lib/supabase/admin'
 import OrgSettingsClient from './OrgSettingsClient'
 
 interface Props { params: { slug: string } }
 
 export default async function OrgSettingsPage({ params }: Props) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const { supabase, user, org } = await requireOrgAuth(params.slug)
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, organization_id')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || !['NGO_ADMIN', 'NGO_STAFF', 'NGO_VIEWER'].includes(profile.role)) {
-    redirect('/login')
+  // Only admins can access settings
+  if (user.profile.role !== 'NGO_ADMIN') {
+    const { redirect } = await import('next/navigation')
+    redirect(`/org/${params.slug}/dashboard`)
   }
-  if (!profile.organization_id) redirect('/onboarding')
 
-  const { data: org } = await supabase
+  const { data: fullOrg } = await supabase
     .from('organizations')
     .select('*')
-    .eq('id', profile.organization_id)
+    .eq('id', org.id)
     .single()
 
-  if (!org || (org as Record<string, unknown>).slug !== params.slug) {
-    redirect(org ? `/org/${(org as Record<string, unknown>).slug}/settings` : '/login')
+  if (!fullOrg) {
+    const { redirect } = await import('next/navigation')
+    redirect('/login')
   }
 
   // Fetch member + program counts for billing tab
@@ -35,12 +29,12 @@ export default async function OrgSettingsPage({ params }: Props) {
     supabase
       .from('profiles')
       .select('id', { count: 'exact', head: true })
-      .eq('organization_id', profile.organization_id)
+      .eq('organization_id', org.id)
       .in('role', ['NGO_ADMIN', 'NGO_STAFF', 'NGO_VIEWER']),
     supabase
       .from('programs')
       .select('id', { count: 'exact', head: true })
-      .eq('organization_id', profile.organization_id)
+      .eq('organization_id', org.id)
       .is('deleted_at', null),
   ])
 
@@ -48,14 +42,13 @@ export default async function OrgSettingsPage({ params }: Props) {
   const { data: teamMembers } = await supabase
     .from('profiles')
     .select('id, full_name, role')
-    .eq('organization_id', profile.organization_id)
+    .eq('organization_id', org.id)
     .in('role', ['NGO_ADMIN', 'NGO_STAFF', 'NGO_VIEWER'])
-    .neq('id', user.id)
 
   return (
     <OrgSettingsClient
-      org={org as Parameters<typeof OrgSettingsClient>[0]['org']}
-      userRole={profile.role as 'NGO_ADMIN' | 'NGO_STAFF' | 'NGO_VIEWER'}
+      org={fullOrg as Parameters<typeof OrgSettingsClient>[0]['org']}
+      userRole={user.profile.role as 'NGO_ADMIN' | 'NGO_STAFF' | 'NGO_VIEWER'}
       currentUserId={user.id}
       orgSlug={params.slug}
       memberCount={memberCountResult.count ?? 0}
