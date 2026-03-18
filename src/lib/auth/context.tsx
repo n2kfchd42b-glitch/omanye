@@ -73,23 +73,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Initial session fetch
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        const { profile, organization } = await loadProfile(session.user.id)
-        setState({ session, user: session.user, profile, organization, loading: false })
-      } else {
-        setState(s => ({ ...s, session: null, user: null, profile: null, organization: null, loading: false }))
-      }
-    })
-
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+    supabase.auth.getSession()
+      .then(async ({ data: { session } }) => {
         if (session?.user) {
           const { profile, organization } = await loadProfile(session.user.id)
           setState({ session, user: session.user, profile, organization, loading: false })
         } else {
-          setState({ session: null, user: null, profile: null, organization: null, loading: false })
+          setState(s => ({ ...s, session: null, user: null, profile: null, organization: null, loading: false }))
+        }
+      })
+      .catch(() => {
+        setState(s => ({ ...s, loading: false }))
+      })
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        try {
+          if (session?.user) {
+            const { profile, organization } = await loadProfile(session.user.id)
+            setState({ session, user: session.user, profile, organization, loading: false })
+          } else {
+            setState({ session: null, user: null, profile: null, organization: null, loading: false })
+          }
+        } catch {
+          setState(s => ({ ...s, loading: false }))
         }
       }
     )
