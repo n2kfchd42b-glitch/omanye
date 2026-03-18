@@ -49,21 +49,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // timer (setInterval / setTimeout in _startAutoRefresh). The SDK's GoTrue
     // client force-enables autoRefreshToken in the browser and fires background
     // promises that can reject outside any user-controlled try/catch.
+    const isSdkErrorMsg = (msg: string) =>
+      msg.includes('did not match the expected pattern') ||
+      msg.includes('Invalid URL') ||
+      msg.includes('JSON') ||
+      msg.includes('AuthRetryableFetchError') ||
+      msg.includes('AuthUnknownError') ||
+      msg.includes('WebSocket') ||
+      msg.includes('insecure')
+
     const onUnhandledRejection = (e: PromiseRejectionEvent) => {
       const msg = e.reason?.message ?? String(e.reason ?? '')
-      const isSdkError =
-        msg.includes('did not match the expected pattern') ||
-        msg.includes('Invalid URL') ||
-        msg.includes('JSON') ||
-        msg.includes('AuthRetryableFetchError') ||
-        msg.includes('AuthUnknownError') ||
-        msg.includes('WebSocket') ||
-        msg.includes('insecure')
-      if (isSdkError) {
+      if (isSdkErrorMsg(msg)) {
+        e.preventDefault()
+      }
+    }
+    // Also catch synchronous errors from the SDK that Next.js dev overlay intercepts
+    const onError = (e: ErrorEvent) => {
+      const msg = e.message ?? ''
+      if (isSdkErrorMsg(msg)) {
         e.preventDefault()
       }
     }
     window.addEventListener('unhandledrejection', onUnhandledRejection)
+    window.addEventListener('error', onError)
 
     let supabase: ReturnType<typeof createClient>
     try {
@@ -71,6 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       setState(s => ({ ...s, loading: false }))
       window.removeEventListener('unhandledrejection', onUnhandledRejection)
+      window.removeEventListener('error', onError)
       return
     }
 
@@ -129,6 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe()
       window.removeEventListener('unhandledrejection', onUnhandledRejection)
+      window.removeEventListener('error', onError)
     }
   }, [])
 
