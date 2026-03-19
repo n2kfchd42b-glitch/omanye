@@ -3,6 +3,7 @@
 // ── OMANYE Donor Management — Server Actions ───────────────────────────────────
 
 import { createClient } from '@/lib/supabase/server'
+import { adminClient } from '@/lib/supabase/admin'
 import { logActionForUser } from '@/lib/audit/logger'
 import { sendNotification as sendNGONotification, getOrgAdmins } from '@/lib/notifications/sender'
 import type {
@@ -57,22 +58,96 @@ export async function inviteDonor(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { data: null, error: 'Unauthenticated' }
 
-  // Check if email already has an OMANYE account
-  // If they do — grant access directly and notify rather than invite
-  const { data: existingProfile } = await supabase
-    .from('profiles')
-    .select('id, full_name, role')
-    .eq('role', 'DONOR')
+  const normalizedEmail = payload.email.toLowerCase().trim()
+
+  // Check if email already has a DONOR account on OMANYE.
+  // Use admin client to look up by contact_email across tables (RLS-safe).
+  const { data: existingDonorProfile } = await adminClient
+    .from('donor_profiles')
+    .select('id, contact_email')
+    .eq('contact_email', normalizedEmail)
     .maybeSingle()
 
-  // Get program details for email
+  let existingDonor: { id: string; full_name: string | null } | null = null
+  if (existingDonorProfile) {
+    const { data: prof } = await adminClient
+      .from('profiles')
+      .select('id, full_name, role')
+      .eq('id', existingDonorProfile.id)
+      .eq('role', 'DONOR')
+      .maybeSingle()
+    if (prof) existingDonor = { id: prof.id, full_name: prof.full_name }
+  }
+
+  // Get program details for email / notification
   const { data: program } = await supabase
     .from('programs')
     .select('name, description')
     .eq('id', payload.program_id)
     .single()
 
-  // Create invitation record
+  // ── Fast path: donor already has an account → grant access directly ──────
+  if (existingDonor) {
+    const { data: accessRow, error: accessErr } = await supabase
+      .from('donor_program_access')
+      .upsert({
+        donor_id:             existingDonor.id,
+        program_id:           payload.program_id,
+        organization_id:      organizationId,
+        granted_by:           user.id,
+        access_level:         payload.access_level,
+        can_download_reports: payload.can_download_reports ?? false,
+        active:               true,
+        granted_at:           new Date().toISOString(),
+      }, { onConflict: 'donor_id,program_id' })
+      .select()
+      .single()
+
+    if (accessErr) return { data: null, error: accessErr.message }
+
+    // Send in-app notification to the donor
+    await sendNotification(supabase, {
+      donor_id:        existingDonor.id,
+      organization_id: organizationId,
+      program_id:      payload.program_id,
+      type:            'ACCESS_GRANTED',
+      title:           'Programme access granted',
+      body:            payload.message ?? `You have been granted ${payload.access_level.replace(/_/g, ' ')} access to ${program?.name ?? 'a programme'}.`,
+      link:            `/donor/programs/${payload.program_id}`,
+    })
+
+    void logActionForUser(user.id, {
+      organizationId,
+      action:     'donor.access_granted',
+      entityType: 'donor_program_access',
+      entityId:   (accessRow as Record<string, unknown>).id as string,
+      entityName: existingDonor.full_name ?? normalizedEmail,
+      metadata:   { program_id: payload.program_id, access_level: payload.access_level, direct: true },
+    })
+
+    // Create a pre-accepted invitation record for audit trail
+    const { data: invitation } = await supabase
+      .from('donor_invitations')
+      .insert({
+        organization_id:      organizationId,
+        program_id:           payload.program_id,
+        invited_by:           user.id,
+        email:                normalizedEmail,
+        donor_name:           payload.donor_name ?? existingDonor.full_name ?? null,
+        organization_name:    payload.organization_name ?? null,
+        access_level:         payload.access_level,
+        can_download_reports: payload.can_download_reports ?? false,
+        message:              payload.message ?? null,
+        status:               'ACCEPTED',
+        expires_at:           new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      })
+      .select()
+      .single()
+
+    return { data: (invitation ?? accessRow) as DonorInvitation, error: null }
+  }
+
+  // ── Normal path: create pending invitation + send email ──────────────────
   const expiresAt = payload.expires_at ?? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
 
   const { data: invitation, error } = await supabase
@@ -81,7 +156,7 @@ export async function inviteDonor(
       organization_id:      organizationId,
       program_id:           payload.program_id,
       invited_by:           user.id,
-      email:                payload.email.toLowerCase().trim(),
+      email:                normalizedEmail,
       donor_name:           payload.donor_name ?? null,
       organization_name:    payload.organization_name ?? null,
       access_level:         payload.access_level,
@@ -100,7 +175,7 @@ export async function inviteDonor(
     action:     'donor.invited',
     entityType: 'donor_invitation',
     entityId:   (invitation as Record<string, unknown>).id as string,
-    entityName: payload.donor_name ?? payload.email,
+    entityName: payload.donor_name ?? normalizedEmail,
     metadata:   { program_id: payload.program_id, access_level: payload.access_level },
   })
 
@@ -109,11 +184,12 @@ export async function inviteDonor(
     body: {
       invitation_id: invitation.id,
       token:         invitation.token,
-      email:         payload.email,
+      email:         normalizedEmail,
       donor_name:    payload.donor_name,
       program_name:  program?.name,
       access_level:  payload.access_level,
       message:       payload.message,
+      expires_at:    expiresAt,
     },
   }).catch(() => {/* email failure should not block the action */})
 

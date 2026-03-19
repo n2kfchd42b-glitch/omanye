@@ -306,3 +306,47 @@ export async function inviteTeamMember(data: {
     return { error: 'Invite sent but failed to create profile.' }
   }
 }
+
+// ── Update Donor Profile ──────────────────────────────────────────────────────
+
+export async function updateDonorProfile(data: {
+  fullName:         string
+  donorOrgName:     string
+  contactEmail:     string
+  website?:         string
+}): Promise<{ error: string } | void> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated.' }
+
+  // Verify the user is a donor
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile || profile.role !== 'DONOR') {
+    return { error: 'Only donor accounts can update donor profiles.' }
+  }
+
+  // Update profiles table
+  const { error: profileErr } = await adminClient
+    .from('profiles')
+    .update({ full_name: data.fullName })
+    .eq('id', user.id)
+
+  if (profileErr) return { error: profileErr.message }
+
+  // Update donor_profiles table
+  const { error: donorErr } = await adminClient
+    .from('donor_profiles')
+    .update({
+      organization_name: data.donorOrgName || null,
+      contact_email:     data.contactEmail,
+      website:           data.website || null,
+    })
+    .eq('id', user.id)
+
+  if (donorErr) return { error: donorErr.message }
+}

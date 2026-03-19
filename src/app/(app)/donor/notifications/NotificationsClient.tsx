@@ -109,50 +109,22 @@ export default function NotificationsClient({ notifications: initial }: Props) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: COLORS.snow }}>
-
-      {/* Top bar */}
-      <div style={{
-        background: COLORS.forest,
-        padding: '0 32px',
-        height: 58,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        position: 'sticky', top: 0, zIndex: 50,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Link href='/donor/dashboard' style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, textDecoration: 'none' }}>
-            ← Dashboard
-          </Link>
-          <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
-          <span style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>Notifications</span>
-          {unreadCount > 0 && (
-            <span style={{
-              background: '#EF4444', color: '#fff',
-              fontSize: 11, fontWeight: 700,
-              padding: '1px 7px', borderRadius: 10,
-            }}>
-              {unreadCount}
-            </span>
-          )}
-        </div>
-        {unreadCount > 0 && (
-          <button
-            onClick={markAllRead}
-            style={{
-              background: 'none', border: `1px solid rgba(255,255,255,0.25)`,
-              color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: 600,
-              padding: '6px 14px', borderRadius: 8, cursor: 'pointer',
-            }}
-          >
-            Mark all read
-          </button>
-        )}
-      </div>
-
-      {/* Content */}
       <div style={{ maxWidth: 680, margin: '0 auto', padding: 32 }}>
+        {/* Mark all read button */}
+        {unreadCount > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+            <button
+              onClick={markAllRead}
+              style={{
+                background: 'none', border: `1px solid ${COLORS.mist}`,
+                color: COLORS.slate, fontSize: 12, fontWeight: 600,
+                padding: '6px 14px', borderRadius: 8, cursor: 'pointer',
+              }}
+            >
+              Mark all read ({unreadCount})
+            </button>
+          </div>
+        )}
         <h1 style={{ fontFamily: FONTS.heading, fontSize: 24, fontWeight: 700, color: COLORS.forest, margin: '0 0 6px' }}>
           Notifications
         </h1>
@@ -239,6 +211,5 @@ export default function NotificationsClient({ notifications: initial }: Props) {
           </div>
         )}
       </div>
-    </div>
   )
 }

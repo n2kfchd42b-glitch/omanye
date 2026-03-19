@@ -57,25 +57,6 @@ export default function DonorAccessClient({ grants, requests }: Props) {
   const resolvedReqs  = requests.filter(r => r.status !== 'PENDING')
 
   return (
-    <div style={{ minHeight: '100vh', background: COLORS.snow }}>
-
-      {/* Top bar */}
-      <div style={{
-        background: COLORS.forest,
-        padding: '0 32px',
-        height: 58,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 16,
-        position: 'sticky', top: 0, zIndex: 50,
-      }}>
-        <Link href='/donor/dashboard' style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, textDecoration: 'none' }}>
-          ← Dashboard
-        </Link>
-        <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
-        <span style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>My Access</span>
-      </div>
-
       <div style={{ maxWidth: 820, margin: '0 auto', padding: 32 }}>
         <h1 style={{ fontFamily: FONTS.heading, fontSize: 24, fontWeight: 700, color: COLORS.forest, margin: '0 0 6px' }}>
           My Programme Access
@@ -254,6 +235,5 @@ export default function DonorAccessClient({ grants, requests }: Props) {
           </div>
         )}
       </div>
-    </div>
   )
 }

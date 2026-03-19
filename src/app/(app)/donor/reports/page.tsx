@@ -42,21 +42,6 @@ export default function DonorReportsPage() {
   }, [])
 
   return (
-    <div style={{ minHeight: '100vh', background: COLORS.snow }}>
-      {/* Topbar */}
-      <div style={{
-        background: COLORS.forest, padding: '0 32px', height: 58,
-        display: 'flex', alignItems: 'center', gap: 12,
-        position: 'sticky', top: 0, zIndex: 50,
-      }}>
-        <Link href="/donor/dashboard" style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, textDecoration: 'none' }}>
-          ← Dashboard
-        </Link>
-        <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
-        <span style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>Reports</span>
-      </div>
-
-      {/* Content */}
       <div style={{ maxWidth: 900, margin: '0 auto', padding: 32 }}>
         {/* Header */}
         <div className="fade-up" style={{ marginBottom: 28 }}>
@@ -187,6 +172,5 @@ export default function DonorReportsPage() {
           </div>
         )}
       </div>
-    </div>
   )
 }
