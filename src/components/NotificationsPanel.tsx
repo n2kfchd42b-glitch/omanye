@@ -211,7 +211,7 @@ export function NotificationsPanel({ orgSlug }: NotificationsPanelProps) {
           position:     'fixed',
           top:           58,
           right:         0,
-          width:         380,
+          width:         'min(380px, 100vw)',
           height:        'calc(100vh - 58px)',
           background:    '#0A1628',
           borderLeft:   `1px solid ${COLORS.mist}`,

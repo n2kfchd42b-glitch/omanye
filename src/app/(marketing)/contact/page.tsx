@@ -15,10 +15,14 @@ const SUBJECTS = [
   'Partnership',
 ]
 
+const EMAIL_GENERAL  = process.env.NEXT_PUBLIC_CONTACT_EMAIL_GENERAL  ?? 'hello@omanye.io'
+const EMAIL_SALES    = process.env.NEXT_PUBLIC_CONTACT_EMAIL_SALES    ?? 'sales@omanye.io'
+const EMAIL_SUPPORT  = process.env.NEXT_PUBLIC_CONTACT_EMAIL_SUPPORT  ?? 'support@omanye.io'
+
 const CONTACT_ITEMS = [
-  { label: 'General', email: 'hello@omanye.io', Icon: Mail },
-  { label: 'Sales & Enterprise', email: 'sales@omanye.io', Icon: MessageSquare },
-  { label: 'Support', email: 'support@omanye.io', Icon: MessageSquare },
+  { label: 'General',          email: EMAIL_GENERAL, Icon: Mail },
+  { label: 'Sales & Enterprise', email: EMAIL_SALES,  Icon: MessageSquare },
+  { label: 'Support',          email: EMAIL_SUPPORT, Icon: MessageSquare },
 ]
 
 export default function ContactPage() {
@@ -54,7 +58,7 @@ export default function ContactPage() {
 
     if (error) {
       setStatus('error')
-      setErrorMsg('Something went wrong. Please email us directly at hello@omanye.io.')
+      setErrorMsg(`Something went wrong. Please email us directly at ${EMAIL_GENERAL}.`)
     } else {
       setStatus('sent')
     }

@@ -87,6 +87,7 @@ export default function AuditLogPage() {
   const [logs,       setLogs]       = useState<AuditLog[]>([])
   const [count,      setCount]      = useState(0)
   const [loading,    setLoading]    = useState(true)
+  const [fetchError, setFetchError] = useState(false)
   const [offset,     setOffset]     = useState(0)
   const [team,       setTeam]       = useState<TeamMember[]>([])
   const [expanded,   setExpanded]   = useState<Set<string>>(new Set())
@@ -117,8 +118,11 @@ export default function AuditLogPage() {
         }
         setCount(total ?? 0)
         setOffset(newOffset)
+        setFetchError(false)
+      } else {
+        if (newOffset === 0) setFetchError(true)
       }
-    } catch { /* silent */ } finally {
+    } catch { setFetchError(true) } finally {
       setLoading(false)
     }
   }, [entityType, actorId, search])
@@ -291,11 +295,13 @@ export default function AuditLogPage() {
       )}
 
       {/* Table */}
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
       <div style={{
         background: '#1A2B4A', borderRadius: 12,
         border: `1px solid ${COLORS.mist}`,
         overflow: 'hidden',
         boxShadow: SHADOW.card,
+        minWidth: 776,
       }}>
         {/* Head */}
         <div style={{
@@ -319,6 +325,22 @@ export default function AuditLogPage() {
         {loading && logs.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', color: COLORS.stone, fontSize: 13, fontFamily: FONTS.body }}>
             Loading audit log…
+          </div>
+        ) : fetchError ? (
+          <div style={{ padding: 40, textAlign: 'center' }}>
+            <p style={{ fontSize: 14, color: COLORS.crimson, fontFamily: FONTS.body, marginBottom: 12 }}>
+              Failed to load audit log. Check your connection and try again.
+            </p>
+            <button
+              onClick={() => fetchLogs(0)}
+              style={{
+                padding: '8px 20px', fontSize: 13, borderRadius: 8,
+                border: `1px solid ${COLORS.mist}`, background: '#1A2B4A',
+                color: COLORS.slate, cursor: 'pointer', fontFamily: FONTS.body,
+              }}
+            >
+              Retry
+            </button>
           </div>
         ) : logs.length === 0 ? (
           <EmptyState
@@ -353,6 +375,7 @@ export default function AuditLogPage() {
             </button>
           </div>
         )}
+      </div>
       </div>
     </div>
   )

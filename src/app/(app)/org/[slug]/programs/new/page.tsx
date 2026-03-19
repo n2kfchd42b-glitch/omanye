@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useTransition } from 'react'
+import React, { useState, useEffect, useTransition } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { ArrowLeft, ArrowRight, Check, Loader2, Plus, X } from 'lucide-react'
 import { COLORS, FONTS } from '@/lib/tokens'
@@ -48,6 +48,14 @@ export default function NewProgramPage() {
   const [step, setStep] = useState(0)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    function check() { setIsMobile(window.innerWidth < 768) }
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   // Step 1 — Basics
   const [name,        setName]        = useState('')
@@ -286,7 +294,7 @@ export default function NewProgramPage() {
                 onChange={e => setFunder(e.target.value)}
               />
             </FormField>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
               <FormField label="Start date" htmlFor="pn-start">
                 <Input id="pn-start" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
               </FormField>
@@ -294,7 +302,7 @@ export default function NewProgramPage() {
                 <Input id="pn-end" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
               </FormField>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
               <FormField label="Country" htmlFor="pn-country">
                 <Input id="pn-country" placeholder="e.g. Ghana" value={country} onChange={e => setCountry(e.target.value)} />
               </FormField>
@@ -302,7 +310,7 @@ export default function NewProgramPage() {
                 <Input id="pn-region" placeholder="e.g. Northern Region" value={region} onChange={e => setRegion(e.target.value)} />
               </FormField>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 120px', gap: 12 }}>
               <FormField label="Total budget" htmlFor="pn-budget">
                 <Input id="pn-budget" type="number" min={0} placeholder="0" value={budget} onChange={e => setBudget(e.target.value)} />
               </FormField>

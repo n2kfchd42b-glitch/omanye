@@ -118,7 +118,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       link:           `/org/${(org as Record<string, unknown> | null)?.slug as string}/team`,
       priority:       'LOW',
     })))
-  })()
+  })().catch(err => console.error('[invite-accept] notification delivery failed:', err))
 
   return NextResponse.json({
     success:  true,

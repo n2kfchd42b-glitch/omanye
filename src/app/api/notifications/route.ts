@@ -9,8 +9,8 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
 
   const sp     = req.nextUrl.searchParams
-  const limit  = Math.min(parseInt(sp.get('limit')  ?? '50'), 100)
-  const offset = parseInt(sp.get('offset') ?? '0')
+  const limit  = Math.max(1, Math.min(parseInt(sp.get('limit')  ?? '50') || 50, 100))
+  const offset = Math.max(0, parseInt(sp.get('offset') ?? '0') || 0)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db: any = supabase

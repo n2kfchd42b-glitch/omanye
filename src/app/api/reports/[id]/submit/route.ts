@@ -86,7 +86,7 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
       link:           `/org/reports`,
       priority:       'LOW',
     })))
-  })()
+  })().catch(err => console.error('[report-submit] notification delivery failed:', err))
 
   return NextResponse.json({ data, notified: donorIds.length })
 }

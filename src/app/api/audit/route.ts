@@ -22,8 +22,8 @@ export async function GET(req: NextRequest) {
   }
 
   const sp          = req.nextUrl.searchParams
-  const limit       = Math.min(parseInt(sp.get('limit')  ?? '50'), 100)
-  const offset      = parseInt(sp.get('offset')          ?? '0')
+  const limit       = Math.max(1, Math.min(parseInt(sp.get('limit')  ?? '50') || 50, 100))
+  const offset      = Math.max(0, parseInt(sp.get('offset')          ?? '0') || 0)
   const entityType  = sp.get('entity_type')
   const actorId     = sp.get('actor_id')
   const programId   = sp.get('program_id')
@@ -42,10 +42,14 @@ export async function GET(req: NextRequest) {
   if (actorId)    query = query.eq('actor_id', actorId)
   if (programId) {
     // Filter by program entity or metadata.program_id
-    query = query.or(`entity_id.eq.${programId},metadata->>program_id.eq.${programId}`)
+    // Use encodeURIComponent to prevent filter injection via crafted UUIDs
+    const safeId = programId.replace(/[^a-f0-9-]/gi, '')
+    query = query.or(`entity_id.eq.${safeId},metadata->>program_id.eq.${safeId}`)
   }
   if (search) {
-    query = query.or(`entity_name.ilike.%${search}%,action.ilike.%${search}%`)
+    // Escape special PostgREST characters to prevent filter injection
+    const safeSearch = search.replace(/[%_\\]/g, '\\$&')
+    query = query.or(`entity_name.ilike.%${safeSearch}%,action.ilike.%${safeSearch}%`)
   }
 
   const { data, error, count } = await query

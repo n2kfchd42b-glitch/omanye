@@ -68,7 +68,7 @@ export async function PATCH(_req: NextRequest, { params }: RouteParams) {
       link:           `/org/field`,
       priority:       'MEDIUM',
     })))
-  })()
+  })().catch(err => console.error('[flag] notification delivery failed:', err))
 
   return NextResponse.json({ data })
 }

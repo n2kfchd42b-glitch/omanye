@@ -56,9 +56,9 @@ function maybePruneStore() {
 
 // ── Allowed CORS origins ──────────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
-  'https://omanye.io',
+  process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
   'http://localhost:3000',
-]
+].filter((v, i, a) => a.indexOf(v) === i) // deduplicate
 
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false

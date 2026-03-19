@@ -52,18 +52,35 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
+// ── ModalFooter ───────────────────────────────────────────────────────────────
+
+export function ModalFooter({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      display: 'flex', justifyContent: 'flex-end', gap: 8,
+      padding: 'clamp(12px, 3vw, 16px) clamp(16px, 4vw, 24px)',
+      borderTop: `1px solid ${COLORS.mist}`,
+      flexShrink: 0,
+    }}>
+      {children}
+    </div>
+  )
+}
+
 // ── Root ──────────────────────────────────────────────────────────────────────
 
 function ModalRoot({
   modal, onClose,
 }: { modal: ModalConfig & { visible: boolean }; onClose: () => void }) {
   const maxW = modal.wide ? 720 : 520
+
   return (
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 100,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 16,
+        // On narrow screens: 8px side padding so modal never bleeds to edge
+        padding: 'max(8px, env(safe-area-inset-top, 8px)) 8px max(8px, env(safe-area-inset-bottom, 8px)) 8px',
         background: 'rgba(0,0,0,0.7)',
         backdropFilter: 'blur(2px)',
       }}
@@ -79,7 +96,8 @@ function ModalRoot({
           background: '#1A2B4A',
           borderRadius: 16,
           boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
-          maxHeight: '90vh',
+          // Cap height so it never overflows the screen
+          maxHeight: 'calc(100dvh - 16px)',
           display: 'flex', flexDirection: 'column',
         }}
         className={modal.visible ? 'fade-up' : ''}
@@ -89,7 +107,8 @@ function ModalRoot({
         <div
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '18px 24px',
+            // Responsive padding: tighter on small screens
+            padding: 'clamp(12px, 3vw, 18px) clamp(16px, 4vw, 24px)',
             borderBottom: `1px solid ${COLORS.mist}`,
             flexShrink: 0,
           }}
@@ -98,18 +117,27 @@ function ModalRoot({
             id="modal-title"
             style={{
               fontFamily: 'var(--font-fraunces), Georgia, serif',
-              fontSize: 18, fontWeight: 600, color: '#FFFFFF',
+              fontSize: 'clamp(15px, 4vw, 18px)',
+              fontWeight: 600,
+              color: '#FFFFFF',
+              margin: 0,
             }}
           >
             {modal.title}
           </h2>
+          {/* Close button: visually 28px, touch target 44px via padding */}
           <button
             onClick={onClose}
             style={{
-              width: 28, height: 28, borderRadius: 8,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
+              // Negative margin so the 44px touch area doesn't push layout
+              width: 44, height: 44, margin: '-8px -8px -8px 8px',
+              borderRadius: 8,
               color: COLORS.stone, cursor: 'pointer',
               transition: 'background 0.15s',
+              background: 'transparent',
+              border: 'none',
+              flexShrink: 0,
             }}
             onMouseEnter={e => (e.currentTarget.style.background = COLORS.foam)}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
@@ -120,27 +148,13 @@ function ModalRoot({
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+        <div style={{
+          flex: 1, overflowY: 'auto',
+          padding: 'clamp(14px, 3vw, 20px) clamp(16px, 4vw, 24px)',
+        }}>
           {modal.content}
         </div>
       </div>
-    </div>
-  )
-}
-
-// ── ModalFooter helper ────────────────────────────────────────────────────────
-
-export function ModalFooter({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-        gap: 8, paddingTop: 16,
-        borderTop: `1px solid ${COLORS.mist}`,
-        marginTop: 16,
-      }}
-    >
-      {children}
     </div>
   )
 }

@@ -4,7 +4,7 @@ import React from 'react'
 import {
   LayoutDashboard, FolderOpen,
   FileBarChart, RadioTower,
-  Users, Settings, ChevronLeft, ChevronRight,
+  Users, Settings, ChevronLeft, ChevronRight, X,
   HandCoins, Shield, Database, BarChart2,
 } from 'lucide-react'
 import { COLORS, SPACING } from '@/lib/tokens'
@@ -70,48 +70,98 @@ const SYSTEM_NAV: NavItem[] = [
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 
 interface SidebarProps {
-  view:      ViewId
-  onNav:     (v: ViewId) => void
-  collapsed: boolean
-  onToggle:  () => void
-  user:      User
+  view:          ViewId
+  onNav:         (v: ViewId) => void
+  collapsed:     boolean
+  onToggle:      () => void
+  user:          User
+  isMobile:      boolean
+  mobileOpen:    boolean
+  onMobileClose: () => void
 }
 
-export function Sidebar({ view, onNav, collapsed, onToggle, user }: SidebarProps) {
-  const w = collapsed ? SPACING.sidebarWCollapsed : SPACING.sidebarW
+export function Sidebar({
+  view, onNav, collapsed, onToggle, user,
+  isMobile, mobileOpen, onMobileClose,
+}: SidebarProps) {
+  const desktopW = collapsed ? SPACING.sidebarWCollapsed : SPACING.sidebarW
 
   const visibleWorkspace = WORKSPACE_NAV.filter(item => item.allowedRoles.includes(user.role))
   const visibleSystem    = SYSTEM_NAV.filter(item => item.allowedRoles.includes(user.role))
 
+  // On mobile: fixed overlay drawer that slides in/out
+  // On desktop: static flex column
+  const mobileStyle: React.CSSProperties = isMobile ? {
+    position:   'fixed',
+    top:         0,
+    left:        0,
+    height:     '100vh',
+    width:       SPACING.sidebarW,
+    zIndex:      200,
+    transform:  mobileOpen ? 'translateX(0)' : `translateX(-${SPACING.sidebarW}px)`,
+    transition: 'transform 0.25s ease',
+    boxShadow:  mobileOpen ? '4px 0 32px rgba(0,0,0,0.5)' : 'none',
+  } : {
+    width:      desktopW,
+    minWidth:   desktopW,
+    height:     '100vh',
+    transition: 'width 0.2s ease, min-width 0.2s ease',
+    flexShrink:  0,
+  }
+
+  // On mobile nav click: close drawer then navigate
+  function handleNav(v: ViewId) {
+    if (isMobile) onMobileClose()
+    onNav(v)
+  }
+
   return (
     <aside
       style={{
-        width: w,
-        minWidth: w,
-        height: '100vh',
-        background: COLORS.forest,
-        display: 'flex',
-        flexDirection: 'column',
-        transition: 'width 0.2s ease, min-width 0.2s ease',
-        overflow: 'hidden',
-        flexShrink: 0,
+        background:      COLORS.forest,
+        display:         'flex',
+        flexDirection:   'column',
+        overflow:        'hidden',
+        ...mobileStyle,
       }}
     >
-      {/* Logo */}
+      {/* Logo row */}
       <div
         style={{
-          height: SPACING.topbarH,
-          display: 'flex',
-          alignItems: 'center',
-          padding: collapsed ? '0 12px' : '0 16px',
+          height:       SPACING.topbarH,
+          display:      'flex',
+          alignItems:   'center',
+          justifyContent: 'space-between',
+          padding:      '0 16px',
           borderBottom: `1px solid rgba(255,255,255,0.06)`,
-          flexShrink: 0,
+          flexShrink:   0,
         }}
       >
-        {collapsed
+        {/* Desktop collapsed shows symbol; otherwise full logo */}
+        {!isMobile && collapsed
           ? <OmanyeSymbol size={32} />
           : <OmanyeLogo size="sm" showTagline={false} variant="dark" />
         }
+
+        {/* Mobile: close button */}
+        {isMobile && (
+          <button
+            onClick={onMobileClose}
+            aria-label="Close menu"
+            style={{
+              display:        'flex', alignItems: 'center', justifyContent: 'center',
+              width:           36, height: 36,
+              borderRadius:    8,
+              background:     'transparent',
+              border:         'none',
+              color:          COLORS.stone,
+              cursor:         'pointer',
+              flexShrink:      0,
+            }}
+          >
+            <X size={18} />
+          </button>
+        )}
       </div>
 
       {/* Nav */}
@@ -119,7 +169,8 @@ export function Sidebar({ view, onNav, collapsed, onToggle, user }: SidebarProps
         style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '12px 0' }}
         className="scrollbar-hidden"
       >
-        {!collapsed && (
+        {/* On desktop collapsed, hide labels */}
+        {!((!isMobile) && collapsed) && (
           <p style={{
             fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
             letterSpacing: '0.1em', color: 'rgba(212,175,92,0.40)',
@@ -133,15 +184,15 @@ export function Sidebar({ view, onNav, collapsed, onToggle, user }: SidebarProps
             key={item.id}
             item={item}
             active={view === item.id || (view === 'program-detail' && item.id === 'programs')}
-            collapsed={collapsed}
-            onNav={onNav}
+            collapsed={!isMobile && collapsed}
+            onNav={handleNav}
           />
         ))}
 
         {visibleSystem.length > 0 && (
           <>
             <div style={{ margin: '12px 0', borderTop: `1px solid rgba(255,255,255,0.06)` }} />
-            {!collapsed && (
+            {!((!isMobile) && collapsed) && (
               <p style={{
                 fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
                 letterSpacing: '0.1em', color: 'rgba(212,175,92,0.40)',
@@ -151,7 +202,13 @@ export function Sidebar({ view, onNav, collapsed, onToggle, user }: SidebarProps
               </p>
             )}
             {visibleSystem.map(item => (
-              <NavLink key={item.id} item={item} active={view === item.id} collapsed={collapsed} onNav={onNav} />
+              <NavLink
+                key={item.id}
+                item={item}
+                active={view === item.id}
+                collapsed={!isMobile && collapsed}
+                onNav={handleNav}
+              />
             ))}
           </>
         )}
@@ -162,11 +219,11 @@ export function Sidebar({ view, onNav, collapsed, onToggle, user }: SidebarProps
         {/* User card */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10,
-          padding: collapsed ? '12px' : '12px 16px',
+          padding: (!isMobile && collapsed) ? '12px' : '12px 16px',
           overflow: 'hidden',
         }}>
           <Avatar name={user.name} size={30} style={{ flexShrink: 0 }} />
-          {!collapsed && (
+          {(isMobile || !collapsed) && (
             <div style={{ overflow: 'hidden', flex: 1 }}>
               <p style={{
                 fontSize: 12, fontWeight: 600, color: '#ffffff',
@@ -184,35 +241,35 @@ export function Sidebar({ view, onNav, collapsed, onToggle, user }: SidebarProps
           )}
         </div>
 
-        {/* Collapse toggle */}
-        <button
-          onClick={onToggle}
-          style={{
-            width: '100%',
-            display: 'flex', alignItems: 'center',
-            justifyContent: collapsed ? 'center' : 'flex-start',
-            gap: 8,
-            padding: collapsed ? '10px 0' : '10px 16px',
-            color: 'rgba(212,175,92,0.50)',
-            fontSize: 11,
-            cursor: 'pointer',
-            borderTop: `1px solid rgba(255,255,255,0.04)`,
-            transition: 'color 0.15s',
-            background: 'transparent',
-            border: 'none',
-            borderTopStyle: 'solid',
-            borderTopWidth: 1,
-            borderTopColor: 'rgba(255,255,255,0.04)',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.color = COLORS.mint)}
-          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(212,175,92,0.50)')}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {collapsed
-            ? <ChevronRight size={14} />
-            : <><ChevronLeft size={14} /><span>Collapse</span></>
-          }
-        </button>
+        {/* Collapse toggle — desktop only */}
+        {!isMobile && (
+          <button
+            onClick={onToggle}
+            style={{
+              width: '100%',
+              display: 'flex', alignItems: 'center',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              gap: 8,
+              padding: collapsed ? '10px 0' : '10px 16px',
+              color: 'rgba(212,175,92,0.50)',
+              fontSize: 11,
+              cursor: 'pointer',
+              background: 'transparent',
+              border: 'none',
+              borderTop: `1px solid rgba(255,255,255,0.04)`,
+              transition: 'color 0.15s',
+              minHeight: 40,
+            }}
+            onMouseEnter={e => (e.currentTarget.style.color = COLORS.mint)}
+            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(212,175,92,0.50)')}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed
+              ? <ChevronRight size={14} />
+              : <><ChevronLeft size={14} /><span>Collapse</span></>
+            }
+          </button>
+        )}
       </div>
     </aside>
   )
@@ -232,7 +289,7 @@ function NavLink({
         width: '100%',
         display: 'flex', alignItems: 'center',
         gap: 10,
-        padding: collapsed ? '9px 0' : '9px 16px',
+        padding: collapsed ? '11px 0' : '11px 16px',
         justifyContent: collapsed ? 'center' : 'flex-start',
         borderLeft: active ? `2px solid ${COLORS.sage}` : '2px solid transparent',
         background: active ? 'rgba(212,175,92,0.12)' : 'transparent',
@@ -245,8 +302,9 @@ function NavLink({
         overflow: 'hidden',
         border: 'none',
         borderLeftStyle: 'solid',
-        borderLeftWidth: active ? 2 : 2,
+        borderLeftWidth: 2,
         borderLeftColor: active ? COLORS.sage : 'transparent',
+        minHeight: 44,
       }}
       onMouseEnter={e => {
         if (!active) {

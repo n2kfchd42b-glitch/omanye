@@ -191,7 +191,7 @@ function HeroSection() {
               <div
                 className="relative rounded-2xl overflow-hidden"
                 style={{
-                  width: '340px',
+                  width: 'min(340px, calc(100vw - 48px))',
                   background: '#1a2e4a',
                   border: '2px solid rgba(212,175,92,0.2)',
                   boxShadow: '0 40px 80px rgba(0,0,0,0.4)',

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useCallback, useTransition } from 'react'
+import React, { useState, useCallback, useTransition, useEffect } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
@@ -12,7 +12,6 @@ import type { ViewId, User } from '@/lib/types'
 // ── Path → ViewId mapping ────────────────────────────────────────────────────
 
 function deriveViewId(pathname: string, searchView?: string | null): ViewId {
-  // Check for OmanyeApp internal views via query param
   if (searchView) {
     const valid: ViewId[] = ['data-hub', 'analytics', 'fieldstatus', 'documents', 'map']
     if (valid.includes(searchView as ViewId)) return searchView as ViewId
@@ -42,14 +41,32 @@ export default function AppShell({ user, orgSlug, children }: AppShellProps) {
   const router   = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [collapsed, setCollapsed] = useState(false)
+
+  // Desktop: collapsed icon-only sidebar
+  const [collapsed,      setCollapsed]      = useState(false)
+  // Mobile: slide-out drawer open/closed
+  const [mobileOpen,     setMobileOpen]     = useState(false)
+  // Whether viewport is mobile-sized
+  const [isMobile,       setIsMobile]       = useState(false)
+
   const [, startTransition] = useTransition()
 
+  // Detect and track mobile breakpoint (768px)
+  useEffect(() => {
+    function check() { setIsMobile(window.innerWidth < 768) }
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  // Close mobile drawer when navigating
+  useEffect(() => { setMobileOpen(false) }, [pathname])
+
   const activeView = deriveViewId(pathname, searchParams.get('view'))
-  const sidebarW   = collapsed ? SPACING.sidebarWCollapsed : SPACING.sidebarW
+  // On mobile, the sidebar is an overlay — main content always takes full width
+  const sidebarW   = isMobile ? 0 : (collapsed ? SPACING.sidebarWCollapsed : SPACING.sidebarW)
 
   const navigate = useCallback((v: ViewId) => {
-    // Views with dedicated App Router pages
     const routes: Partial<Record<ViewId, string>> = {
       dashboard:   `/org/${orgSlug}/dashboard`,
       programs:    `/org/${orgSlug}/programs`,
@@ -65,7 +82,6 @@ export default function AppShell({ user, orgSlug, children }: AppShellProps) {
       return
     }
 
-    // Internal OmanyeApp views — navigate to dashboard with query param
     router.push(`/org/${orgSlug}/dashboard?view=${v}`)
   }, [orgSlug, router])
 
@@ -80,12 +96,28 @@ export default function AppShell({ user, orgSlug, children }: AppShellProps) {
     <ToastProvider>
       <ModalProvider>
         <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: COLORS.snow }}>
+          {/* Mobile backdrop — closes sidebar when tapping outside */}
+          {isMobile && mobileOpen && (
+            <div
+              onClick={() => setMobileOpen(false)}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 150,
+                background: 'rgba(0,0,0,0.55)',
+                backdropFilter: 'blur(2px)',
+              }}
+              aria-hidden="true"
+            />
+          )}
+
           <Sidebar
             view={activeView}
             onNav={navigate}
             collapsed={collapsed}
             onToggle={() => setCollapsed(c => !c)}
             user={user}
+            isMobile={isMobile}
+            mobileOpen={mobileOpen}
+            onMobileClose={() => setMobileOpen(false)}
           />
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -94,6 +126,8 @@ export default function AppShell({ user, orgSlug, children }: AppShellProps) {
               sidebarW={sidebarW}
               user={user}
               orgSlug={orgSlug}
+              isMobile={isMobile}
+              onHamburger={() => setMobileOpen(o => !o)}
               onSettings={() => navigate('settings')}
               onSignOut={handleSignOut}
             />
@@ -101,7 +135,7 @@ export default function AppShell({ user, orgSlug, children }: AppShellProps) {
             <main style={{
               flex: 1,
               marginTop: SPACING.topbarH,
-              padding: SPACING.pagePad,
+              padding: isMobile ? '16px 12px' : SPACING.pagePad,
               overflowY: 'auto',
             }}>
               {children}

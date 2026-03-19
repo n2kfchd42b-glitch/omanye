@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, ChevronDown, User, Settings, LogOut, Building2 } from 'lucide-react'
+import { Search, ChevronDown, User, Settings, LogOut, Building2, Menu } from 'lucide-react'
 import { COLORS, SPACING, FONTS } from '@/lib/tokens'
 import { Avatar } from '@/components/atoms/Avatar'
 import { NotificationsPanel } from '@/components/NotificationsPanel'
@@ -40,15 +40,21 @@ const ROLE_BADGE: Record<string, { bg: string; text: string }> = {
 // ── Topbar ────────────────────────────────────────────────────────────────────
 
 interface TopbarProps {
-  view:       ViewId
-  sidebarW:   number
-  user:       UserType
-  orgSlug?:   string
-  onSettings: () => void
-  onSignOut:  () => void
+  view:         ViewId
+  sidebarW:     number
+  user:         UserType
+  orgSlug?:     string
+  isMobile:     boolean
+  onHamburger:  () => void
+  onSettings:   () => void
+  onSignOut:    () => void
 }
 
-export function Topbar({ view, sidebarW, user, orgSlug, onSettings, onSignOut }: TopbarProps) {
+export function Topbar({
+  view, sidebarW, user, orgSlug,
+  isMobile, onHamburger,
+  onSettings, onSignOut,
+}: TopbarProps) {
   const router = useRouter()
   const [query,    setQuery]    = useState('')
   const [dropOpen, setDropOpen] = useState(false)
@@ -83,56 +89,82 @@ export function Topbar({ view, sidebarW, user, orgSlug, onSettings, onSignOut }:
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '0 24px',
+        padding: isMobile ? '0 12px' : '0 24px',
         transition: 'left 0.2s ease',
       }}
     >
-      {/* Page title */}
-      <h1 style={{
-        fontFamily: FONTS.heading,
-        fontSize: 18,
-        fontWeight: 600,
-        color: '#FFFFFF',
-        lineHeight: 1,
-      }}>
-        {VIEW_TITLE[view]}
-      </h1>
+      {/* Left: hamburger (mobile) or page title */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+        {isMobile && (
+          <button
+            onClick={onHamburger}
+            aria-label="Open menu"
+            style={{
+              display:        'flex', alignItems: 'center', justifyContent: 'center',
+              width:           40, height: 40,
+              borderRadius:    8,
+              background:     'transparent',
+              border:         'none',
+              color:          COLORS.slate,
+              cursor:         'pointer',
+              flexShrink:      0,
+            }}
+          >
+            <Menu size={20} />
+          </button>
+        )}
+        <h1 style={{
+          fontFamily: FONTS.heading,
+          fontSize: isMobile ? 16 : 18,
+          fontWeight: 600,
+          color: '#FFFFFF',
+          lineHeight: 1,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}>
+          {VIEW_TITLE[view]}
+        </h1>
+      </div>
 
       {/* Right side */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {/* Search */}
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <Search size={13} style={{
-            position: 'absolute', left: 10, color: COLORS.stone, pointerEvents: 'none',
-          }} />
-          <input
-            type="text"
-            placeholder="Search…"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            style={{
-              paddingLeft: 30, paddingRight: 12, paddingTop: 7, paddingBottom: 7,
-              fontSize: 13,
-              borderRadius: 8,
-              border: `1px solid ${COLORS.mist}`,
-              background: '#1A2B4A',
-              color: '#FFFFFF',
-              outline: 'none',
-              width: 160,
-              fontFamily: FONTS.body,
-            }}
-            onFocus={e => {
-              e.target.style.width = '200px'
-              e.target.style.borderColor = COLORS.sage
-              e.target.style.boxShadow = `0 0 0 3px rgba(212,175,92,0.15)`
-            }}
-            onBlur={e => {
-              e.target.style.width = '160px'
-              e.target.style.borderColor = COLORS.mist
-              e.target.style.boxShadow = 'none'
-            }}
-          />
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 4 : 8, flexShrink: 0 }}>
+        {/* Search — desktop only */}
+        {!isMobile && (
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <Search size={13} style={{
+              position: 'absolute', left: 10, color: COLORS.stone, pointerEvents: 'none',
+            }} />
+            <input
+              type="text"
+              placeholder="Search…"
+              aria-label="Search"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              style={{
+                paddingLeft: 30, paddingRight: 12, paddingTop: 7, paddingBottom: 7,
+                fontSize: 13,
+                borderRadius: 8,
+                border: `1px solid ${COLORS.mist}`,
+                background: '#1A2B4A',
+                color: '#FFFFFF',
+                outline: 'none',
+                width: 160,
+                fontFamily: FONTS.body,
+              }}
+              onFocus={e => {
+                e.target.style.width = '200px'
+                e.target.style.borderColor = COLORS.sage
+                e.target.style.boxShadow = `0 0 0 3px rgba(212,175,92,0.15)`
+              }}
+              onBlur={e => {
+                e.target.style.width = '160px'
+                e.target.style.borderColor = COLORS.mist
+                e.target.style.boxShadow = 'none'
+              }}
+            />
+          </div>
+        )}
 
         {/* Notifications */}
         <NotificationsPanel orgSlug={orgSlug} />
@@ -149,6 +181,7 @@ export function Topbar({ view, sidebarW, user, orgSlug, onSettings, onSignOut }:
               transition: 'background 0.15s',
               background: 'transparent',
               border: 'none',
+              minHeight: 40,
             }}
             onMouseEnter={e => (e.currentTarget.style.background = COLORS.foam)}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
@@ -156,7 +189,7 @@ export function Topbar({ view, sidebarW, user, orgSlug, onSettings, onSignOut }:
             aria-expanded={dropOpen}
           >
             <Avatar name={user.name} size={28} />
-            <ChevronDown size={12} style={{ color: COLORS.stone }} />
+            {!isMobile && <ChevronDown size={12} style={{ color: COLORS.stone }} />}
           </button>
 
           {dropOpen && (
@@ -239,7 +272,7 @@ function DropItem({ icon: Icon, label, onClick, danger }: {
       onClick={onClick}
       style={{
         width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-        padding: '9px 14px',
+        padding: '11px 14px',
         fontSize: 13,
         color: danger ? COLORS.crimson : COLORS.slate,
         cursor: 'pointer',
@@ -247,6 +280,7 @@ function DropItem({ icon: Icon, label, onClick, danger }: {
         background: 'transparent',
         border: 'none',
         fontFamily: FONTS.body,
+        minHeight: 44,
       }}
       onMouseEnter={e => (e.currentTarget.style.background = COLORS.foam)}
       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}

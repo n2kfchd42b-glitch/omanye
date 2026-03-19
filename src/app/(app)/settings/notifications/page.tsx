@@ -120,11 +120,12 @@ const DEFAULTS: PrefsState = {
 }
 
 export default function NotificationPreferencesPage() {
-  const [prefs,   setPrefs]   = useState<PrefsState>(DEFAULTS)
-  const [loading, setLoading] = useState(true)
-  const [saving,  setSaving]  = useState(false)
-  const [saved,   setSaved]   = useState(false)
-  const [error,   setError]   = useState<string | null>(null)
+  const [prefs,      setPrefs]      = useState<PrefsState>(DEFAULTS)
+  const [loading,    setLoading]    = useState(true)
+  const [loadError,  setLoadError]  = useState(false)
+  const [saving,     setSaving]     = useState(false)
+  const [saved,      setSaved]      = useState(false)
+  const [error,      setError]      = useState<string | null>(null)
 
   const fetchPrefs = useCallback(async () => {
     setLoading(true)
@@ -136,8 +137,10 @@ export default function NotificationPreferencesPage() {
           const { id, profile_id, created_at, updated_at, ...rest } = data
           setPrefs(rest)
         }
+      } else {
+        setLoadError(true)
       }
-    } catch { /* silent */ } finally {
+    } catch { setLoadError(true) } finally {
       setLoading(false)
     }
   }, [])
@@ -189,6 +192,22 @@ export default function NotificationPreferencesPage() {
       {loading ? (
         <div style={{ textAlign: 'center', padding: 60, color: COLORS.stone, fontSize: 13, fontFamily: FONTS.body }}>
           Loading…
+        </div>
+      ) : loadError ? (
+        <div style={{ textAlign: 'center', padding: 60 }}>
+          <p style={{ fontSize: 14, color: COLORS.crimson, fontFamily: FONTS.body, marginBottom: 12 }}>
+            Failed to load your notification preferences.
+          </p>
+          <button
+            onClick={fetchPrefs}
+            style={{
+              padding: '9px 20px', fontSize: 13, borderRadius: 8,
+              border: `1px solid ${COLORS.mist}`, background: '#1A2B4A',
+              color: COLORS.slate, cursor: 'pointer', fontFamily: FONTS.body,
+            }}
+          >
+            Retry
+          </button>
         </div>
       ) : (
         <div style={{

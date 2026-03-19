@@ -30,9 +30,6 @@ export async function POST(request: Request) {
   const { orgName, country, registrationNumber, fullName, email, password } =
     await request.json()
 
-  console.log('[ngo-signup] NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
-  console.log('[ngo-signup] Service role key set:', !!process.env.SUPABASE_SERVICE_ROLE_KEY)
-
   if (!orgName || !fullName || !email || !password) {
     return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 })
   }
@@ -47,23 +44,18 @@ export async function POST(request: Request) {
   })
 
   if (authError) {
-    console.error('[ngo-signup] signUp error:', authError)
     return NextResponse.json({ error: authError.message }, { status: 400 })
   }
   if (!authData.user) {
-    console.error('[ngo-signup] signUp returned no user (likely duplicate email with confirmation ON)')
     return NextResponse.json({ error: 'User already exists or email confirmation is required.' }, { status: 400 })
   }
 
   const userId = authData.user.id
-  console.log('[ngo-signup] Auth user created:', userId)
 
   // 2. Confirm email via admin so the user can sign in immediately.
   const { error: confirmError } = await adminClient.auth.admin.updateUserById(userId, { email_confirm: true })
   if (confirmError) {
-    console.error('[ngo-signup] email confirm error (non-fatal):', confirmError)
-  } else {
-    console.log('[ngo-signup] Email confirmed via admin')
+    // Non-fatal — user can still confirm via email link
   }
 
   // 3. Create organization
@@ -79,15 +71,12 @@ export async function POST(request: Request) {
     .single()
 
   if (orgError || !org) {
-    console.error('[ngo-signup] org insert error:', orgError)
     await adminClient.auth.admin.deleteUser(userId)
     return NextResponse.json(
       { error: `Failed to create organization: ${orgError?.message ?? 'unknown error'}` },
       { status: 500 }
     )
   }
-
-  console.log('[ngo-signup] Org created:', org.id)
 
   // 4. Create profile
   const { error: profileError } = await adminClient
@@ -100,7 +89,6 @@ export async function POST(request: Request) {
     })
 
   if (profileError) {
-    console.error('[ngo-signup] profile insert error:', profileError)
     await adminClient.auth.admin.deleteUser(userId)
     return NextResponse.json(
       { error: `Failed to create profile: ${profileError.message}` },
@@ -108,15 +96,9 @@ export async function POST(request: Request) {
     )
   }
 
-  console.log('[ngo-signup] Profile created')
-
   // 5. Probe whether the user can sign in right now (email confirmed or not).
   const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-  if (signInError) {
-    console.error('[ngo-signup] sign-in probe failed:', signInError)
-  }
   const canSignInNow = !signInError
 
-  console.log('[ngo-signup] canSignInNow:', canSignInNow)
   return NextResponse.json({ success: true, canSignInNow })
 }

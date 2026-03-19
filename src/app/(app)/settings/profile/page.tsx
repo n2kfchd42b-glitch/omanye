@@ -23,15 +23,17 @@ export default function ProfileSettingsPage() {
   const supabase = createClient()
   const fileRef  = useRef<HTMLInputElement>(null)
 
-  const [userId,    setUserId]    = useState<string | null>(null)
-  const [email,     setEmail]     = useState('')
-  const [fullName,  setFullName]  = useState('')
-  const [jobTitle,  setJobTitle]  = useState('')
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
-  const [loading,   setLoading]   = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [toast,     setToast]     = useState<{ msg: string; ok: boolean } | null>(null)
-  const [pwLoading, setPwLoading] = useState(false)
+  const [userId,       setUserId]       = useState<string | null>(null)
+  const [email,        setEmail]        = useState('')
+  const [fullName,     setFullName]     = useState('')
+  const [jobTitle,     setJobTitle]     = useState('')
+  const [avatarUrl,    setAvatarUrl]    = useState<string | null>(null)
+  const [pageLoading,  setPageLoading]  = useState(true)
+  const [pageError,    setPageError]    = useState(false)
+  const [loading,      setLoading]      = useState(false)
+  const [uploading,    setUploading]    = useState(false)
+  const [toast,        setToast]        = useState<{ msg: string; ok: boolean } | null>(null)
+  const [pwLoading,    setPwLoading]    = useState(false)
 
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok })
@@ -40,21 +42,29 @@ export default function ProfileSettingsPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      setUserId(user.id)
-      setEmail(user.email ?? '')
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        setUserId(user.id)
+        setEmail(user.email ?? '')
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, job_title, avatar_url')
-        .eq('id', user.id)
-        .single()
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('full_name, job_title, avatar_url')
+          .eq('id', user.id)
+          .single()
 
-      if (profile) {
-        setFullName((profile as Record<string, unknown>).full_name as string ?? '')
-        setJobTitle((profile as Record<string, unknown>).job_title as string ?? '')
-        setAvatarUrl((profile as Record<string, unknown>).avatar_url as string | null ?? null)
+        if (error) { setPageError(true); return }
+
+        if (profile) {
+          setFullName((profile as Record<string, unknown>).full_name as string ?? '')
+          setJobTitle((profile as Record<string, unknown>).job_title as string ?? '')
+          setAvatarUrl((profile as Record<string, unknown>).avatar_url as string | null ?? null)
+        }
+      } catch {
+        setPageError(true)
+      } finally {
+        setPageLoading(false)
       }
     }
     load()
@@ -109,6 +119,38 @@ export default function ProfileSettingsPage() {
     } finally {
       setPwLoading(false)
     }
+  }
+
+  if (pageLoading) {
+    return (
+      <div style={{ maxWidth: 560, margin: '0 auto', padding: '32px 24px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {[72, 40, 40, 40].map((h, i) => (
+            <div key={i} style={{ height: h, borderRadius: 8, background: COLORS.mist, opacity: 0.4 }} />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (pageError) {
+    return (
+      <div style={{ maxWidth: 560, margin: '0 auto', padding: '32px 24px', textAlign: 'center' }}>
+        <p style={{ fontSize: 14, color: COLORS.crimson, fontFamily: FONTS.body, marginBottom: 12 }}>
+          Failed to load your profile. Please refresh the page.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          style={{
+            padding: '9px 20px', fontSize: 13, borderRadius: 8,
+            border: `1px solid ${COLORS.mist}`, background: '#1A2B4A',
+            color: COLORS.slate, cursor: 'pointer', fontFamily: FONTS.body,
+          }}
+        >
+          Refresh
+        </button>
+      </div>
+    )
   }
 
   return (

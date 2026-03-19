@@ -31,15 +31,23 @@ interface DonorReportSummary {
 
 export default function DonorReportsPage() {
   const router    = useRouter()
-  const [reports, setReports] = useState<DonorReportSummary[]>([])
-  const [loading, setLoading] = useState(true)
+  const [reports,    setReports]    = useState<DonorReportSummary[]>([])
+  const [loading,    setLoading]    = useState(true)
+  const [fetchError, setFetchError] = useState(false)
 
-  useEffect(() => {
+  function loadReports() {
+    setLoading(true)
+    setFetchError(false)
     fetch('/api/donor/reports')
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error('fetch failed')
+        return r.json()
+      })
       .then(json => { setReports(json.data ?? []); setLoading(false) })
-      .catch(() => setLoading(false))
-  }, [])
+      .catch(() => { setFetchError(true); setLoading(false) })
+  }
+
+  useEffect(() => { loadReports() }, [])
 
   return (
       <div style={{ maxWidth: 900, margin: '0 auto', padding: 32 }}>
@@ -56,6 +64,27 @@ export default function DonorReportsPage() {
         {loading ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200 }}>
             <Loader2 size={24} style={{ color: COLORS.stone, animation: 'spin 1s linear infinite' }} />
+          </div>
+        ) : fetchError ? (
+          <div style={{
+            background: COLORS.forest, borderRadius: 16,
+            padding: '48px 32px', textAlign: 'center', maxWidth: 480, margin: '0 auto',
+          }}>
+            <p style={{ fontSize: 15, fontWeight: 600, color: '#fff', marginBottom: 8 }}>
+              Could not load reports
+            </p>
+            <p style={{ fontSize: 13, color: COLORS.mint, lineHeight: 1.7, opacity: 0.8, marginBottom: 20 }}>
+              There was a problem fetching your reports. Please try again.
+            </p>
+            <button
+              onClick={loadReports}
+              style={{
+                padding: '9px 22px', fontSize: 13, borderRadius: 8, fontWeight: 600,
+                background: COLORS.gold, color: COLORS.forest, border: 'none', cursor: 'pointer',
+              }}
+            >
+              Try again
+            </button>
           </div>
         ) : reports.length === 0 ? (
           /* Empty state */

@@ -69,6 +69,7 @@ export function Footer() {
                 href="https://twitter.com/omanye_io"
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Follow OMANYE on X (Twitter)"
                 className="transition-colors duration-150"
                 style={{ color: 'rgba(255,255,255,0.4)' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#D4AF5C')}
@@ -80,6 +81,7 @@ export function Footer() {
                 href="https://linkedin.com/company/omanye"
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Follow OMANYE on LinkedIn"
                 className="transition-colors duration-150"
                 style={{ color: 'rgba(255,255,255,0.4)' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#D4AF5C')}

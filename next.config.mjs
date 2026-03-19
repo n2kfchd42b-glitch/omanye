@@ -1,10 +1,16 @@
 /** @type {import('next').NextConfig} */
+
+// Derive allowed server-action origins from NEXT_PUBLIC_ALLOWED_HOSTS env var.
+// In production set: NEXT_PUBLIC_ALLOWED_HOSTS=omanye.io,www.omanye.io
+const extraHosts = process.env.NEXT_PUBLIC_ALLOWED_HOSTS
+  ? process.env.NEXT_PUBLIC_ALLOWED_HOSTS.split(',').map(h => h.trim())
+  : []
+
 const nextConfig = {
   experimental: {
     serverActions: {
       allowedOrigins: [
-        'omanye.io',
-        'www.omanye.io',
+        ...extraHosts,
         '*.vercel.app',
         '*.app.github.dev',
         'localhost:3000',
