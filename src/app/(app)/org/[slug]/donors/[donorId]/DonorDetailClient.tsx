@@ -467,16 +467,15 @@ export default function DonorDetailClient({
   const revokedCount = accessList.filter(a => !a.active).length
 
   return (
-    <div style={{ minHeight: '100vh', background: COLORS.snow }}>
+    <div>
 
       {/* Top bar */}
       <div style={{
-        background: COLORS.forest,
-        padding: '20px 32px',
+        padding: '4px 0 16px',
         display: 'flex',
         alignItems: 'center',
         gap: 16,
-        borderBottom: `1px solid rgba(255,255,255,0.08)`,
+        borderBottom: `1px solid ${COLORS.mist}`,
       }}>
         <Link
           href={`/org/${orgSlug}/donors`}

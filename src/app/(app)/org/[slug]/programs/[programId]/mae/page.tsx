@@ -109,72 +109,77 @@ export default function MaeDashboardPage() {
   const [activeLines,   setActiveLines]   = useState<Set<string>>(new Set())
 
   const load = useCallback(async () => {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.replace('/login'); return }
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.replace('/login'); return }
 
-    const { data: prog } = await supabase.from('programs').select('name').eq('id', params.programId).single()
-    setProgramName((prog as { name: string } | null)?.name ?? '')
+      const { data: prog } = await supabase.from('programs').select('name').eq('id', params.programId).single()
+      setProgramName((prog as { name: string } | null)?.name ?? '')
 
-    // Fetch indicators with updates (cast via unknown to bypass strict DB types)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const db: any = supabase
+      // Fetch indicators with updates (cast via unknown to bypass strict DB types)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const db: any = supabase
 
-    const { data: indsRaw } = await db
-      .from('indicators')
-      .select('id, name, target, current_value, unit, is_key')
-      .eq('program_id', params.programId)
-      .order('sort_order', { ascending: true })
+      const { data: indsRaw } = await db
+        .from('indicators')
+        .select('id, name, target, current_value, unit, is_key')
+        .eq('program_id', params.programId)
+        .order('sort_order', { ascending: true })
 
-    const inds = (indsRaw ?? []) as { id: string; name: string; target: number; current_value: number; unit: string; is_key: boolean }[]
+      const inds = (indsRaw ?? []) as { id: string; name: string; target: number; current_value: number; unit: string; is_key: boolean }[]
 
-    // Fetch indicator updates for each indicator (for time series)
-    let indicatorsWithUpdates: Indicator[] = []
-    if (inds.length > 0) {
-      const { data: updatesRaw } = await db
-        .from('indicator_updates')
-        .select('indicator_id, new_value, recorded_at')
-        .in('indicator_id', inds.map((i: { id: string }) => i.id))
-        .order('recorded_at', { ascending: true })
+      // Fetch indicator updates for each indicator (for time series)
+      let indicatorsWithUpdates: Indicator[] = []
+      if (inds.length > 0) {
+        const { data: updatesRaw } = await db
+          .from('indicator_updates')
+          .select('indicator_id, new_value, recorded_at')
+          .in('indicator_id', inds.map((i: { id: string }) => i.id))
+          .order('recorded_at', { ascending: true })
 
-      const updatesMap = new Map<string, { value: number; recorded_at: string }[]>()
-      for (const u of (updatesRaw ?? []) as { indicator_id: string; new_value: number; recorded_at: string }[]) {
-        const arr = updatesMap.get(u.indicator_id) ?? []
-        arr.push({ value: u.new_value, recorded_at: u.recorded_at })
-        updatesMap.set(u.indicator_id, arr)
+        const updatesMap = new Map<string, { value: number; recorded_at: string }[]>()
+        for (const u of (updatesRaw ?? []) as { indicator_id: string; new_value: number; recorded_at: string }[]) {
+          const arr = updatesMap.get(u.indicator_id) ?? []
+          arr.push({ value: u.new_value, recorded_at: u.recorded_at })
+          updatesMap.set(u.indicator_id, arr)
+        }
+
+        indicatorsWithUpdates = inds.map(ind => ({
+          id:      ind.id,
+          name:    ind.name,
+          target:  ind.target ?? 0,
+          current: ind.current_value ?? 0,
+          unit:    ind.unit ?? '',
+          is_key:  ind.is_key ?? false,
+          updates: updatesMap.get(ind.id) ?? [],
+        }))
       }
 
-      indicatorsWithUpdates = inds.map(ind => ({
-        id:      ind.id,
-        name:    ind.name,
-        target:  ind.target ?? 0,
-        current: ind.current_value ?? 0,
-        unit:    ind.unit ?? '',
-        is_key:  ind.is_key ?? false,
-        updates: updatesMap.get(ind.id) ?? [],
-      }))
+      setIndicators(indicatorsWithUpdates)
+      setActiveLines(new Set(indicatorsWithUpdates.filter(i => i.is_key).map(i => i.id).slice(0, 5)))
+
+      // Fetch summary
+      const [summaryRes, subRaw] = await Promise.all([
+        fetch(`/api/field/summary?program_id=${params.programId}`),
+        db
+          .from('field_submissions')
+          .select('submission_date, status')
+          .eq('program_id', params.programId)
+          .order('submission_date', { ascending: true }),
+      ])
+
+      if (summaryRes.ok) {
+        const j = await summaryRes.json()
+        setSummary(j.data)
+      }
+
+      setSubmissions(((subRaw as { data: unknown[] })?.data ?? []) as { submission_date: string; status: string }[])
+    } catch (err) {
+      console.error('M&E load error:', err)
+    } finally {
+      setLoading(false)
     }
-
-    setIndicators(indicatorsWithUpdates)
-    setActiveLines(new Set(indicatorsWithUpdates.filter(i => i.is_key).map(i => i.id).slice(0, 5)))
-
-    // Fetch summary
-    const [summaryRes, subRaw] = await Promise.all([
-      fetch(`/api/field/summary?program_id=${params.programId}`),
-      db
-        .from('field_submissions')
-        .select('submission_date, status')
-        .eq('program_id', params.programId)
-        .order('submission_date', { ascending: true }),
-    ])
-
-    if (summaryRes.ok) {
-      const j = await summaryRes.json()
-      setSummary(j.data)
-    }
-
-    setSubmissions(((subRaw as { data: unknown[] }).data ?? []) as { submission_date: string; status: string }[])
-    setLoading(false)
   }, [params.programId, params.slug, router])
 
   useEffect(() => { load() }, [load])
@@ -223,24 +228,24 @@ export default function MaeDashboardPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: COLORS.snow, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300 }}>
         <Loader2 size={24} style={{ color: COLORS.stone, animation: 'spin 1s linear infinite' }} />
       </div>
     )
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: COLORS.snow }}>
-      {/* Topbar */}
-      <div style={{ background: COLORS.forest, borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', gap: 12 }}>
+    <div>
+      {/* Breadcrumb */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <button
           onClick={() => router.push(`/org/${params.slug}/programs/${params.programId}`)}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'rgba(255,255,255,0.7)', background: 'none', cursor: 'pointer', fontSize: 13, border: 'none' }}
+          style={{ display: 'flex', alignItems: 'center', gap: 5, color: COLORS.stone, background: 'none', cursor: 'pointer', fontSize: 13, border: 'none' }}
         >
           <ArrowLeft size={14} /> {programName || 'Program'}
         </button>
-        <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
-        <span style={{ fontFamily: FONTS.heading, fontSize: 15, fontWeight: 600, color: '#fff' }}>M&E Dashboard</span>
+        <span style={{ color: COLORS.mist }}>/</span>
+        <span style={{ fontFamily: FONTS.heading, fontSize: 15, fontWeight: 600, color: COLORS.forest }}>M&E Dashboard</span>
       </div>
 
       {/* Tab bar */}

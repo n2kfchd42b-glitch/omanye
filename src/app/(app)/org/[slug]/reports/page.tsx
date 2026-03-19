@@ -142,39 +142,18 @@ export default function ReportsPage() {
     }
   }
 
-  const shell = (content: React.ReactNode) => (
-    <div style={{ minHeight: '100vh', background: COLORS.snow }}>
-      {/* Topbar */}
-      <div style={{ background: COLORS.forest, borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '0 32px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 56 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <FileBarChart size={18} color={COLORS.gold} />
-            <span style={{ fontFamily: FONTS.heading, fontSize: 18, fontWeight: 700, color: '#fff' }}>Reports</span>
-          </div>
-          <button
-            onClick={() => router.push(`/org/${params.slug}/dashboard`)}
-            style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-          >
-            ← Dashboard
-          </button>
-        </div>
-      </div>
-      <div style={{ maxWidth: 1040, margin: '0 auto', padding: '32px 24px' }}>
-        {content}
-      </div>
-    </div>
-  )
-
   if (loading) {
-    return shell(
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300 }}>
-        <Loader2 size={24} style={{ color: COLORS.stone, animation: 'spin 1s linear infinite' }} />
+    return (
+      <div style={{ maxWidth: 1040, margin: '0 auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300 }}>
+          <Loader2 size={24} style={{ color: COLORS.stone, animation: 'spin 1s linear infinite' }} />
+        </div>
       </div>
     )
   }
 
-  return shell(
-    <div>
+  return (
+    <div style={{ maxWidth: 1040, margin: '0 auto' }}>
       {/* Header */}
       <div className="fade-up" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>

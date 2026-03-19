@@ -1,13 +1,8 @@
 'use client'
 
-import React, { useState, useCallback, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import { Sidebar }        from './Sidebar'
-import { Topbar }         from './Topbar'
-import { ToastProvider }  from './Toast'
-import { ModalProvider }  from './Modal'
+import React, { useState, useCallback } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { AuditProvider }  from '@/lib/useAuditLog'
-import { COLORS, SPACING } from '@/lib/tokens'
 import type {
   ViewId, User, Program, Dataset,
   Analysis, Document, TeamMember,
@@ -43,21 +38,10 @@ export default function OmanyeApp({
   initialUser, orgSlug, orgId, initialStats, recentActivity,
 }: OmanyeAppProps = {}) {
   const router = useRouter()
-  // Auth state — seeded from real Supabase session when available
-  const [user, setUser]   = useState<User | null>(initialUser ?? null)
-  const [, startTransition] = useTransition()
+  const searchParams = useSearchParams()
 
-  const handleSignOut = useCallback(() => {
-    if (initialUser) {
-      // Real auth — invoke server action to clear session
-      startTransition(async () => {
-        const { signOut } = await import('@/app/actions/auth')
-        await signOut()
-      })
-    } else {
-      setUser(null)
-    }
-  }, [initialUser])
+  // Auth state — seeded from real Supabase session when available
+  const [user, setUser] = useState<User | null>(initialUser ?? null)
 
   // App data — all start empty
   const [programs,   setPrograms]   = useState<Program[]>([])
@@ -69,13 +53,13 @@ export default function OmanyeApp({
   const [alertRules, setAlertRules] = useState<AlertRule[]>([])
   const [periods,    setPeriods]    = useState<CollectionPeriod[]>([])
 
-  // Navigation
-  const [view,      setView]      = useState<ViewId>('dashboard')
+  // Navigation — read initial view from URL query param (e.g. ?view=data-hub)
+  const initialView = (searchParams.get('view') as ViewId) || 'dashboard'
+  const [view,      setView]      = useState<ViewId>(initialView)
   const [programId, setProgramId] = useState<number | null>(null)
-  const [collapsed, setCollapsed] = useState(false)
 
   const navigate = useCallback((v: ViewId, pid?: number) => {
-    // programs and program-detail have dedicated App Router pages
+    // Views with dedicated App Router pages — navigate away
     if (v === 'programs' && orgSlug) {
       router.push(`/org/${orgSlug}/programs`)
       return
@@ -84,22 +68,18 @@ export default function OmanyeApp({
       router.push(`/org/${orgSlug}/programs/${pid}`)
       return
     }
-    // donors has a dedicated App Router page
     if (v === 'donors' && orgSlug) {
       router.push(`/org/${orgSlug}/donors`)
       return
     }
-    // reports has a dedicated App Router page
     if (v === 'reports' && orgSlug) {
       router.push(`/org/${orgSlug}/reports`)
       return
     }
-    // team has a dedicated App Router page
     if (v === 'team' && orgSlug) {
       router.push(`/org/${orgSlug}/team`)
       return
     }
-    // settings has a dedicated App Router page
     if (v === 'settings' && orgSlug) {
       router.push(`/org/${orgSlug}/settings`)
       return
@@ -108,8 +88,6 @@ export default function OmanyeApp({
     if (pid !== undefined) setProgramId(pid)
   }, [orgSlug, router])
 
-  const sidebarW = collapsed ? SPACING.sidebarWCollapsed : SPACING.sidebarW
-
   // ── No user — middleware handles redirect to /login; this is a safety net ───
 
   if (!user) {
@@ -117,68 +95,28 @@ export default function OmanyeApp({
     return null
   }
 
-  // ── App shell ───────────────────────────────────────────────────────────────
+  // ── Render view content only (shell is provided by AppShell layout) ────────
 
   return (
-    <ToastProvider>
-      <ModalProvider>
-        <AuditProvider>
-          <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: COLORS.snow }}>
-            <Sidebar
-              view={view}
-              onNav={(v) => navigate(v)}
-              collapsed={collapsed}
-              onToggle={() => setCollapsed(c => !c)}
-              user={user}
-            />
-
-            <div style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-            }}>
-              <Topbar
-                view={view}
-                sidebarW={sidebarW}
-                user={user}
-                orgSlug={orgSlug}
-                onSettings={() => navigate('settings')}
-                onSignOut={handleSignOut}
-              />
-
-              <main
-                style={{
-                  flex: 1,
-                  marginTop: SPACING.topbarH,
-                  padding: SPACING.pagePad,
-                  overflowY: 'auto',
-                }}
-                key={view + (programId ?? '')}
-              >
-                <ViewRouter
-                  view={view}
-                  programId={programId}
-                  navigate={navigate}
-                  user={user}
-                  setUser={setUser}
-                  programs={programs}      setPrograms={setPrograms}
-                  datasets={datasets}      setDatasets={setDatasets}
-                  analyses={analyses}      setAnalyses={setAnalyses}
-                  documents={documents}    setDocuments={setDocuments}
-                  team={team}              setTeam={setTeam}
-                  reports={reports}        setReports={setReports}
-                  alertRules={alertRules}  setAlertRules={setAlertRules}
-                  periods={periods}        setPeriods={setPeriods}
-                  initialStats={initialStats}
-                  recentActivity={recentActivity}
-                />
-              </main>
-            </div>
-          </div>
-        </AuditProvider>
-      </ModalProvider>
-    </ToastProvider>
+    <AuditProvider>
+      <ViewRouter
+        view={view}
+        programId={programId}
+        navigate={navigate}
+        user={user}
+        setUser={setUser}
+        programs={programs}      setPrograms={setPrograms}
+        datasets={datasets}      setDatasets={setDatasets}
+        analyses={analyses}      setAnalyses={setAnalyses}
+        documents={documents}    setDocuments={setDocuments}
+        team={team}              setTeam={setTeam}
+        reports={reports}        setReports={setReports}
+        alertRules={alertRules}  setAlertRules={setAlertRules}
+        periods={periods}        setPeriods={setPeriods}
+        initialStats={initialStats}
+        recentActivity={recentActivity}
+      />
+    </AuditProvider>
   )
 }
 

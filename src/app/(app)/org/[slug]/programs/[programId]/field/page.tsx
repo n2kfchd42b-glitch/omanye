@@ -700,31 +700,36 @@ export default function FieldDataPage() {
   const canSubmit = userRole === 'NGO_ADMIN' || userRole === 'NGO_STAFF'
 
   const load = useCallback(async () => {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.replace('/login'); return }
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.replace('/login'); return }
 
-    const { data: profileRaw } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-    const profile = profileRaw as { role: string } | null
-    setUserRole((profile?.role ?? null) as OmanyeRole)
+      const { data: profileRaw } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+      const profile = profileRaw as { role: string } | null
+      setUserRole((profile?.role ?? null) as OmanyeRole)
 
-    const { data: prog } = await supabase.from('programs').select('name').eq('id', params.programId).single()
-    setProgramName((prog as { name: string } | null)?.name ?? '')
+      const { data: prog } = await supabase.from('programs').select('name').eq('id', params.programId).single()
+      setProgramName((prog as { name: string } | null)?.name ?? '')
 
-    const [formsRes, subRes] = await Promise.all([
-      fetch(`/api/field/forms?program_id=${params.programId}`),
-      fetch(`/api/field/submissions?program_id=${params.programId}`),
-    ])
+      const [formsRes, subRes] = await Promise.all([
+        fetch(`/api/field/forms?program_id=${params.programId}`),
+        fetch(`/api/field/submissions?program_id=${params.programId}`),
+      ])
 
-    if (formsRes.ok) {
-      const j = await formsRes.json()
-      setForms(j.data ?? [])
+      if (formsRes.ok) {
+        const j = await formsRes.json()
+        setForms(j.data ?? [])
+      }
+      if (subRes.ok) {
+        const j = await subRes.json()
+        setSubmissions(j.data ?? [])
+      }
+    } catch (err) {
+      console.error('Field data load error:', err)
+    } finally {
+      setLoading(false)
     }
-    if (subRes.ok) {
-      const j = await subRes.json()
-      setSubmissions(j.data ?? [])
-    }
-    setLoading(false)
   }, [params.programId, params.slug, router])
 
   useEffect(() => { load() }, [load])
@@ -750,24 +755,24 @@ export default function FieldDataPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: COLORS.snow, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300 }}>
         <Loader2 size={24} style={{ color: COLORS.stone, animation: 'spin 1s linear infinite' }} />
       </div>
     )
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: COLORS.snow }}>
-      {/* Topbar */}
-      <div style={{ background: COLORS.forest, borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', gap: 12 }}>
+    <div>
+      {/* Breadcrumb + action bar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <button
           onClick={() => router.push(`/org/${params.slug}/programs/${params.programId}`)}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'rgba(255,255,255,0.7)', background: 'none', cursor: 'pointer', fontSize: 13, border: 'none' }}
+          style={{ display: 'flex', alignItems: 'center', gap: 5, color: COLORS.stone, background: 'none', cursor: 'pointer', fontSize: 13, border: 'none' }}
         >
           <ArrowLeft size={14} /> {programName || 'Program'}
         </button>
-        <span style={{ color: 'rgba(255,255,255,0.25)' }}>/</span>
-        <span style={{ fontFamily: FONTS.heading, fontSize: 15, fontWeight: 600, color: '#fff' }}>Field Data</span>
+        <span style={{ color: COLORS.mist }}>/</span>
+        <span style={{ fontFamily: FONTS.heading, fontSize: 15, fontWeight: 600, color: COLORS.forest }}>Field Data</span>
         {canSubmit && (
           <button
             onClick={() => setShowSubmitModal(true)}

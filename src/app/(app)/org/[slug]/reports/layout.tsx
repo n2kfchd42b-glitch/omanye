@@ -1,8 +1,4 @@
-'use client'
-
-import React from 'react'
-import { ToastProvider } from '@/components/Toast'
-
+// Reports layout — providers are now in the shared org layout (AppShell)
 export default function ReportsLayout({ children }: { children: React.ReactNode }) {
-  return <ToastProvider>{children}</ToastProvider>
+  return <>{children}</>
 }

@@ -100,7 +100,7 @@ export default function DonorsClient({
   const pendingInvites   = invitations.filter(i => i.status === 'PENDING').length
 
   return (
-    <div style={{ minHeight: '100vh', background: COLORS.snow }}>
+    <div>
       {/* Header */}
       <div style={{
         background: COLORS.forest, borderBottom: '1px solid rgba(255,255,255,0.06)',

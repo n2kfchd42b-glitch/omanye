@@ -4,7 +4,7 @@ import { COLORS } from '@/lib/tokens'
 
 export default function DonorDetailLoading() {
   return (
-    <div style={{ minHeight: '100vh', background: COLORS.snow }}>
+    <div>
       {/* Header */}
       <div style={{ background: COLORS.forest, padding: '20px 32px' }}>
         <div style={{ marginBottom: 8 }}><Skeleton h={16} w={120} /></div>

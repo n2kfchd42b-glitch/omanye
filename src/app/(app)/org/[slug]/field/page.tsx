@@ -372,32 +372,37 @@ export default function FieldStaffPage() {
   const [userId,     setUserId]       = useState('')
 
   const load = useCallback(async () => {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.replace('/login'); return }
-    setUserId(user.id)
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.replace('/login'); return }
+      setUserId(user.id)
 
-    const { data: profileRaw } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single()
-    const profile = profileRaw as { organization_id: string } | null
+      const { data: profileRaw } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single()
+      const profile = profileRaw as { organization_id: string } | null
 
-    // Org programs
-    const { data: progs } = await supabase
-      .from('programs')
-      .select('id, name')
-      .eq('organization_id', profile?.organization_id ?? '')
-      .is('deleted_at', null)
-      .order('name')
+      // Org programs
+      const { data: progs } = await supabase
+        .from('programs')
+        .select('id, name')
+        .eq('organization_id', profile?.organization_id ?? '')
+        .is('deleted_at', null)
+        .order('name')
 
-    const progList = (progs ?? []) as { id: string; name: string }[]
-    setPrograms(progList)
+      const progList = (progs ?? []) as { id: string; name: string }[]
+      setPrograms(progList)
 
-    const firstProg = progList[0]?.id ?? ''
-    setSelectedProgramId(firstProg)
+      const firstProg = progList[0]?.id ?? ''
+      setSelectedProgramId(firstProg)
 
-    if (firstProg) {
-      await loadFormsAndSubs(firstProg, user.id)
+      if (firstProg) {
+        await loadFormsAndSubs(firstProg, user.id)
+      }
+    } catch (err) {
+      console.error('Field data load error:', err)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [params.slug, router])
 
   async function loadFormsAndSubs(programId: string, uid: string) {
@@ -426,22 +431,18 @@ export default function FieldStaffPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: COLORS.snow, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300 }}>
         <Loader2 size={28} style={{ color: COLORS.stone, animation: 'spin 1s linear infinite' }} />
       </div>
     )
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: COLORS.snow, maxWidth: 600, margin: '0 auto' }}>
+    <div style={{ maxWidth: 600, margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ background: COLORS.forest, padding: '16px 20px', position: 'sticky', top: 0, zIndex: 40 }}>
+      <div style={{ padding: '16px 0 0', marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-          <button onClick={() => router.push(`/org/${params.slug}/dashboard`)}
-            style={{ background: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center' }}>
-            <ArrowLeft size={18} />
-          </button>
-          <h1 style={{ fontFamily: FONTS.heading, fontSize: 20, fontWeight: 700, color: '#fff', flex: 1 }}>
+          <h1 style={{ fontFamily: FONTS.heading, fontSize: 20, fontWeight: 700, color: COLORS.forest, flex: 1 }}>
             Field Data
           </h1>
         </div>

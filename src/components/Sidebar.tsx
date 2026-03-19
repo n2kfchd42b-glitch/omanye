@@ -5,7 +5,7 @@ import {
   LayoutDashboard, FolderOpen,
   FileBarChart, RadioTower,
   Users, Settings, ChevronLeft, ChevronRight,
-  HandCoins, Shield,
+  HandCoins, Shield, Database, BarChart2,
 } from 'lucide-react'
 import { COLORS, SPACING } from '@/lib/tokens'
 import { OmanyeLogo, OmanyeSymbol } from '@/components/Logo'
@@ -37,6 +37,14 @@ const WORKSPACE_NAV: NavItem[] = [
   {
     id: 'donors', label: 'Donors', icon: HandCoins,
     allowedRoles: ['Admin'],
+  },
+  {
+    id: 'data-hub', label: 'Data Hub', icon: Database,
+    allowedRoles: ['Admin', 'M&E Officer', 'Supervisor'],
+  },
+  {
+    id: 'analytics', label: 'Analysis', icon: BarChart2,
+    allowedRoles: ['Admin', 'M&E Officer', 'Supervisor'],
   },
   {
     id: 'reports', label: 'Reports', icon: FileBarChart,
