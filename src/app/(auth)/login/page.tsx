@@ -8,11 +8,11 @@ import { createClient } from '@/lib/supabase/client'
 const inputStyle: React.CSSProperties = {
   width:        '100%',
   padding:      '10px 14px',
-  border:       '1px solid #C8EDD8',
+  border:       '1px solid #2D3F5C',
   borderRadius: 8,
   fontSize:     15,
-  color:        '#0F1A14',
-  background:   '#FFFFFF',
+  color:        '#FFFFFF',
+  background:   '#243352',
   outline:      'none',
   boxSizing:    'border-box',
   transition:   'border-color 0.15s',
@@ -22,7 +22,7 @@ const labelStyle: React.CSSProperties = {
   display:      'block',
   fontSize:     13,
   fontWeight:   600,
-  color:        '#2C3E35',
+  color:        '#A0AEC0',
   marginBottom: 6,
 }
 
@@ -122,25 +122,25 @@ export default function LoginPage() {
             width:          32,
             height:         32,
             borderRadius:   8,
-            background:     '#0D2B1E',
+            background:     '#D4AF5C',
             display:        'flex',
             alignItems:     'center',
             justifyContent: 'center',
             fontFamily:     'Palatino, Georgia, serif',
             fontWeight:     700,
             fontSize:       16,
-            color:          '#D4AF5C',
+            color:          '#0F1B33',
           }}>
             O
           </div>
-          <span style={{ fontFamily: 'Palatino, Georgia, serif', fontSize: 18, fontWeight: 700, color: '#0D2B1E' }}>
+          <span style={{ fontFamily: 'Palatino, Georgia, serif', fontSize: 18, fontWeight: 700, color: '#FFFFFF' }}>
             OMANYE
           </span>
         </div>
-        <h2 style={{ fontSize: 26, fontWeight: 700, color: '#0F1A14', marginBottom: 6, fontFamily: 'Palatino, Georgia, serif' }}>
+        <h2 style={{ fontSize: 26, fontWeight: 700, color: '#FFFFFF', marginBottom: 6, fontFamily: 'Palatino, Georgia, serif' }}>
           Welcome back
         </h2>
-        <p style={{ fontSize: 15, color: '#4A6355' }}>
+        <p style={{ fontSize: 15, color: '#6B7A99' }}>
           Sign in to your workspace
         </p>
       </div>
@@ -153,9 +153,9 @@ export default function LoginPage() {
         style={{
           width:          '100%',
           padding:        '10px 16px',
-          border:         '1px solid #C8EDD8',
+          border:         '1px solid #2D3F5C',
           borderRadius:   8,
-          background:     '#FFFFFF',
+          background:     '#1A2B4A',
           cursor:         'pointer',
           display:        'flex',
           alignItems:     'center',
@@ -163,7 +163,7 @@ export default function LoginPage() {
           gap:            10,
           fontSize:       14,
           fontWeight:     600,
-          color:          '#2C3E35',
+          color:          '#FFFFFF',
           marginBottom:   20,
           opacity:        googleLoading ? 0.7 : 1,
         }}
@@ -179,9 +179,9 @@ export default function LoginPage() {
 
       {/* Divider */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-        <div style={{ flex: 1, height: 1, background: '#C8EDD8' }} />
-        <span style={{ fontSize: 12, color: '#7A9688', fontWeight: 500 }}>or sign in with email</span>
-        <div style={{ flex: 1, height: 1, background: '#C8EDD8' }} />
+        <div style={{ flex: 1, height: 1, background: '#2D3F5C' }} />
+        <span style={{ fontSize: 12, color: '#6B7A99', fontWeight: 500 }}>or sign in with email</span>
+        <div style={{ flex: 1, height: 1, background: '#2D3F5C' }} />
       </div>
 
       {/* Form */}
@@ -222,8 +222,8 @@ export default function LoginPage() {
             padding:       '11px 16px',
             borderRadius:  8,
             border:        'none',
-            background:    loading ? '#4CAF78' : '#0D2B1E',
-            color:         '#D4AF5C',
+            background:    loading ? '#6B7A99' : '#D4AF5C',
+            color:         '#0F1B33',
             fontSize:      15,
             fontWeight:    700,
             cursor:        loading ? 'not-allowed' : 'pointer',
@@ -238,8 +238,8 @@ export default function LoginPage() {
           <div style={{
             padding:      '10px 14px',
             borderRadius: 8,
-            background:   '#FEE2E2',
-            color:        '#991B1B',
+            background:   'rgba(229,62,62,0.15)',
+            color:        '#FC8181',
             fontSize:     13,
             marginTop:    12,
           }}>
@@ -250,9 +250,9 @@ export default function LoginPage() {
 
       {/* Footer links */}
       <div style={{ marginTop: 28, textAlign: 'center' }}>
-        <p style={{ fontSize: 14, color: '#4A6355' }}>
+        <p style={{ fontSize: 14, color: '#6B7A99' }}>
           Don&apos;t have an account?{' '}
-          <Link href="/signup" style={{ color: '#1A5C3A', fontWeight: 600, textDecoration: 'none' }}>
+          <Link href="/signup" style={{ color: '#D4AF5C', fontWeight: 600, textDecoration: 'none' }}>
             Sign up
           </Link>
         </p>

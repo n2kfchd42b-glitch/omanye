@@ -12,7 +12,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div style={{
       minHeight:       '100vh',
       display:         'flex',
-      backgroundColor: '#0D2B1E',
+      backgroundColor: '#0F1B33',
     }}>
       {/* Left branding panel — hidden on small screens via inline media query workaround */}
       <div style={{
@@ -22,8 +22,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         flexDirection:  'column',
         justifyContent: 'space-between',
         padding:        '48px 40px',
-        background:     'linear-gradient(160deg, #0D2B1E 0%, #133828 60%, #1A5C3A 100%)',
-        borderRight:    '1px solid rgba(212,175,92,0.15)',
+        background:     'linear-gradient(160deg, #0A1628 0%, #0F1B33 60%, #1A2B4A 100%)',
+        borderRight:    '1px solid rgba(212,175,92,0.12)',
       }}>
         {/* Logo */}
         <div>
@@ -39,7 +39,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               fontFamily:   'Palatino, Georgia, serif',
               fontWeight:   700,
               fontSize:     20,
-              color:        '#0D2B1E',
+              color:        '#0F1B33',
             }}>
               O
             </div>
@@ -67,7 +67,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
           <p style={{
             fontSize:   15,
-            color:      'rgba(255,255,255,0.6)',
+            color:      'rgba(255,255,255,0.55)',
             lineHeight: 1.65,
             marginBottom: 40,
           }}>
@@ -84,7 +84,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             ].map(({ icon, text }) => (
               <div key={text} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 <span style={{ fontSize: 18, lineHeight: 1.4 }}>{icon}</span>
-                <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
+                <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
                   {text}
                 </span>
               </div>
@@ -93,7 +93,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </div>
 
         {/* Footer */}
-        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>
           © {new Date().getFullYear()} OMANYE · Built for NGOs
         </p>
       </div>
@@ -105,7 +105,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         alignItems:      'center',
         justifyContent:  'center',
         padding:         '48px 24px',
-        backgroundColor: '#F4FAF6',
+        backgroundColor: '#0F1B33',
         overflowY:       'auto',
       }}>
         <div style={{ width: '100%', maxWidth: 440 }}>

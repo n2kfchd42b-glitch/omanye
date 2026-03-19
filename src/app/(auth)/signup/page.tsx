@@ -11,31 +11,31 @@ export default function SignupChoicePage() {
             width:          32,
             height:         32,
             borderRadius:   8,
-            background:     '#0D2B1E',
+            background:     '#D4AF5C',
             display:        'flex',
             alignItems:     'center',
             justifyContent: 'center',
             fontFamily:     'Palatino, Georgia, serif',
             fontWeight:     700,
             fontSize:       16,
-            color:          '#D4AF5C',
+            color:          '#0F1B33',
           }}>
             O
           </div>
-          <span style={{ fontFamily: 'Palatino, Georgia, serif', fontSize: 18, fontWeight: 700, color: '#0D2B1E' }}>
+          <span style={{ fontFamily: 'Palatino, Georgia, serif', fontSize: 18, fontWeight: 700, color: '#FFFFFF' }}>
             OMANYE
           </span>
         </div>
         <h2 style={{
           fontSize:     26,
           fontWeight:   700,
-          color:        '#0F1A14',
+          color:        '#FFFFFF',
           marginBottom: 8,
           fontFamily:   'Palatino, Georgia, serif',
         }}>
           Create your account
         </h2>
-        <p style={{ fontSize: 15, color: '#4A6355' }}>
+        <p style={{ fontSize: 15, color: '#6B7A99' }}>
           Choose how you&apos;ll use OMANYE
         </p>
       </div>
@@ -46,17 +46,17 @@ export default function SignupChoicePage() {
           <div style={{
             padding:      24,
             borderRadius: 12,
-            border:       '2px solid #C8EDD8',
-            background:   '#FFFFFF',
+            border:       '2px solid #2D3F5C',
+            background:   '#1A2B4A',
             cursor:       'pointer',
             transition:   'border-color 0.15s, box-shadow 0.15s',
           }}
           onMouseEnter={e => {
-            (e.currentTarget as HTMLDivElement).style.borderColor = '#2E7D52'
-            ;(e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 20px rgba(26,92,58,0.1)'
+            (e.currentTarget as HTMLDivElement).style.borderColor = '#60A5FA'
+            ;(e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 20px rgba(96,165,250,0.12)'
           }}
           onMouseLeave={e => {
-            (e.currentTarget as HTMLDivElement).style.borderColor = '#C8EDD8'
+            (e.currentTarget as HTMLDivElement).style.borderColor = '#2D3F5C'
             ;(e.currentTarget as HTMLDivElement).style.boxShadow = 'none'
           }}
           >
@@ -65,7 +65,7 @@ export default function SignupChoicePage() {
                 width:          48,
                 height:         48,
                 borderRadius:   12,
-                background:     '#EAF7EE',
+                background:     'rgba(96,165,250,0.12)',
                 display:        'flex',
                 alignItems:     'center',
                 justifyContent: 'center',
@@ -75,18 +75,18 @@ export default function SignupChoicePage() {
                 🏢
               </div>
               <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0F1A14', marginBottom: 4 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: '#FFFFFF', marginBottom: 4 }}>
                   I represent an NGO
                 </h3>
-                <p style={{ fontSize: 13, color: '#4A6355', lineHeight: 1.5 }}>
+                <p style={{ fontSize: 13, color: '#A0AEC0', lineHeight: 1.5 }}>
                   Manage programs, track field data, monitor budgets, and control what your donors can see.
                 </p>
                 <div style={{ marginTop: 10 }}>
                   <span style={{
                     fontSize:     12,
                     fontWeight:   600,
-                    color:        '#1A5C3A',
-                    background:   '#E6F5EC',
+                    color:        '#60A5FA',
+                    background:   'rgba(96,165,250,0.12)',
                     padding:      '3px 8px',
                     borderRadius: 4,
                   }}>
@@ -103,17 +103,17 @@ export default function SignupChoicePage() {
           <div style={{
             padding:      24,
             borderRadius: 12,
-            border:       '2px solid #C8EDD8',
-            background:   '#FFFFFF',
+            border:       '2px solid #2D3F5C',
+            background:   '#1A2B4A',
             cursor:       'pointer',
             transition:   'border-color 0.15s, box-shadow 0.15s',
           }}
           onMouseEnter={e => {
             (e.currentTarget as HTMLDivElement).style.borderColor = '#D4AF5C'
-            ;(e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 20px rgba(212,175,92,0.15)'
+            ;(e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 20px rgba(212,175,92,0.12)'
           }}
           onMouseLeave={e => {
-            (e.currentTarget as HTMLDivElement).style.borderColor = '#C8EDD8'
+            (e.currentTarget as HTMLDivElement).style.borderColor = '#2D3F5C'
             ;(e.currentTarget as HTMLDivElement).style.boxShadow = 'none'
           }}
           >
@@ -122,7 +122,7 @@ export default function SignupChoicePage() {
                 width:          48,
                 height:         48,
                 borderRadius:   12,
-                background:     '#FEF9EC',
+                background:     'rgba(212,175,92,0.12)',
                 display:        'flex',
                 alignItems:     'center',
                 justifyContent: 'center',
@@ -132,18 +132,18 @@ export default function SignupChoicePage() {
                 🤝
               </div>
               <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0F1A14', marginBottom: 4 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: '#FFFFFF', marginBottom: 4 }}>
                   I&apos;m a donor / funder
                 </h3>
-                <p style={{ fontSize: 13, color: '#4A6355', lineHeight: 1.5 }}>
+                <p style={{ fontSize: 13, color: '#A0AEC0', lineHeight: 1.5 }}>
                   View program progress, indicators, and impact reports for the NGOs you fund.
                 </p>
                 <div style={{ marginTop: 10 }}>
                   <span style={{
                     fontSize:     12,
                     fontWeight:   600,
-                    color:        '#78350F',
-                    background:   '#FEF3C7',
+                    color:        '#D4AF5C',
+                    background:   'rgba(212,175,92,0.12)',
                     padding:      '3px 8px',
                     borderRadius: 4,
                   }}>
@@ -157,9 +157,9 @@ export default function SignupChoicePage() {
       </div>
 
       <div style={{ marginTop: 28, textAlign: 'center' }}>
-        <p style={{ fontSize: 14, color: '#4A6355' }}>
+        <p style={{ fontSize: 14, color: '#6B7A99' }}>
           Already have an account?{' '}
-          <Link href="/login" style={{ color: '#1A5C3A', fontWeight: 600, textDecoration: 'none' }}>
+          <Link href="/login" style={{ color: '#D4AF5C', fontWeight: 600, textDecoration: 'none' }}>
             Sign in
           </Link>
         </p>
