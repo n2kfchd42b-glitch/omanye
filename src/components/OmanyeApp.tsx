@@ -188,6 +188,7 @@ function ViewRouter(p: RouterProps) {
           analyses={p.analyses}
           setAnalyses={p.setAnalyses}
           datasets={p.datasets}
+          programs={p.programs}
         />
       )
     case 'reports':

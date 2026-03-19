@@ -47,14 +47,15 @@ const INTEGRATIONS: Integration[] = [
 
 // ── Connect modal ─────────────────────────────────────────────────────────────
 
-function ConnectForm({ integration, onSave }: { integration: Integration; onSave: (d: Dataset) => void }) {
+function ConnectForm({ integration, programs, onSave }: { integration: Integration; programs: Program[]; onSave: (d: Dataset) => void }) {
   const { close } = useModal()
-  const [url,   setUrl]   = useState('')
-  const [token, setToken] = useState('')
-  const [name,  setName]  = useState('')
+  const [url,       setUrl]       = useState('')
+  const [token,     setToken]     = useState('')
+  const [name,      setName]      = useState('')
+  const [programId, setProgramId] = useState('')
 
   function handleConnect() {
-    if (!url.trim() || !token.trim()) return
+    if (!url.trim() || !token.trim() || !programId) return
     const ds: Dataset = {
       id: nextId(),
       name: name.trim() || `${integration.label} Dataset`,
@@ -64,10 +65,13 @@ function ConnectForm({ integration, onSave }: { integration: Integration; onSave
       size: '—',
       status: 'processing',
       updated: todayISO(),
+      programId: Number(programId),
     }
     onSave(ds)
     close()
   }
+
+  const canSubmit = url.trim() && token.trim() && programId
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -83,6 +87,15 @@ function ConnectForm({ integration, onSave }: { integration: Integration; onSave
       <FormField label="Dataset name" htmlFor="cf-name">
         <Input id="cf-name" placeholder={`${integration.label} Dataset`} value={name} onChange={e => setName(e.target.value)} />
       </FormField>
+      <FormField label="Link to program" required htmlFor="cf-prog">
+        <Select
+          id="cf-prog"
+          placeholder="Select a program…"
+          options={programs.map(p => ({ value: String(p.id), label: p.name }))}
+          value={programId}
+          onChange={e => setProgramId(e.target.value)}
+        />
+      </FormField>
       <FormField label="Server URL" required htmlFor="cf-url">
         <Input id="cf-url" type="url" placeholder="https://your-server.example.com" value={url} onChange={e => setUrl(e.target.value)} />
       </FormField>
@@ -94,12 +107,12 @@ function ConnectForm({ integration, onSave }: { integration: Integration; onSave
         <button onClick={close} style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, color: COLORS.stone, cursor: 'pointer', border: `1px solid ${COLORS.mist}` }}>Cancel</button>
         <button
           onClick={handleConnect}
-          disabled={!url.trim() || !token.trim()}
+          disabled={!canSubmit}
           style={{
             padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-            background: url.trim() && token.trim() ? COLORS.moss : COLORS.mist,
-            color: url.trim() && token.trim() ? COLORS.forest : COLORS.stone,
-            cursor: url.trim() && token.trim() ? 'pointer' : 'not-allowed',
+            background: canSubmit ? COLORS.moss : COLORS.mist,
+            color: canSubmit ? COLORS.forest : COLORS.stone,
+            cursor: canSubmit ? 'pointer' : 'not-allowed',
           }}
         >
           Connect Source
@@ -132,7 +145,7 @@ function UploadForm({ programs, onSave }: { programs: Program[]; onSave: (d: Dat
   }
 
   function handleUpload() {
-    if (!file) return
+    if (!file || !programId) return
     const ds: Dataset = {
       id: nextId(),
       name: name.trim() || file.name,
@@ -142,7 +155,7 @@ function UploadForm({ programs, onSave }: { programs: Program[]; onSave: (d: Dat
       size: file.size > 1_000_000 ? `${(file.size / 1_000_000).toFixed(1)} MB` : `${Math.round(file.size / 1000)} KB`,
       status: 'processing',
       updated: todayISO(),
-      programId: programId ? Number(programId) : undefined,
+      programId: Number(programId),
     }
     onSave(ds)
     close()
@@ -182,28 +195,26 @@ function UploadForm({ programs, onSave }: { programs: Program[]; onSave: (d: Dat
         <Input id="uf-name" placeholder="Dataset name" value={name} onChange={e => setName(e.target.value)} />
       </FormField>
 
-      {programs.length > 0 && (
-        <FormField label="Link to program" htmlFor="uf-prog">
-          <Select
-            id="uf-prog"
-            placeholder="No program link"
-            options={programs.map(p => ({ value: String(p.id), label: p.name }))}
-            value={programId}
-            onChange={e => setProgramId(e.target.value)}
-          />
-        </FormField>
-      )}
+      <FormField label="Link to program" required htmlFor="uf-prog">
+        <Select
+          id="uf-prog"
+          placeholder="Select a program…"
+          options={programs.map(p => ({ value: String(p.id), label: p.name }))}
+          value={programId}
+          onChange={e => setProgramId(e.target.value)}
+        />
+      </FormField>
 
       <ModalFooter>
         <button onClick={close} style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, color: COLORS.stone, cursor: 'pointer', border: `1px solid ${COLORS.mist}` }}>Cancel</button>
         <button
           onClick={handleUpload}
-          disabled={!file}
+          disabled={!file || !programId}
           style={{
             padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-            background: file ? COLORS.moss : COLORS.mist,
-            color: file ? COLORS.forest : COLORS.stone,
-            cursor: file ? 'pointer' : 'not-allowed',
+            background: file && programId ? COLORS.moss : COLORS.mist,
+            color: file && programId ? COLORS.forest : COLORS.stone,
+            cursor: file && programId ? 'pointer' : 'not-allowed',
           }}
         >
           Upload Dataset
@@ -224,6 +235,7 @@ interface DataHubProps {
 export function DataHub({ datasets, setDatasets, programs }: DataHubProps) {
   const { open }    = useModal()
   const { success } = useToast()
+  const [filterProgramId, setFilterProgramId] = useState<string>('')
 
   function openConnect(integration: Integration) {
     open({
@@ -231,6 +243,7 @@ export function DataHub({ datasets, setDatasets, programs }: DataHubProps) {
       content: (
         <ConnectForm
           integration={integration}
+          programs={programs}
           onSave={(ds) => {
             setDatasets(prev => [...prev, ds])
             success(`${integration.label} connected`)
@@ -255,13 +268,17 @@ export function DataHub({ datasets, setDatasets, programs }: DataHubProps) {
     })
   }
 
+  const filteredDatasets = filterProgramId
+    ? datasets.filter(d => d.programId === Number(filterProgramId))
+    : datasets
+
   return (
     <div style={{ maxWidth: 960, margin: '0 auto' }}>
       {/* Header */}
       <div className="fade-up" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
         <div>
           <h2 style={{ fontFamily: FONTS.heading, fontSize: 22, fontWeight: 600, color: COLORS.forest }}>Data Hub</h2>
-          <p style={{ fontSize: 12, color: COLORS.stone, marginTop: 2 }}>{datasets.length} dataset{datasets.length !== 1 ? 's' : ''}</p>
+          <p style={{ fontSize: 12, color: COLORS.stone, marginTop: 2 }}>{filteredDatasets.length} dataset{filteredDatasets.length !== 1 ? 's' : ''}{filterProgramId ? ` in ${programs.find(p => String(p.id) === filterProgramId)?.name ?? 'program'}` : ''}</p>
         </div>
         <button
           onClick={openUpload}
@@ -274,6 +291,29 @@ export function DataHub({ datasets, setDatasets, programs }: DataHubProps) {
           <Upload size={14} /> Upload Dataset
         </button>
       </div>
+
+      {/* Program filter */}
+      {programs.length > 0 && (
+        <div className="fade-up" style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.stone }}>Program:</span>
+            <select
+              value={filterProgramId}
+              onChange={e => setFilterProgramId(e.target.value)}
+              style={{
+                padding: '6px 12px', borderRadius: 8, fontSize: 13,
+                border: `1px solid ${COLORS.mist}`, background: COLORS.snow,
+                color: COLORS.charcoal, cursor: 'pointer',
+              }}
+            >
+              <option value="">All Programs</option>
+              {programs.map(p => (
+                <option key={p.id} value={String(p.id)}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
 
       {/* Integration cards */}
       <div className="fade-up-1" style={{ marginBottom: 32 }}>
@@ -292,12 +332,12 @@ export function DataHub({ datasets, setDatasets, programs }: DataHubProps) {
         <h3 style={{ fontFamily: FONTS.heading, fontSize: 15, fontWeight: 600, color: COLORS.forest, marginBottom: 14 }}>
           Datasets
         </h3>
-        {datasets.length === 0 ? (
+        {filteredDatasets.length === 0 ? (
           <div className="card" style={{ padding: 0 }}>
             <EmptyState
               icon={<Database size={24} />}
               title="No datasets yet"
-              description="Connect a data source above or upload a CSV file."
+              description={filterProgramId ? 'No datasets linked to this program. Upload or connect a source.' : 'Connect a data source above or upload a CSV file.'}
             />
           </div>
         ) : (
@@ -305,33 +345,37 @@ export function DataHub({ datasets, setDatasets, programs }: DataHubProps) {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: COLORS.snow }}>
-                  {['Name', 'Source', 'Rows', 'Size', 'Status', 'Updated', ''].map((h, i) => (
+                  {['Name', 'Program', 'Source', 'Rows', 'Size', 'Status', 'Updated', ''].map((h, i) => (
                     <th key={i} style={{ padding: '10px 16px', fontSize: 11, fontWeight: 700, color: COLORS.stone, textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {datasets.map((ds, i) => (
-                  <tr key={ds.id} style={{ borderTop: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? COLORS.pearl : COLORS.snow }}>
-                    <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 500, color: COLORS.forest }}>{ds.name}</td>
-                    <td style={{ padding: '12px 16px' }}><SourceBadge source={ds.source} /></td>
-                    <td style={{ padding: '12px 16px', fontSize: 13, color: COLORS.slate }}>{ds.rows}</td>
-                    <td style={{ padding: '12px 16px', fontSize: 13, color: COLORS.slate }}>{ds.size}</td>
-                    <td style={{ padding: '12px 16px' }}><StatusBadge status={ds.status} /></td>
-                    <td style={{ padding: '12px 16px', fontSize: 12, color: COLORS.stone }}>{ds.updated}</td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <button
-                        onClick={() => {
-                          setDatasets(prev => prev.map(d => d.id === ds.id ? { ...d, status: 'processing' } : d))
-                        }}
-                        style={{ color: COLORS.stone, cursor: 'pointer' }}
-                        title="Refresh"
-                      >
-                        <RefreshCw size={13} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {filteredDatasets.map((ds, i) => {
+                  const prog = programs.find(p => p.id === ds.programId)
+                  return (
+                    <tr key={ds.id} style={{ borderTop: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? COLORS.pearl : COLORS.snow }}>
+                      <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 500, color: COLORS.forest }}>{ds.name}</td>
+                      <td style={{ padding: '12px 16px', fontSize: 12, color: COLORS.slate }}>{prog?.name ?? '—'}</td>
+                      <td style={{ padding: '12px 16px' }}><SourceBadge source={ds.source} /></td>
+                      <td style={{ padding: '12px 16px', fontSize: 13, color: COLORS.slate }}>{ds.rows}</td>
+                      <td style={{ padding: '12px 16px', fontSize: 13, color: COLORS.slate }}>{ds.size}</td>
+                      <td style={{ padding: '12px 16px' }}><StatusBadge status={ds.status} /></td>
+                      <td style={{ padding: '12px 16px', fontSize: 12, color: COLORS.stone }}>{ds.updated}</td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <button
+                          onClick={() => {
+                            setDatasets(prev => prev.map(d => d.id === ds.id ? { ...d, status: 'processing' } : d))
+                          }}
+                          style={{ color: COLORS.stone, cursor: 'pointer' }}
+                          title="Refresh"
+                        >
+                          <RefreshCw size={13} />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

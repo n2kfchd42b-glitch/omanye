@@ -9,7 +9,7 @@ import { FormField, Input, Select, Textarea } from '@/components/atoms/FormField
 import { useModal, ModalFooter } from '@/components/Modal'
 import { useToast } from '@/components/Toast'
 import { nextId, todayISO } from '@/lib/utils'
-import type { Analysis, Dataset } from '@/lib/types'
+import type { Analysis, Dataset, Program } from '@/lib/types'
 
 // ── Analysis types ────────────────────────────────────────────────────────────
 
@@ -31,31 +31,47 @@ const ANALYSIS_TYPES: AnalysisType[] = [
 
 // ── New analysis form ─────────────────────────────────────────────────────────
 
-function NewAnalysisForm({ datasets, onSave }: { datasets: Dataset[]; onSave: (a: Analysis) => void }) {
+function NewAnalysisForm({ datasets, programs, onSave }: { datasets: Dataset[]; programs: Program[]; onSave: (a: Analysis) => void }) {
   const { close } = useModal()
   const [title,     setTitle]     = useState('')
   const [type,      setType]      = useState('')
+  const [programId, setProgramId] = useState('')
   const [datasetId, setDatasetId] = useState('')
   const [script,    setScript]    = useState('')
 
   const isCustom = type === 'custom'
+  const programDatasets = programId
+    ? datasets.filter(d => d.programId === Number(programId))
+    : datasets
 
   function handleRun() {
-    if (!title.trim() || !type) return
+    if (!title.trim() || !type || !programId) return
     onSave({
       id: nextId(),
       title: title.trim(),
       type,
       status: 'running',
       createdAt: todayISO(),
+      programId: Number(programId),
     })
     close()
   }
+
+  const canSubmit = title.trim() && type && programId
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <FormField label="Analysis title" required htmlFor="na-title">
         <Input id="na-title" placeholder="e.g. Q2 Beneficiary Analysis" value={title} onChange={e => setTitle(e.target.value)} />
+      </FormField>
+      <FormField label="Program" required htmlFor="na-prog">
+        <Select
+          id="na-prog"
+          placeholder="Select a program…"
+          options={programs.map(p => ({ value: String(p.id), label: p.name }))}
+          value={programId}
+          onChange={e => { setProgramId(e.target.value); setDatasetId('') }}
+        />
       </FormField>
       <FormField label="Analysis type" required htmlFor="na-type">
         <Select
@@ -66,12 +82,12 @@ function NewAnalysisForm({ datasets, onSave }: { datasets: Dataset[]; onSave: (a
           onChange={e => setType(e.target.value)}
         />
       </FormField>
-      {datasets.length > 0 && (
+      {programDatasets.length > 0 && (
         <FormField label="Dataset" htmlFor="na-ds">
           <Select
             id="na-ds"
             placeholder="Select dataset…"
-            options={datasets.map(d => ({ value: String(d.id), label: d.name }))}
+            options={programDatasets.map(d => ({ value: String(d.id), label: d.name }))}
             value={datasetId}
             onChange={e => setDatasetId(e.target.value)}
           />
@@ -93,12 +109,12 @@ function NewAnalysisForm({ datasets, onSave }: { datasets: Dataset[]; onSave: (a
         <button onClick={close} style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, color: COLORS.stone, cursor: 'pointer', border: `1px solid ${COLORS.mist}` }}>Cancel</button>
         <button
           onClick={handleRun}
-          disabled={!title.trim() || !type}
+          disabled={!canSubmit}
           style={{
             padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-            background: title.trim() && type ? COLORS.moss : COLORS.mist,
-            color: title.trim() && type ? COLORS.forest : COLORS.stone,
-            cursor: title.trim() && type ? 'pointer' : 'not-allowed',
+            background: canSubmit ? COLORS.moss : COLORS.mist,
+            color: canSubmit ? COLORS.forest : COLORS.stone,
+            cursor: canSubmit ? 'pointer' : 'not-allowed',
           }}
         >
           Run Analysis
@@ -114,11 +130,13 @@ interface AnalyticsProps {
   analyses:    Analysis[]
   setAnalyses: React.Dispatch<React.SetStateAction<Analysis[]>>
   datasets:    Dataset[]
+  programs:    Program[]
 }
 
-export function Analytics({ analyses, setAnalyses, datasets }: AnalyticsProps) {
+export function Analytics({ analyses, setAnalyses, datasets, programs }: AnalyticsProps) {
   const { open }    = useModal()
   const { success } = useToast()
+  const [filterProgramId, setFilterProgramId] = useState<string>('')
 
   function openNew() {
     open({
@@ -126,6 +144,7 @@ export function Analytics({ analyses, setAnalyses, datasets }: AnalyticsProps) {
       content: (
         <NewAnalysisForm
           datasets={datasets}
+          programs={programs}
           onSave={(a) => {
             setAnalyses(prev => [...prev, a])
             success(`Analysis "${a.title}" queued`)
@@ -135,13 +154,17 @@ export function Analytics({ analyses, setAnalyses, datasets }: AnalyticsProps) {
     })
   }
 
+  const filteredAnalyses = filterProgramId
+    ? analyses.filter(a => a.programId === Number(filterProgramId))
+    : analyses
+
   return (
     <div style={{ maxWidth: 960, margin: '0 auto' }}>
       {/* Header */}
       <div className="fade-up" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
         <div>
           <h2 style={{ fontFamily: FONTS.heading, fontSize: 22, fontWeight: 600, color: COLORS.forest }}>Analytics</h2>
-          <p style={{ fontSize: 12, color: COLORS.stone, marginTop: 2 }}>{analyses.length} analys{analyses.length !== 1 ? 'es' : 'is'}</p>
+          <p style={{ fontSize: 12, color: COLORS.stone, marginTop: 2 }}>{filteredAnalyses.length} analys{filteredAnalyses.length !== 1 ? 'es' : 'is'}{filterProgramId ? ` in ${programs.find(p => String(p.id) === filterProgramId)?.name ?? 'program'}` : ''}</p>
         </div>
         <button
           onClick={openNew}
@@ -154,6 +177,29 @@ export function Analytics({ analyses, setAnalyses, datasets }: AnalyticsProps) {
           <Plus size={14} /> New Analysis
         </button>
       </div>
+
+      {/* Program filter */}
+      {programs.length > 0 && (
+        <div className="fade-up" style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.stone }}>Program:</span>
+            <select
+              value={filterProgramId}
+              onChange={e => setFilterProgramId(e.target.value)}
+              style={{
+                padding: '6px 12px', borderRadius: 8, fontSize: 13,
+                border: `1px solid ${COLORS.mist}`, background: COLORS.snow,
+                color: COLORS.charcoal, cursor: 'pointer',
+              }}
+            >
+              <option value="">All Programs</option>
+              {programs.map(p => (
+                <option key={p.id} value={String(p.id)}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
 
       {/* Type cards */}
       <div className="fade-up-1" style={{ marginBottom: 32 }}>
@@ -190,12 +236,12 @@ export function Analytics({ analyses, setAnalyses, datasets }: AnalyticsProps) {
         <h3 style={{ fontFamily: FONTS.heading, fontSize: 15, fontWeight: 600, color: COLORS.forest, marginBottom: 14 }}>
           Analysis History
         </h3>
-        {analyses.length === 0 ? (
+        {filteredAnalyses.length === 0 ? (
           <div className="card" style={{ padding: 0 }}>
             <EmptyState
               icon={<BarChart2 size={24} />}
               title="No analyses yet"
-              description="Run your first analysis to surface insights from your data."
+              description={filterProgramId ? 'No analyses linked to this program yet.' : 'Run your first analysis to surface insights from your data.'}
               action={
                 <button
                   onClick={openNew}
@@ -215,15 +261,16 @@ export function Analytics({ analyses, setAnalyses, datasets }: AnalyticsProps) {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: COLORS.snow }}>
-                  {['Title', 'Type', 'Status', 'Created'].map(h => (
+                  {['Title', 'Program', 'Type', 'Status', 'Created'].map(h => (
                     <th key={h} style={{ padding: '10px 16px', fontSize: 11, fontWeight: 700, color: COLORS.stone, textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {analyses.map((a, i) => {
+                {filteredAnalyses.map((a, i) => {
                   const TypeInfo = ANALYSIS_TYPES.find(t => t.id === a.type)
                   const Icon = TypeInfo?.icon ?? BarChart2
+                  const prog = programs.find(p => p.id === a.programId)
                   return (
                     <tr key={a.id} style={{ borderTop: `1px solid ${COLORS.mist}`, background: i % 2 === 0 ? COLORS.pearl : COLORS.snow }}>
                       <td style={{ padding: '12px 16px' }}>
@@ -234,6 +281,7 @@ export function Analytics({ analyses, setAnalyses, datasets }: AnalyticsProps) {
                           <span style={{ fontSize: 13, fontWeight: 500, color: COLORS.forest }}>{a.title}</span>
                         </div>
                       </td>
+                      <td style={{ padding: '12px 16px', fontSize: 12, color: COLORS.slate }}>{prog?.name ?? '—'}</td>
                       <td style={{ padding: '12px 16px', fontSize: 12, color: COLORS.slate }}>{TypeInfo?.label ?? a.type}</td>
                       <td style={{ padding: '12px 16px' }}><StatusBadge status={a.status} /></td>
                       <td style={{ padding: '12px 16px', fontSize: 12, color: COLORS.stone }}>{a.createdAt}</td>

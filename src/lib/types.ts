@@ -87,6 +87,7 @@ export interface Analysis {
   type:      string
   status:    'running' | 'done' | 'error'
   createdAt: string
+  programId?: number
 }
 
 export type DocumentType   = 'logframe' | 'report' | 'framework' | 'manual' | 'proposal' | 'other'

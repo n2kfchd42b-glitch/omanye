@@ -85,7 +85,7 @@ function applySecurityHeaders(response: NextResponse, origin: string | null): Ne
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://va.vercel-scripts.com",
       "style-src 'self' 'unsafe-inline'",
       "frame-src https://js.stripe.com",
-      "connect-src 'self' https://*.supabase.co https://api.stripe.com https://va.vercel-scripts.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://va.vercel-scripts.com",
       "img-src 'self' data: blob: https://*.supabase.co",
       "object-src 'self' data:",
       "font-src 'self' data:",
