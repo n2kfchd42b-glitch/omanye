@@ -100,12 +100,12 @@ export default function ReportsPage() {
 
       setPrograms((progsResult.data ?? []) as Program[])
 
-      const rawReports = (reportsResult.data ?? []) as Record<string, unknown>[]
+      const rawReports = (reportsResult.data ?? []) as unknown as (Record<string, unknown> & { programs?: { name: string } | null })[]
       setReports(rawReports.map(r => ({
         ...r,
-        program_name: (r.programs as { name: string } | null)?.name ?? null,
+        program_name: r.programs?.name ?? null,
         programs:     undefined,
-      })) as Report[])
+      })) as unknown as Report[])
     } finally {
       setLoading(false)
     }
