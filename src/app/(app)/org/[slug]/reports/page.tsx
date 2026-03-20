@@ -79,23 +79,33 @@ export default function ReportsPage() {
       setUserRole(profile.role as OmanyeRole)
       setOrgId(profile.organization_id)
 
-      // Fetch programs and reports in parallel
-      const [progsResult, reportsRes] = await Promise.all([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const db: any = supabase
+
+      // Fetch programs + reports in parallel using direct Supabase queries.
+      // RLS (ngo_read_reports) enforces org-scoping at the DB level, eliminating
+      // the extra auth waterfall that fetch('/api/reports') would add.
+      const [progsResult, reportsResult] = await Promise.all([
         supabase
           .from('programs')
           .select('id, name, status')
           .eq('organization_id', profile.organization_id)
           .is('deleted_at', null)
           .order('name'),
-        fetch('/api/reports'),
+        db
+          .from('reports')
+          .select('id, title, report_type, reporting_period_start, reporting_period_end, status, visible_to_donors, submitted_at, created_at, program_id, organization_id, programs(name)')
+          .order('created_at', { ascending: false }),
       ])
 
       setPrograms((progsResult.data ?? []) as Program[])
 
-      if (reportsRes.ok) {
-        const json = await reportsRes.json()
-        setReports(json.data ?? [])
-      }
+      const rawReports = (reportsResult.data ?? []) as Record<string, unknown>[]
+      setReports(rawReports.map(r => ({
+        ...r,
+        program_name: (r.programs as { name: string } | null)?.name ?? null,
+        programs:     undefined,
+      })) as Report[])
     } finally {
       setLoading(false)
     }

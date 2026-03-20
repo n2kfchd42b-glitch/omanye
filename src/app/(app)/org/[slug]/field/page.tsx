@@ -585,25 +585,29 @@ export default function FieldStaffPage() {
 
   // ── Data loading ───────────────────────────────────────────────────────────
 
-  // Stable callback so the online handler and handleProgramChange can call it
-  // without stale-closure issues.
+  // Direct Supabase queries avoid the auth waterfall that fetch('/api/...') adds.
+  // RLS on field_collection_forms and field_submissions already enforces org-scoping.
   const loadFormsAndSubs = useCallback(async (programId: string, uid: string) => {
-    const [formsRes, subRes] = await Promise.all([
-      fetch(`/api/field/forms?program_id=${programId}`),
-      fetch(`/api/field/submissions?program_id=${programId}`),
+    const supabase = createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db: any = supabase
+    const [formsResult, subResult] = await Promise.all([
+      db
+        .from('field_collection_forms')
+        .select('*')
+        .eq('program_id', programId)
+        .eq('active', true)
+        .order('created_at', { ascending: false }),
+      db
+        .from('field_submissions')
+        .select('*')
+        .eq('program_id', programId)
+        .order('submission_date', { ascending: false }),
     ])
-    if (formsRes.ok) {
-      const j = await formsRes.json()
-      setForms((j.data ?? []).filter((f: FieldCollectionForm) => f.active))
-    } else {
-      setForms([])
-    }
-    if (subRes.ok) {
-      const j = await subRes.json()
-      setMySubmissions((j.data ?? []).filter((s: FieldSubmission) => s.submitted_by === uid))
-    } else {
-      setMySubmissions([])
-    }
+    setForms((formsResult.data ?? []) as FieldCollectionForm[])
+    setMySubmissions(
+      ((subResult.data ?? []) as FieldSubmission[]).filter(s => s.submitted_by === uid)
+    )
   }, [])
 
   const load = useCallback(async () => {
@@ -614,14 +618,8 @@ export default function FieldStaffPage() {
       if (authErr || !user) { router.replace('/login'); return }
       setUserId(user.id)
 
-      // Fetch profile and programs in parallel
-      const [profileRes, progsRes] = await Promise.all([
-        supabase.from('profiles').select('organization_id').eq('id', user.id).single(),
-        // Programs will be re-fetched once we have the org id; placeholder needed for parallel
-        Promise.resolve(null),
-      ])
-
-      const profile = profileRes.data as { organization_id: string } | null
+      const { data: profileData } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single()
+      const profile = profileData as { organization_id: string } | null
       if (!profile?.organization_id) {
         setLoadError('Could not load your organisation. Please refresh.')
         return

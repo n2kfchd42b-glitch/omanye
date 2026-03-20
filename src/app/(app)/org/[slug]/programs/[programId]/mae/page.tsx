@@ -114,53 +114,35 @@ export default function MaeDashboardPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/login'); return }
 
-      const { data: prog } = await supabase.from('programs').select('name').eq('id', params.programId).single()
-      setProgramName((prog as { name: string } | null)?.name ?? '')
-
-      // Fetch indicators with updates (cast via unknown to bypass strict DB types)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const db: any = supabase
 
-      const { data: indsRaw } = await db
-        .from('indicators')
-        .select('id, name, target, current_value, unit, is_key')
-        .eq('program_id', params.programId)
-        .order('sort_order', { ascending: true })
+      // Stage 1 — program name + indicators in parallel (no dependency between them)
+      const [progResult, indsResult] = await Promise.all([
+        supabase.from('programs').select('name').eq('id', params.programId).single(),
+        db
+          .from('indicators')
+          .select('id, name, target_value, current_value, unit, is_key_indicator')
+          .eq('program_id', params.programId)
+          .order('sort_order', { ascending: true }),
+      ])
 
-      const inds = (indsRaw ?? []) as { id: string; name: string; target: number; current_value: number; unit: string; is_key: boolean }[]
+      setProgramName((progResult.data as { name: string } | null)?.name ?? '')
 
-      // Fetch indicator updates for each indicator (for time series)
-      let indicatorsWithUpdates: Indicator[] = []
-      if (inds.length > 0) {
-        const { data: updatesRaw } = await db
-          .from('indicator_updates')
-          .select('indicator_id, new_value, recorded_at')
-          .in('indicator_id', inds.map((i: { id: string }) => i.id))
-          .order('recorded_at', { ascending: true })
+      const inds = (indsResult.data ?? []) as {
+        id: string; name: string; target_value: number
+        current_value: number; unit: string; is_key_indicator: boolean
+      }[]
 
-        const updatesMap = new Map<string, { value: number; recorded_at: string }[]>()
-        for (const u of (updatesRaw ?? []) as { indicator_id: string; new_value: number; recorded_at: string }[]) {
-          const arr = updatesMap.get(u.indicator_id) ?? []
-          arr.push({ value: u.new_value, recorded_at: u.recorded_at })
-          updatesMap.set(u.indicator_id, arr)
-        }
-
-        indicatorsWithUpdates = inds.map(ind => ({
-          id:      ind.id,
-          name:    ind.name,
-          target:  ind.target ?? 0,
-          current: ind.current_value ?? 0,
-          unit:    ind.unit ?? '',
-          is_key:  ind.is_key ?? false,
-          updates: updatesMap.get(ind.id) ?? [],
-        }))
-      }
-
-      setIndicators(indicatorsWithUpdates)
-      setActiveLines(new Set(indicatorsWithUpdates.filter(i => i.is_key).map(i => i.id).slice(0, 5)))
-
-      // Fetch summary
-      const [summaryRes, subRaw] = await Promise.all([
+      // Stage 2 — updates (needs indicator IDs) + summary + submissions all in parallel
+      const [updatesResult, summaryRes, subResult] = await Promise.all([
+        inds.length > 0
+          ? db
+              .from('indicator_updates')
+              .select('indicator_id, new_value, submitted_at')
+              .in('indicator_id', inds.map((i: { id: string }) => i.id))
+              .order('submitted_at', { ascending: true })
+          : Promise.resolve({ data: [] }),
         fetch(`/api/field/summary?program_id=${params.programId}`),
         db
           .from('field_submissions')
@@ -169,12 +151,33 @@ export default function MaeDashboardPage() {
           .order('submission_date', { ascending: true }),
       ])
 
+      // Build indicator time-series from updates
+      const updatesMap = new Map<string, { value: number; recorded_at: string }[]>()
+      for (const u of (updatesResult.data ?? []) as { indicator_id: string; new_value: number; submitted_at: string }[]) {
+        const arr = updatesMap.get(u.indicator_id) ?? []
+        arr.push({ value: u.new_value, recorded_at: u.submitted_at })
+        updatesMap.set(u.indicator_id, arr)
+      }
+
+      const indicatorsWithUpdates: Indicator[] = inds.map(ind => ({
+        id:      ind.id,
+        name:    ind.name,
+        target:  ind.target_value ?? 0,
+        current: ind.current_value ?? 0,
+        unit:    ind.unit ?? '',
+        is_key:  ind.is_key_indicator ?? false,
+        updates: updatesMap.get(ind.id) ?? [],
+      }))
+
+      setIndicators(indicatorsWithUpdates)
+      setActiveLines(new Set(indicatorsWithUpdates.filter(i => i.is_key).map(i => i.id).slice(0, 5)))
+
       if (summaryRes.ok) {
         const j = await summaryRes.json()
         setSummary(j.data)
       }
 
-      setSubmissions(((subRaw as { data: unknown[] })?.data ?? []) as { submission_date: string; status: string }[])
+      setSubmissions(((subResult as { data: unknown[] })?.data ?? []) as { submission_date: string; status: string }[])
     } catch (err) {
       console.error('M&E load error:', err)
     } finally {
