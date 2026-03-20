@@ -78,11 +78,12 @@ interface SidebarProps {
   isMobile:      boolean
   mobileOpen:    boolean
   onMobileClose: () => void
+  pendingNav?:   ViewId | null
 }
 
 export function Sidebar({
   view, onNav, collapsed, onToggle, user,
-  isMobile, mobileOpen, onMobileClose,
+  isMobile, mobileOpen, onMobileClose, pendingNav,
 }: SidebarProps) {
   const desktopW = collapsed ? SPACING.sidebarWCollapsed : SPACING.sidebarW
 
@@ -184,6 +185,7 @@ export function Sidebar({
             key={item.id}
             item={item}
             active={view === item.id || (view === 'program-detail' && item.id === 'programs')}
+            pending={pendingNav === item.id}
             collapsed={!isMobile && collapsed}
             onNav={handleNav}
           />
@@ -206,6 +208,7 @@ export function Sidebar({
                 key={item.id}
                 item={item}
                 active={view === item.id}
+                pending={pendingNav === item.id}
                 collapsed={!isMobile && collapsed}
                 onNav={handleNav}
               />
@@ -278,9 +281,10 @@ export function Sidebar({
 // ── NavLink ───────────────────────────────────────────────────────────────────
 
 function NavLink({
-  item, active, collapsed, onNav,
-}: { item: NavItem; active: boolean; collapsed: boolean; onNav: (v: ViewId) => void }) {
+  item, active, pending, collapsed, onNav,
+}: { item: NavItem; active: boolean; pending: boolean; collapsed: boolean; onNav: (v: ViewId) => void }) {
   const Icon = item.icon
+  const isActive = active || pending
   return (
     <button
       onClick={() => onNav(item.id)}
@@ -291,37 +295,47 @@ function NavLink({
         gap: 10,
         padding: collapsed ? '11px 0' : '11px 16px',
         justifyContent: collapsed ? 'center' : 'flex-start',
-        borderLeft: active ? `2px solid ${COLORS.sage}` : '2px solid transparent',
-        background: active ? 'rgba(212,175,92,0.12)' : 'transparent',
-        color: active ? COLORS.mint : '#A0AEC0',
+        borderLeft: isActive ? `2px solid ${COLORS.sage}` : '2px solid transparent',
+        background: isActive ? 'rgba(212,175,92,0.12)' : 'transparent',
+        color: isActive ? COLORS.mint : '#A0AEC0',
         fontSize: 13,
-        fontWeight: active ? 600 : 400,
-        cursor: 'pointer',
+        fontWeight: isActive ? 600 : 400,
+        cursor: pending ? 'wait' : 'pointer',
         transition: 'background 0.15s, color 0.15s',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         border: 'none',
         borderLeftStyle: 'solid',
         borderLeftWidth: 2,
-        borderLeftColor: active ? COLORS.sage : 'transparent',
+        borderLeftColor: isActive ? COLORS.sage : 'transparent',
         minHeight: 44,
+        opacity: pending && !active ? 0.85 : 1,
       }}
       onMouseEnter={e => {
-        if (!active) {
+        if (!isActive) {
           e.currentTarget.style.background = '#1A2B4A'
           e.currentTarget.style.color = '#ffffff'
         }
       }}
       onMouseLeave={e => {
-        if (!active) {
+        if (!isActive) {
           e.currentTarget.style.background = 'transparent'
           e.currentTarget.style.color = '#A0AEC0'
         }
       }}
       aria-current={active ? 'page' : undefined}
+      aria-busy={pending}
     >
       <Icon size={16} style={{ flexShrink: 0 }} />
-      {!collapsed && <span>{item.label}</span>}
+      {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
+      {!collapsed && pending && (
+        <span style={{
+          width: 6, height: 6, borderRadius: '50%',
+          background: COLORS.gold,
+          flexShrink: 0,
+          animation: 'pulse 1s ease-in-out infinite',
+        }} />
+      )}
     </button>
   )
 }

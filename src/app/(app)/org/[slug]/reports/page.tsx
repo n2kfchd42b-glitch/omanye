@@ -79,20 +79,21 @@ export default function ReportsPage() {
       setUserRole(profile.role as OmanyeRole)
       setOrgId(profile.organization_id)
 
-      // Programs for this org
-      const { data: progs } = await supabase
-        .from('programs')
-        .select('id, name, status')
-        .eq('organization_id', profile.organization_id)
-        .is('deleted_at', null)
-        .order('name')
+      // Fetch programs and reports in parallel
+      const [progsResult, reportsRes] = await Promise.all([
+        supabase
+          .from('programs')
+          .select('id, name, status')
+          .eq('organization_id', profile.organization_id)
+          .is('deleted_at', null)
+          .order('name'),
+        fetch('/api/reports'),
+      ])
 
-      setPrograms((progs ?? []) as Program[])
+      setPrograms((progsResult.data ?? []) as Program[])
 
-      // Reports via API
-      const res = await fetch('/api/reports')
-      if (res.ok) {
-        const json = await res.json()
+      if (reportsRes.ok) {
+        const json = await reportsRes.json()
         setReports(json.data ?? [])
       }
     } finally {

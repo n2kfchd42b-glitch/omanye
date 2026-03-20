@@ -9,6 +9,11 @@ import { ModalProvider } from './Modal'
 import { COLORS, SPACING } from '@/lib/tokens'
 import type { ViewId, User } from '@/lib/types'
 
+// ── Pending nav context ───────────────────────────────────────────────────────
+
+const PendingNavContext = React.createContext<ViewId | null>(null)
+export function usePendingNav() { return React.useContext(PendingNavContext) }
+
 // ── Path → ViewId mapping ────────────────────────────────────────────────────
 
 function deriveViewId(pathname: string, searchView?: string | null): ViewId {
@@ -48,8 +53,10 @@ export default function AppShell({ user, orgSlug, children }: AppShellProps) {
   const [mobileOpen,     setMobileOpen]     = useState(false)
   // Whether viewport is mobile-sized
   const [isMobile,       setIsMobile]       = useState(false)
+  // Track which view was clicked for optimistic active state
+  const [pendingNav,     setPendingNav]     = useState<ViewId | null>(null)
 
-  const [, startTransition] = useTransition()
+  const [isPending, startTransition] = useTransition()
 
   // Detect and track mobile breakpoint (768px)
   useEffect(() => {
@@ -62,9 +69,14 @@ export default function AppShell({ user, orgSlug, children }: AppShellProps) {
   // Close mobile drawer when navigating
   useEffect(() => { setMobileOpen(false) }, [pathname])
 
-  const activeView = deriveViewId(pathname, searchParams.get('view'))
+  const routerView = deriveViewId(pathname, searchParams.get('view'))
+  // Show pending nav item as active immediately on click (optimistic)
+  const activeView = pendingNav ?? routerView
   // On mobile, the sidebar is an overlay — main content always takes full width
   const sidebarW   = isMobile ? 0 : (collapsed ? SPACING.sidebarWCollapsed : SPACING.sidebarW)
+
+  // Clear pending state when navigation completes
+  useEffect(() => { if (!isPending) setPendingNav(null) }, [isPending])
 
   const navigate = useCallback((v: ViewId) => {
     const routes: Partial<Record<ViewId, string>> = {
@@ -75,14 +87,17 @@ export default function AppShell({ user, orgSlug, children }: AppShellProps) {
       team:        `/org/${orgSlug}/team`,
       settings:    `/org/${orgSlug}/settings`,
       audit:       `/org/${orgSlug}/audit`,
+      fieldstatus: `/org/${orgSlug}/field`,
     }
 
-    if (routes[v]) {
-      router.push(routes[v]!)
-      return
-    }
-
-    router.push(`/org/${orgSlug}/dashboard?view=${v}`)
+    setPendingNav(v)
+    startTransition(() => {
+      if (routes[v]) {
+        router.push(routes[v]!)
+        return
+      }
+      router.push(`/org/${orgSlug}/dashboard?view=${v}`)
+    })
   }, [orgSlug, router])
 
   const handleSignOut = useCallback(() => {
@@ -93,6 +108,7 @@ export default function AppShell({ user, orgSlug, children }: AppShellProps) {
   }, [])
 
   return (
+    <PendingNavContext.Provider value={pendingNav}>
     <ToastProvider>
       <ModalProvider>
         <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: COLORS.snow }}>
@@ -118,6 +134,7 @@ export default function AppShell({ user, orgSlug, children }: AppShellProps) {
             isMobile={isMobile}
             mobileOpen={mobileOpen}
             onMobileClose={() => setMobileOpen(false)}
+            pendingNav={pendingNav}
           />
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -144,5 +161,6 @@ export default function AppShell({ user, orgSlug, children }: AppShellProps) {
         </div>
       </ModalProvider>
     </ToastProvider>
+    </PendingNavContext.Provider>
   )
 }

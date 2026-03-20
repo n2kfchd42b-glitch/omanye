@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react'
 import {
   Plus, X, ChevronDown, ChevronUp, Bell, Eye,
   CheckCircle2, Clock, AlertTriangle, Circle,
-  Users, ClipboardList, AlertCircle, TrendingUp,
+  Users, ClipboardList, AlertCircle, TrendingUp, Loader2,
 } from 'lucide-react'
 import { COLORS, FONTS, SHADOW } from '@/lib/tokens'
 import { useToast } from '@/components/Toast'
@@ -18,6 +18,7 @@ interface Props {
   setPeriods: React.Dispatch<React.SetStateAction<CollectionPeriod[]>>
   team: TeamMember[]
   user: User
+  loading?: boolean
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -470,7 +471,7 @@ function tblBtnStyle(color: string): React.CSSProperties {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-export function FieldStatus({ periods, setPeriods, team, user }: Props) {
+export function FieldStatus({ periods, setPeriods, team, user, loading = false }: Props) {
   const { toast } = useToast()
   const { append } = useAuditLog()
   const [showModal, setShowModal] = useState(false)
@@ -529,6 +530,17 @@ export function FieldStatus({ periods, setPeriods, team, user }: Props) {
 
   function handleView(_assignmentId: number) {
     toast('Opening submission view…', 'success')
+  }
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 320, fontFamily: FONTS.body }}>
+        <div style={{ textAlign: 'center' }}>
+          <Loader2 size={28} style={{ color: COLORS.stone, animation: 'spin 1s linear infinite', marginBottom: 12 }} />
+          <p style={{ fontSize: 13, color: COLORS.stone }}>Loading field data…</p>
+        </div>
+      </div>
+    )
   }
 
   return (
