@@ -154,6 +154,8 @@ export default function AppShell({ user, orgSlug, children }: AppShellProps) {
               marginTop: SPACING.topbarH,
               padding: isMobile ? '16px 12px' : SPACING.pagePad,
               overflowY: 'auto',
+              background: '#FFFFFF',
+              color: '#1A2B4A',
             }}>
               {children}
             </main>
