@@ -47,6 +47,8 @@ export type AuditAction =
   | 'report.archived'
   // Impact
   | 'impact.estimate_created'
+  // Health
+  | 'health.status_changed'
 
 export interface AuditLogEntry {
   organizationId: string
@@ -185,4 +187,5 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   'report.deleted':            'Deleted report',
   'report.archived':           'Archived report',
   'impact.estimate_created':   'Created impact estimate',
+  'health.status_changed':     'Program health status changed',
 }

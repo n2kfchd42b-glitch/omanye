@@ -90,6 +90,7 @@ export interface Program {
   cover_image_url:  string | null
   tags:             string[]
   visibility:       ProgramVisibility
+  expected_submission_cadence_per_week: number | null
   deleted_at:       string | null
   created_at:       string
   updated_at:       string
@@ -204,6 +205,7 @@ export interface CreateProgramPayload {
   logframe_url?:    string
   tags?:            string[]
   visibility?:      ProgramVisibility
+  expected_submission_cadence_per_week?: number | null
 }
 
 export interface UpdateProgramPayload extends Partial<CreateProgramPayload> {

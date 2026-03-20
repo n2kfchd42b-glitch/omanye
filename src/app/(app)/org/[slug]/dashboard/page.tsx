@@ -11,6 +11,7 @@ export interface DashboardStats {
   totalIndicators:  number
   activeDonors:     number
   pendingRequests:  number
+  healthSummary:    { green: number; amber: number; red: number; unscored: number } | null
 }
 
 export interface ActivityItem {
@@ -34,6 +35,7 @@ export default async function OrgDashboardPage({ params }: Props) {
     indicatorsResult,
     activeDonorsResult,
     pendingRequestsResult,
+    healthScoreRows,
   ] = await Promise.all([
     supabase
       .from('programs')
@@ -58,13 +60,39 @@ export default async function OrgDashboardPage({ params }: Props) {
       .select('id', { count: 'exact', head: true })
       .eq('organization_id', orgId)
       .eq('status', 'PENDING'),
+
+    supabase
+      .from('program_health_scores')
+      .select('program_id, rag_status')
+      .eq('organization_id', orgId)
+      .order('calculated_at', { ascending: false })
+      .limit(500),
   ])
 
+  // Deduplicate to latest score per program, then count by RAG status
+  const seenPrograms = new Set<string>()
+  const latestScores: Array<{ program_id: string; rag_status: string }> = []
+  for (const row of (healthScoreRows.data ?? []) as Array<{ program_id: string; rag_status: string }>) {
+    if (!seenPrograms.has(row.program_id)) {
+      seenPrograms.add(row.program_id)
+      latestScores.push(row)
+    }
+  }
+
+  const activeCount = activeProgramsResult.count ?? 0
+  const healthSummary = latestScores.length === 0 ? null : {
+    green:    latestScores.filter(r => r.rag_status === 'green').length,
+    amber:    latestScores.filter(r => r.rag_status === 'amber').length,
+    red:      latestScores.filter(r => r.rag_status === 'red').length,
+    unscored: Math.max(0, activeCount - latestScores.length),
+  }
+
   const stats: DashboardStats = {
-    activePrograms:  activeProgramsResult.count  ?? 0,
+    activePrograms:  activeCount,
     totalIndicators: indicatorsResult.count       ?? 0,
     activeDonors:    activeDonorsResult.count     ?? 0,
     pendingRequests: pendingRequestsResult.count  ?? 0,
+    healthSummary,
   }
 
   // ── Fetch recent activity (last 10 events merged) ────────────────────────────

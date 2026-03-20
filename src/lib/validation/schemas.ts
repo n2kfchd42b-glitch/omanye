@@ -215,4 +215,5 @@ export const notificationPrefsSchema = z.object({
   notify_team_changes:      z.boolean(),
   notify_donor_activity:    z.boolean(),
   notify_budget_warnings:   z.boolean(),
+  funder_digest_enabled:    z.boolean().optional(),
 })

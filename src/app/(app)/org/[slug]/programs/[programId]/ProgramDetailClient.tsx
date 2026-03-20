@@ -1,12 +1,12 @@
 'use client'
 
 import React, { useState, useOptimistic, useTransition, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowLeft, Plus, Star, Eye, EyeOff, TrendingUp, Calendar,
   MapPin, Link2, Tag, Edit2, Trash2, Loader2, Save, Globe,
   Lock, BarChart3, FileText, Users, Settings, ChevronDown, Wallet, FileBarChart,
-  Database, Activity, Clock,
+  Database, Activity, Clock, Heart,
 } from 'lucide-react'
 import { COLORS, FONTS } from '@/lib/tokens'
 import { StatusBadge, GenericBadge } from '@/components/atoms/Badge'
@@ -30,6 +30,7 @@ import {
   toggleUpdateDonorVisibility,
 } from '@/app/actions/indicators'
 import BudgetTab from './BudgetTab'
+import HealthScoreTab from './HealthScoreTab'
 import type { BudgetCategory, Expenditure, BudgetAmendment, FundingTranche, BudgetSummary, CategorySpend } from '@/lib/budget'
 import type { Program, Indicator, ProgramUpdate, IndicatorFrequency, UpdateType, ProgramVisibility } from '@/lib/programs'
 import {
@@ -62,7 +63,7 @@ interface Props {
   initialAmendments:    BudgetAmendment[]
 }
 
-type TabId = 'overview' | 'indicators' | 'updates' | 'budget' | 'reports' | 'field' | 'mae' | 'activity' | 'settings'
+type TabId = 'overview' | 'indicators' | 'updates' | 'budget' | 'reports' | 'field' | 'mae' | 'health' | 'activity' | 'settings'
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode; external?: boolean }[] = [
   { id: 'overview',   label: 'Overview',    icon: <BarChart3 size={14} /> },
@@ -72,6 +73,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode; external?: boolea
   { id: 'reports',    label: 'Reports',     icon: <FileBarChart size={14} /> },
   { id: 'field',      label: 'Field Data',  icon: <Database size={14} />, external: true },
   { id: 'mae',        label: 'M&E',         icon: <Activity size={14} />, external: true },
+  { id: 'health',     label: 'Health',      icon: <Heart size={14} /> },
   { id: 'activity',   label: 'Activity',    icon: <Clock size={14} /> },
   { id: 'settings',   label: 'Settings',    icon: <Settings size={14} /> },
 ]
@@ -103,8 +105,10 @@ export default function ProgramDetailClient({
   initialTranches,
   initialAmendments,
 }: Props) {
-  const router = useRouter()
-  const [tab, setTab]                = useState<TabId>('overview')
+  const router       = useRouter()
+  const searchParams = useSearchParams()
+  const initialTab   = (searchParams.get('tab') as TabId | null) ?? 'overview'
+  const [tab, setTab] = useState<TabId>(initialTab)
   const [program, setProgram]        = useState(initialProgram)
   const [indicators, setIndicators]  = useState(initialIndicators)
   const [updates, setUpdates]        = useState(initialUpdates)
@@ -301,6 +305,13 @@ export default function ProgramDetailClient({
           programId={program.id}
           orgSlug={orgSlug}
           canCreate={canEdit}
+        />
+      )}
+      {tab === 'health' && (
+        <HealthScoreTab
+          programId={program.id}
+          program={program}
+          isAdmin={isAdmin}
         />
       )}
       {tab === 'activity' && (

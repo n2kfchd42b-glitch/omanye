@@ -15,10 +15,16 @@ import type { Program, ProgramStatus as ProgramStatusDB, ProgramVisibility } fro
 import { PROGRAM_STATUS_LABELS, VISIBILITY_LABELS } from '@/lib/programs'
 import type { OmanyeRole } from '@/lib/supabase/database.types'
 
+interface HealthScore {
+  rag_status:      string
+  composite_score: number
+}
+
 interface Props {
-  programs: Program[]
-  userRole: OmanyeRole
-  orgSlug:  string
+  programs:     Program[]
+  userRole:     OmanyeRole
+  orgSlug:      string
+  healthScores?: Record<string, HealthScore>
 }
 
 const STATUS_FILTERS: (ProgramStatusDB | 'all')[] = ['all', 'ACTIVE', 'PLANNING', 'COMPLETED', 'SUSPENDED']
@@ -35,7 +41,7 @@ const VISIBILITY_COLORS: Record<ProgramVisibility, { bg: string; text: string }>
   PUBLIC:     { bg: '#38A16920', text: '#38A169' },
 }
 
-export default function ProgramsClient({ programs, userRole, orgSlug }: Props) {
+export default function ProgramsClient({ programs, userRole, orgSlug, healthScores = {} }: Props) {
   const router = useRouter()
   const [filter, setFilter]   = useState<ProgramStatusDB | 'all'>('all')
   const [search, setSearch]   = useState('')
@@ -175,6 +181,7 @@ export default function ProgramsClient({ programs, userRole, orgSlug }: Props) {
             <ProgramCard
               key={p.id}
               program={p}
+              health={healthScores[p.id]}
               onClick={() => router.push(`/org/${orgSlug}/programs/${p.id}`)}
             />
           ))}
@@ -184,9 +191,27 @@ export default function ProgramsClient({ programs, userRole, orgSlug }: Props) {
   )
 }
 
+// ── RAG colors ────────────────────────────────────────────────────────────────
+
+const RAG_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
+  green: { bg: '#38A16914', text: '#38A169', dot: '#38A169' },
+  amber: { bg: '#D4AF5C14', text: '#D4AF5C', dot: '#D4AF5C' },
+  red:   { bg: '#E53E3E14', text: '#E53E3E', dot: '#E53E3E' },
+}
+
+const RAG_LABELS: Record<string, string> = {
+  green: 'On Track',
+  amber: 'At Risk',
+  red:   'Critical',
+}
+
 // ── ProgramCard ────────────────────────────────────────────────────────────────
 
-function ProgramCard({ program: p, onClick }: { program: Program; onClick: () => void }) {
+function ProgramCard({ program: p, health, onClick }: {
+  program: Program
+  health?: HealthScore
+  onClick: () => void
+}) {
   const statusKey  = p.status.toLowerCase()
   const barColor   = STATUS_MAP[statusKey]?.dot ?? COLORS.stone
   const vis        = p.visibility as ProgramVisibility
@@ -246,16 +271,40 @@ function ProgramCard({ program: p, onClick }: { program: Program; onClick: () =>
 
       {/* Content */}
       <div style={{ padding: '16px 18px 18px' }}>
-        <h3 style={{
-          fontFamily:  FONTS.heading,
-          fontSize:    15,
-          fontWeight:  700,
-          color:       COLORS.forest,
-          marginBottom: 4,
-          lineHeight:  1.3,
-        }}>
-          {p.name}
-        </h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4, gap: 8 }}>
+          <h3 style={{
+            fontFamily: FONTS.heading,
+            fontSize:   15,
+            fontWeight: 700,
+            color:      COLORS.forest,
+            lineHeight: 1.3,
+            margin:     0,
+            flex:       1,
+          }}>
+            {p.name}
+          </h3>
+          {health && (() => {
+            const rc = RAG_COLORS[health.rag_status] ?? RAG_COLORS.amber
+            return (
+              <span style={{
+                display:      'inline-flex',
+                alignItems:   'center',
+                gap:          4,
+                padding:      '2px 8px',
+                borderRadius: 10,
+                fontSize:     10,
+                fontWeight:   600,
+                background:   rc.bg,
+                color:        rc.text,
+                flexShrink:   0,
+                whiteSpace:   'nowrap',
+              }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: rc.dot, display: 'inline-block' }} />
+                {health.composite_score} · {RAG_LABELS[health.rag_status] ?? health.rag_status}
+              </span>
+            )
+          })()}
+        </div>
 
         {p.objective && (
           <p style={{

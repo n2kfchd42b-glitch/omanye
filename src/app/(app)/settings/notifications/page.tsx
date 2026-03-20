@@ -117,6 +117,7 @@ const DEFAULTS: PrefsState = {
   notify_team_changes:      true,
   notify_donor_activity:    true,
   notify_budget_warnings:   true,
+  funder_digest_enabled:    true,
 }
 
 export default function NotificationPreferencesPage() {
@@ -291,6 +292,12 @@ export default function NotificationPreferencesPage() {
             hint="Sent via your registered email address"
             checked={prefs.email_notifications}
             onChange={set('email_notifications')}
+          />
+          <PrefRow
+            label="Weekly Funder Match Digest"
+            hint="Receive a weekly email of grant opportunities matched to your profile"
+            checked={prefs.funder_digest_enabled}
+            onChange={set('funder_digest_enabled')}
           />
 
           {/* High priority note */}

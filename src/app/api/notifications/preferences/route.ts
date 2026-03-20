@@ -36,6 +36,7 @@ export async function GET() {
         notify_team_changes:      true,
         notify_donor_activity:    true,
         notify_budget_warnings:   true,
+        funder_digest_enabled:    true,
       },
     })
   }

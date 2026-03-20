@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import {
   FolderOpen, Database, Users, TrendingUp,
   Plus, AlertCircle, ArrowRight, BarChart2,
-  HandCoins, Bell, Activity,
+  HandCoins, Bell, Activity, Heart, RefreshCw,
 } from 'lucide-react'
 import { COLORS, FONTS } from '@/lib/tokens'
 import { StatusBadge }  from '@/components/atoms/Badge'
@@ -231,6 +231,41 @@ export function Dashboard({
         </div>
       </div>
 
+      {/* Program Health Overview */}
+      {stats !== undefined && (
+        <div className="fade-up-4" style={{ marginBottom: 28 }}>
+          <div className="card" style={{ padding: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Heart size={15} style={{ color: COLORS.crimson }} />
+                <h3 style={{ fontFamily: FONTS.heading, fontSize: 15, fontWeight: 600, color: COLORS.forest }}>
+                  Program Health
+                </h3>
+              </div>
+              {user.role === 'Admin' && (
+                <RecalcButton />
+              )}
+            </div>
+            {stats?.healthSummary == null ? (
+              <p style={{ fontSize: 13, color: COLORS.stone }}>
+                No health data yet — click Recalculate to score your active programs.
+              </p>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(3, 1fr)', gap: 12 }}>
+                <RAGSummaryCard color="#38A169" label="On Track"  count={stats.healthSummary.green} />
+                <RAGSummaryCard color={COLORS.amber} label="At Risk"   count={stats.healthSummary.amber} />
+                <RAGSummaryCard color={COLORS.crimson} label="Critical" count={stats.healthSummary.red} />
+              </div>
+            )}
+            {stats?.healthSummary && stats.healthSummary.unscored > 0 && (
+              <p style={{ fontSize: 11, color: COLORS.stone, marginTop: 12 }}>
+                {stats.healthSummary.unscored} active program{stats.healthSummary.unscored !== 1 ? 's' : ''} not yet scored
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Quick action cards */}
       <div className="fade-up-4" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 14 }}>
         <QuickCard icon={FolderOpen} label="New Program"   desc="Create and track a program"          onClick={() => onNavigate('programs')} />
@@ -256,6 +291,66 @@ function StatCard({ icon: Icon, label, value, color }: {
       <p style={{ fontSize: 22, fontWeight: 700, color: COLORS.forest, lineHeight: 1 }}>{value}</p>
       <p style={{ fontSize: 11, color: COLORS.stone, marginTop: 4 }}>{label}</p>
     </div>
+  )
+}
+
+function RAGSummaryCard({ color, label, count }: { color: string; label: string; count: number }) {
+  return (
+    <div style={{
+      padding:      '14px 16px',
+      borderRadius: 10,
+      background:   color + '14',
+      border:       `1px solid ${color}30`,
+      textAlign:    'center',
+    }}>
+      <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, margin: '0 auto 8px' }} />
+      <p style={{ fontSize: 20, fontWeight: 700, color, lineHeight: 1 }}>{count}</p>
+      <p style={{ fontSize: 11, color: COLORS.stone, marginTop: 4 }}>{label}</p>
+    </div>
+  )
+}
+
+function RecalcButton() {
+  const [loading, setLoading] = useState(false)
+  const [done,    setDone]    = useState(false)
+
+  const handleClick = async () => {
+    if (loading) return
+    setLoading(true)
+    setDone(false)
+    try {
+      await fetch('/api/health/recalculate', { method: 'POST' })
+      setDone(true)
+      setTimeout(() => setDone(false), 4000)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={loading}
+      style={{
+        display:      'flex',
+        alignItems:   'center',
+        gap:          5,
+        padding:      '5px 12px',
+        borderRadius: 7,
+        fontSize:     12,
+        fontWeight:   500,
+        cursor:       loading ? 'not-allowed' : 'pointer',
+        border:       `1px solid ${COLORS.mist}`,
+        background:   COLORS.foam,
+        color:        done ? '#38A169' : COLORS.slate,
+        opacity:      loading ? 0.6 : 1,
+        transition:   'color 0.2s',
+        fontFamily:   FONTS.body,
+      }}
+    >
+      <RefreshCw size={11} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+      {done ? 'Recalculated' : 'Recalculate'}
+    </button>
   )
 }
 
