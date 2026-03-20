@@ -21,6 +21,7 @@ interface Props {
   orgId:        string
   ngoProfile:   NgoProfile
   initialSaved: SavedRow[]
+  defaultTab?:  'feed' | 'saved'
 }
 
 const FOCUS_OPTIONS   = ['health','education','WASH','food security','livelihoods','protection','gender','climate','governance']
@@ -403,11 +404,11 @@ function RemoveConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; on
 
 // ── FundersClient (main) ──────────────────────────────────────────────────────
 
-export default function FundersClient({ orgSlug, orgId: _orgId, ngoProfile, initialSaved }: Props) {
+export default function FundersClient({ orgSlug, orgId: _orgId, ngoProfile, initialSaved, defaultTab = 'feed' }: Props) {
   const router = useRouter()
 
   // ── Tab state ─────────────────────────────────────────────────────────────
-  const [tab, setTab] = useState<'feed' | 'saved'>('feed')
+  const [tab, setTab] = useState<'feed' | 'saved'>(defaultTab)
 
   // ── Toast ─────────────────────────────────────────────────────────────────
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)

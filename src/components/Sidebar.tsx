@@ -5,7 +5,7 @@ import {
   LayoutDashboard, FolderOpen,
   FileBarChart, RadioTower,
   Users, Settings, ChevronLeft, ChevronRight, X,
-  HandCoins, Shield, Database, BarChart2, Landmark, PenLine, TrendingUp,
+  HandCoins, Shield, Database, BarChart2, Landmark, PenLine, TrendingUp, Target,
 } from 'lucide-react'
 import { COLORS, SPACING } from '@/lib/tokens'
 import { OmanyeLogo, OmanyeSymbol } from '@/components/Logo'
@@ -57,6 +57,10 @@ const WORKSPACE_NAV: NavItem[] = [
 ]
 
 const FUNDING_NAV: NavItem[] = [
+  {
+    id: 'matches', label: 'Matches', icon: Target,
+    allowedRoles: ['Admin', 'Field Staff'],
+  },
   {
     id: 'funders', label: 'Funders', icon: Landmark,
     allowedRoles: ['Admin', 'Field Staff'],

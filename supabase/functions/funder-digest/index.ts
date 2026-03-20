@@ -1,36 +1,30 @@
 // ── OMANYE — Funder Digest Edge Function ──────────────────────────────────────
 // Sends a weekly plain-text email digest to NGO team members showing their
-// top 5 matched funder opportunities.
+// top 5 matched funder opportunities. Also creates in-platform notifications
+// for high-confidence matches (score ≥ 75).
 //
 // Schedule: every Monday at 08:00 UTC
 //   supabase cron: "0 8 * * 1"
 //
 // Environment variables required:
-//   SUPABASE_URL        — your project URL
+//   SUPABASE_URL              — your project URL
 //   SUPABASE_SERVICE_ROLE_KEY — service role key (bypasses RLS)
-//   RESEND_API_KEY      — Resend API key
-//   SITE_URL            — e.g. https://app.omanye.com
-//   FROM_EMAIL          — e.g. noreply@omanye.com
+//   RESEND_API_KEY            — Resend API key
+//   SITE_URL                  — e.g. https://app.omanye.com
+//   FROM_EMAIL                — e.g. noreply@omanye.com
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const SUPABASE_URL     = Deno.env.get('SUPABASE_URL')              ?? ''
-const SERVICE_KEY      = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-const RESEND_API_KEY   = Deno.env.get('RESEND_API_KEY')            ?? ''
-const SITE_URL         = Deno.env.get('SITE_URL')                  ?? 'https://app.omanye.com'
-const FROM_EMAIL       = Deno.env.get('FROM_EMAIL')                ?? 'noreply@omanye.com'
+const SUPABASE_URL   = Deno.env.get('SUPABASE_URL')              ?? ''
+const SERVICE_KEY    = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')            ?? ''
+const SITE_URL       = Deno.env.get('SITE_URL')                  ?? 'https://app.omanye.com'
+const FROM_EMAIL     = Deno.env.get('FROM_EMAIL')                ?? 'noreply@omanye.com'
 
-// ── Match score (inline copy for Deno — cannot import from src/) ──────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-interface NgoProfile {
-  focus_areas:          string[]
-  eligible_geographies: string[]
-  program_types:        string[]
-  annual_budget_range:  string | null
-}
-
-interface FunderOpp {
+interface RankedOpp {
   id:                   string
   funder_name:          string
   opportunity_title:    string
@@ -38,32 +32,7 @@ interface FunderOpp {
   funding_range_max:    number | null
   application_deadline: string | null
   external_link:        string | null
-  focus_areas:          string[]
-  eligible_geographies: string[]
-  eligible_org_types:   string[]
-}
-
-const BUDGET_MIDPOINTS: Record<string, number> = {
-  under_100k: 50_000,
-  '100k_500k': 300_000,
-  '500k_1m':   750_000,
-  '1m_5m':   3_000_000,
-  above_5m: 10_000_000,
-}
-
-function matchScore(ngo: NgoProfile, opp: FunderOpp): number {
-  const focusDenom  = opp.focus_areas.length || 1
-  const focusHits   = ngo.focus_areas.filter(x => opp.focus_areas.includes(x)).length
-  const geoDenom    = opp.eligible_geographies.length || 1
-  const geoHits     = ngo.eligible_geographies.filter(x => opp.eligible_geographies.includes(x)).length
-  let budget = 0
-  if (ngo.annual_budget_range && BUDGET_MIDPOINTS[ngo.annual_budget_range] !== undefined) {
-    const mid = BUDGET_MIDPOINTS[ngo.annual_budget_range]
-    const min = opp.funding_range_min ?? 0
-    const max = opp.funding_range_max ?? Infinity
-    if (mid >= min && mid <= max) budget = 20
-  }
-  return Math.round((focusHits / focusDenom) * 40 + (geoHits / geoDenom) * 40 + budget)
+  match_score:          number
 }
 
 // ── Formatting ────────────────────────────────────────────────────────────────
@@ -92,8 +61,7 @@ function fmtDate(d: string | null): string {
 function buildEmailText(opts: {
   orgName:       string
   recipientName: string | null
-  opps:          FunderOpp[]
-  scores:        number[]
+  opps:          RankedOpp[]
   orgSlug:       string
 }): string {
   const lines: string[] = []
@@ -112,17 +80,15 @@ function buildEmailText(opts: {
     lines.push(`   Funder:   ${opp.funder_name}`)
     lines.push(`   Funding:  ${fmtRange(opp.funding_range_min, opp.funding_range_max)}`)
     lines.push(`   Deadline: ${fmtDate(opp.application_deadline)}`)
-    lines.push(`   Match:    ${opts.scores[i]}/100`)
-    if (opp.external_link) {
-      lines.push(`   Apply:    ${opp.external_link}`)
-    }
+    lines.push(`   Match:    ${opp.match_score}/100${opp.match_score >= 75 ? ' ★ High Confidence' : ''}`)
+    if (opp.external_link) lines.push(`   Apply:    ${opp.external_link}`)
     lines.push('')
     lines.push('─'.repeat(60))
   }
 
   lines.push('')
-  lines.push(`View all opportunities on Omanye:`)
-  lines.push(`${SITE_URL}/org/${opts.orgSlug}/funders`)
+  lines.push(`View your top matches on Omanye:`)
+  lines.push(`${SITE_URL}/org/${opts.orgSlug}/matches`)
   lines.push('')
   lines.push('To stop receiving these digests, visit your notification settings:')
   lines.push(`${SITE_URL}/org/${opts.orgSlug}/settings`)
@@ -146,48 +112,46 @@ serve(async (_req) => {
   const db: any = supabase
   const { data: orgs, error: orgsErr } = await db
     .from('organizations')
-    .select('id, name, slug, focus_areas, eligible_geographies, program_types, annual_budget_range')
+    .select('id, name, slug, focus_areas')
     .filter('focus_areas', 'not.eq', '{}')
 
   if (orgsErr) {
     return new Response(JSON.stringify({ error: orgsErr.message }), { status: 500 })
   }
 
-  // 2. Fetch all active funder opportunities
-  const { data: allOpps, error: oppsErr } = await db
-    .from('funder_opportunities')
-    .select('id, funder_name, opportunity_title, funding_range_min, funding_range_max, application_deadline, external_link, focus_areas, eligible_geographies, eligible_org_types')
-    .eq('status', 'active')
-
-  if (oppsErr) {
-    return new Response(JSON.stringify({ error: oppsErr.message }), { status: 500 })
-  }
-
   let sent = 0
   let errors = 0
+  let notifications_created = 0
 
   for (const org of (orgs ?? [])) {
-    const ngoProfile: NgoProfile = {
-      focus_areas:          org.focus_areas          ?? [],
-      eligible_geographies: org.eligible_geographies ?? [],
-      program_types:        org.program_types        ?? [],
-      annual_budget_range:  org.annual_budget_range  ?? null,
+    // 2. Call the matches API endpoint (server-to-server auth via service key)
+    //    Returns top 20 ranked matches with explanations already computed.
+    let topOpps: RankedOpp[] = []
+    try {
+      const matchRes = await fetch(
+        `${SITE_URL}/api/matches?org_id=${org.id}&limit=20`,
+        {
+          headers: {
+            Authorization: `Bearer ${SERVICE_KEY}`,
+          },
+        }
+      )
+      if (matchRes.ok) {
+        const json = await matchRes.json() as { data: RankedOpp[] }
+        topOpps = (json.data ?? []).slice(0, 5)
+      }
+    } catch (_e) {
+      // If the API is unreachable, skip this org's email but continue
+      errors++
+      continue
     }
 
-    // Score and rank opps for this org
-    const scored = (allOpps as FunderOpp[])
-      .map(opp => ({ opp, score: matchScore(ngoProfile, opp) }))
-      .sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score
-        const da = a.opp.application_deadline ? new Date(a.opp.application_deadline).getTime() : Infinity
-        const db2 = b.opp.application_deadline ? new Date(b.opp.application_deadline).getTime() : Infinity
-        return da - db2
-      })
-      .slice(0, 5)
+    if (topOpps.length === 0) continue
 
-    if (scored.length === 0) continue
+    // 3. Identify high-confidence matches (score ≥ 75)
+    const highMatches = topOpps.filter(o => o.match_score >= 75)
 
-    // Fetch team members with email notifications enabled + funder_digest_enabled
+    // 4. Fetch team members eligible for digest
     const { data: members } = await db
       .from('profiles')
       .select('id, full_name, notification_preferences(email_notifications, funder_digest_enabled)')
@@ -199,12 +163,43 @@ serve(async (_req) => {
         ? member.notification_preferences[0]
         : member.notification_preferences
 
-      // Skip if email notifications globally off or digest specifically disabled
-      if (prefs && (prefs.email_notifications === false || prefs.funder_digest_enabled === false)) {
-        continue
+      const digestEnabled =
+        !prefs ||
+        (prefs.email_notifications !== false && prefs.funder_digest_enabled !== false)
+
+      // 5. Create in-platform notifications for high-confidence matches
+      //    (regardless of email digest preference — these are in-app only)
+      if (highMatches.length > 0) {
+        for (const opp of highMatches) {
+          // Check if this notification already exists (avoid duplication on re-runs)
+          const { count } = await db
+            .from('notifications')
+            .select('id', { count: 'exact', head: true })
+            .eq('organization_id', org.id)
+            .eq('recipient_id', member.id)
+            .eq('type', 'FUNDER_HIGH_MATCH_FOUND')
+            .eq('link', `/org/${org.slug}/matches`)
+            .ilike('body', `%${opp.id}%`)
+
+          if ((count ?? 0) === 0) {
+            await db.from('notifications').insert({
+              organization_id: org.id,
+              recipient_id:    member.id,
+              type:            'FUNDER_HIGH_MATCH_FOUND',
+              title:           `High-confidence match: ${opp.opportunity_title}`,
+              body:            `${opp.funder_name} scored ${opp.match_score}/100 for your organization. Opportunity ID: ${opp.id}`,
+              link:            `/org/${org.slug}/matches`,
+              priority:        'HIGH',
+              read:            false,
+            })
+            notifications_created++
+          }
+        }
       }
 
-      // Get auth user email
+      // 6. Send email digest (if enabled)
+      if (!digestEnabled) continue
+
       const { data: authData } = await db.auth.admin.getUserById(member.id)
       const email = authData?.user?.email
       if (!email) continue
@@ -212,17 +207,15 @@ serve(async (_req) => {
       const body = buildEmailText({
         orgName:       org.name,
         recipientName: member.full_name,
-        opps:          scored.map(s => s.opp),
-        scores:        scored.map(s => s.score),
+        opps:          topOpps,
         orgSlug:       org.slug,
       })
 
-      // Send via Resend
       const res = await fetch('https://api.resend.com/emails', {
         method:  'POST',
         headers: {
-          'Authorization': `Bearer ${RESEND_API_KEY}`,
-          'Content-Type':  'application/json',
+          Authorization: `Bearer ${RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           from:    `Omanye <${FROM_EMAIL}>`,
@@ -238,7 +231,13 @@ serve(async (_req) => {
   }
 
   return new Response(
-    JSON.stringify({ success: true, sent, errors, orgs_processed: (orgs ?? []).length }),
+    JSON.stringify({
+      success: true,
+      sent,
+      errors,
+      notifications_created,
+      orgs_processed: (orgs ?? []).length,
+    }),
     { status: 200, headers: { 'Content-Type': 'application/json' } }
   )
 })

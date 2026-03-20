@@ -26,6 +26,7 @@ function deriveViewId(pathname: string, searchView?: string | null): ViewId {
   if (pathname.includes('/programs/') && pathname.includes('/mae'))   return 'analytics'
   if (pathname.includes('/programs'))  return 'programs'
   if (pathname.includes('/donors'))    return 'donors'
+  if (pathname.includes('/matches'))   return 'matches'
   if (pathname.includes('/funders'))   return 'funders'
   if (pathname.includes('/grants'))    return 'grants'
   if (pathname.includes('/impact'))    return 'impact'
@@ -86,6 +87,7 @@ export default function AppShell({ user, orgSlug, children }: AppShellProps) {
       dashboard:   `/org/${orgSlug}/dashboard`,
       programs:    `/org/${orgSlug}/programs`,
       donors:      `/org/${orgSlug}/donors`,
+      matches:     `/org/${orgSlug}/matches`,
       funders:     `/org/${orgSlug}/funders`,
       grants:      `/org/${orgSlug}/grants`,
       impact:      `/org/${orgSlug}/impact`,

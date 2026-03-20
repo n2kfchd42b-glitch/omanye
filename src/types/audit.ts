@@ -97,6 +97,7 @@ export type NotificationType =
   | 'DONOR_ACCESS_REQUESTED'
   | 'DONOR_ACCESS_GRANTED'
   | 'BUDGET_WARNING'
+  | 'FUNDER_HIGH_MATCH_FOUND'
 
 export type NotificationPriority = 'LOW' | 'MEDIUM' | 'HIGH'
 
@@ -132,6 +133,7 @@ export interface NotificationPreferences {
   notify_team_changes:      boolean
   notify_donor_activity:    boolean
   notify_budget_warnings:   boolean
+  funder_digest_enabled:    boolean
   created_at:               string
   updated_at:               string
 }

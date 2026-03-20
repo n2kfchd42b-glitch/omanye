@@ -235,6 +235,7 @@ export type ViewId =
   | 'settings'
   | 'funders'
   | 'grants'
+  | 'matches'
   | 'impact'
 
 export type ToastVariant = 'success' | 'error' | 'warn'
