@@ -30,14 +30,16 @@ export async function POST(req: NextRequest) {
   if (!['NGO_ADMIN', 'NGO_STAFF'].includes(profile.role)) return forbidden()
   if (!profile.organization_id) return forbidden('No organization found')
 
-  let body: { organization_id?: string; form?: Partial<GrantInputForm> }
+  let body: { organization_id?: string; form?: Partial<GrantInputForm>; stream_only?: boolean; program_id?: string }
   try {
     body = await req.json()
   } catch {
     return internalError('Invalid JSON body')
   }
 
-  const form = body.form as GrantInputForm
+  const form       = body.form as GrantInputForm
+  const streamOnly = !!body.stream_only
+  const programId  = body.program_id ?? null
   if (!form?.funder_name || !form?.opportunity_title || !form?.funding_amount_requested) {
     return internalError('Missing required form fields')
   }
@@ -172,9 +174,16 @@ Write the full six-section proposal now, starting with ${SECTION_DELIMITER(SECTI
           send({ type: 'delta', section: finalKey, text: buffer })
         }
 
+        // stream_only mode: return sections without saving a new grant record
+        if (streamOnly) {
+          send({ type: 'done', sections })
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+          return
+        }
+
         // Save grant + version 1 to database
         const grantId = crypto.randomUUID()
-        const { error: grantErr } = await db.from('grants').insert({
+        const grantInsert: Record<string, unknown> = {
           id:                       grantId,
           organization_id:          profile.organization_id,
           funder_name:              form.funder_name,
@@ -185,7 +194,10 @@ Write the full six-section proposal now, starting with ${SECTION_DELIMITER(SECTI
           status:                   'draft',
           current_version:          1,
           created_by:               user.id,
-        })
+        }
+        if (programId) grantInsert.program_id = programId
+
+        const { error: grantErr } = await db.from('grants').insert(grantInsert)
 
         if (grantErr) {
           send({ type: 'error', message: `Database error: ${grantErr.message}` })

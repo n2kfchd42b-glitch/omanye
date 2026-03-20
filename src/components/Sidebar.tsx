@@ -5,7 +5,7 @@ import {
   LayoutDashboard, FolderOpen,
   FileBarChart, RadioTower,
   Users, Settings, ChevronLeft, ChevronRight, X,
-  HandCoins, Shield, Database, BarChart2, Landmark, PenLine,
+  HandCoins, Shield, Database, BarChart2, Landmark, PenLine, TrendingUp,
 } from 'lucide-react'
 import { COLORS, SPACING } from '@/lib/tokens'
 import { OmanyeLogo, OmanyeSymbol } from '@/components/Logo'
@@ -67,6 +67,13 @@ const FUNDING_NAV: NavItem[] = [
   },
 ]
 
+const TOOLS_NAV: NavItem[] = [
+  {
+    id: 'impact', label: 'Impact Estimator', icon: TrendingUp,
+    allowedRoles: ['Admin', 'Field Staff', 'M&E Officer', 'Supervisor'],
+  },
+]
+
 const SYSTEM_NAV: NavItem[] = [
   {
     id: 'audit', label: 'Audit Log', icon: Shield,
@@ -100,6 +107,7 @@ export function Sidebar({
 
   const visibleWorkspace = WORKSPACE_NAV.filter(item => item.allowedRoles.includes(user.role))
   const visibleFunding   = FUNDING_NAV.filter(item => item.allowedRoles.includes(user.role))
+  const visibleTools     = TOOLS_NAV.filter(item => item.allowedRoles.includes(user.role))
   const visibleSystem    = SYSTEM_NAV.filter(item => item.allowedRoles.includes(user.role))
 
   // On mobile: fixed overlay drawer that slides in/out
@@ -216,6 +224,31 @@ export function Sidebar({
               </p>
             )}
             {visibleFunding.map(item => (
+              <NavLink
+                key={item.id}
+                item={item}
+                active={view === item.id}
+                pending={pendingNav === item.id}
+                collapsed={!isMobile && collapsed}
+                onNav={handleNav}
+              />
+            ))}
+          </>
+        )}
+
+        {visibleTools.length > 0 && (
+          <>
+            <div style={{ margin: '12px 0', borderTop: `1px solid rgba(255,255,255,0.06)` }} />
+            {!((!isMobile) && collapsed) && (
+              <p style={{
+                fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
+                letterSpacing: '0.1em', color: 'rgba(212,175,92,0.40)',
+                padding: '0 16px 8px',
+              }}>
+                Tools
+              </p>
+            )}
+            {visibleTools.map(item => (
               <NavLink
                 key={item.id}
                 item={item}

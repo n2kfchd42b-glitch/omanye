@@ -56,7 +56,7 @@ export async function PATCH(
 
   if (error) return internalError(error.message)
 
-  // Audit log (best-effort — ignore errors so status update still succeeds)
+  // Audit log (best-effort — log errors but don't block the response)
   await db.from('audit_logs').insert({
     organization_id: profile.organization_id,
     actor_id:        user.id,
@@ -66,7 +66,9 @@ export async function PATCH(
     resource_id:     grant.id,
     resource_name:   grant.opportunity_title,
     details:         `Status changed from ${grant.status} to ${body.status}`,
-  }).catch(() => {/* ignore */})
+  }).catch((e: unknown) => {
+    console.error('[audit] grant status log failed:', e)
+  })
 
   return NextResponse.json({ success: true })
 }

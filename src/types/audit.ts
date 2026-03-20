@@ -45,6 +45,8 @@ export type AuditAction =
   | 'report.deleted'
   // Reports
   | 'report.archived'
+  // Impact
+  | 'impact.estimate_created'
 
 export interface AuditLogEntry {
   organizationId: string
@@ -180,4 +182,5 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   'indicator.deleted':         'Deleted indicator',
   'report.deleted':            'Deleted report',
   'report.archived':           'Archived report',
+  'impact.estimate_created':   'Created impact estimate',
 }
