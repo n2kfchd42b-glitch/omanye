@@ -569,94 +569,68 @@ export default function FieldStaffPage() {
   const params = useParams<{ slug: string }>()
   const router = useRouter()
 
-  const [activeTab,        setActiveTab]        = useState<'forms' | 'history'>('forms')
-  const [programs,         setPrograms]          = useState<{ id: string; name: string }[]>([])
-  const [selectedProgramId, setSelectedProgramId] = useState('')
-  const [forms,            setForms]             = useState<FieldCollectionForm[]>([])
-  const [mySubmissions,    setMySubmissions]     = useState<FieldSubmission[]>([])
-  const [loading,          setLoading]           = useState(true)
-  const [wizard,           setWizard]            = useState<FieldCollectionForm | null>(null)
-  const [userId,           setUserId]            = useState('')
-  const [isOnline,         setIsOnline]          = useState(true)
-  const [pendingCount,     setPendingCount]      = useState(0)
-  const [syncing,          setSyncing]           = useState(false)
-  const [syncMsg,          setSyncMsg]           = useState('')
-
-  // ── Online/offline detection ───────────────────────────────────────────────
-
-  useEffect(() => {
-    setIsOnline(navigator.onLine)
-
-    const handleOnline = async () => {
-      setIsOnline(true)
-      // Attempt auto-sync when connection is restored
-      const count = await queueCount()
-      if (count === 0) { setPendingCount(0); return }
-
-      setSyncing(true)
-      setSyncMsg(`Syncing ${count} offline submission${count > 1 ? 's' : ''}…`)
-
-      const result = await syncQueue((done, total) => {
-        setSyncMsg(`Syncing… ${done}/${total}`)
-      })
-
-      setSyncing(false)
-      setPendingCount(await queueCount())
-
-      if (result.succeeded > 0) {
-        setSyncMsg(`✓ Synced ${result.succeeded} submission${result.succeeded > 1 ? 's' : ''}`)
-        // Reload submissions list to show newly synced items
-        if (selectedProgramId) await loadFormsAndSubs(selectedProgramId, userId)
-      }
-      if (result.failed > 0) {
-        setSyncMsg(`${result.failed} submission${result.failed > 1 ? 's' : ''} failed to sync`)
-      }
-
-      // Clear message after a few seconds
-      setTimeout(() => setSyncMsg(''), 5_000)
-    }
-
-    const handleOffline = () => setIsOnline(false)
-
-    window.addEventListener('online',  handleOnline)
-    window.addEventListener('offline', handleOffline)
-
-    // Also wire up background-sync messages from the service worker
-    const handleSWMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'BACKGROUND_SYNC') handleOnline()
-    }
-    navigator.serviceWorker?.addEventListener('message', handleSWMessage)
-
-    return () => {
-      window.removeEventListener('online',  handleOnline)
-      window.removeEventListener('offline', handleOffline)
-      navigator.serviceWorker?.removeEventListener('message', handleSWMessage)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProgramId, userId])
-
-  // Refresh queue count on mount
-  useEffect(() => {
-    queueCount().then(setPendingCount).catch(() => {})
-  }, [])
+  const [activeTab,          setActiveTab]          = useState<'forms' | 'history'>('forms')
+  const [programs,           setPrograms]            = useState<{ id: string; name: string }[]>([])
+  const [selectedProgramId,  setSelectedProgramId]  = useState('')
+  const [forms,              setForms]               = useState<FieldCollectionForm[]>([])
+  const [mySubmissions,      setMySubmissions]       = useState<FieldSubmission[]>([])
+  const [loading,            setLoading]             = useState(true)
+  const [loadError,          setLoadError]           = useState('')
+  const [wizard,             setWizard]              = useState<FieldCollectionForm | null>(null)
+  const [userId,             setUserId]              = useState('')
+  const [isOnline,           setIsOnline]            = useState(true)
+  const [pendingCount,       setPendingCount]        = useState(0)
+  const [syncing,            setSyncing]             = useState(false)
+  const [syncMsg,            setSyncMsg]             = useState('')
 
   // ── Data loading ───────────────────────────────────────────────────────────
 
+  // Stable callback so the online handler and handleProgramChange can call it
+  // without stale-closure issues.
+  const loadFormsAndSubs = useCallback(async (programId: string, uid: string) => {
+    const [formsRes, subRes] = await Promise.all([
+      fetch(`/api/field/forms?program_id=${programId}`),
+      fetch(`/api/field/submissions?program_id=${programId}`),
+    ])
+    if (formsRes.ok) {
+      const j = await formsRes.json()
+      setForms((j.data ?? []).filter((f: FieldCollectionForm) => f.active))
+    } else {
+      setForms([])
+    }
+    if (subRes.ok) {
+      const j = await subRes.json()
+      setMySubmissions((j.data ?? []).filter((s: FieldSubmission) => s.submitted_by === uid))
+    } else {
+      setMySubmissions([])
+    }
+  }, [])
+
   const load = useCallback(async () => {
+    setLoadError('')
     try {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.replace('/login'); return }
+      const { data: { user }, error: authErr } = await supabase.auth.getUser()
+      if (authErr || !user) { router.replace('/login'); return }
       setUserId(user.id)
 
-      const { data: profileRaw } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single()
-      const profile = profileRaw as { organization_id: string } | null
+      // Fetch profile and programs in parallel
+      const [profileRes, progsRes] = await Promise.all([
+        supabase.from('profiles').select('organization_id').eq('id', user.id).single(),
+        // Programs will be re-fetched once we have the org id; placeholder needed for parallel
+        Promise.resolve(null),
+      ])
 
-      // Org programs
+      const profile = profileRes.data as { organization_id: string } | null
+      if (!profile?.organization_id) {
+        setLoadError('Could not load your organisation. Please refresh.')
+        return
+      }
+
       const { data: progs } = await supabase
         .from('programs')
         .select('id, name')
-        .eq('organization_id', profile?.organization_id ?? '')
+        .eq('organization_id', profile.organization_id)
         .is('deleted_at', null)
         .order('name')
 
@@ -671,27 +645,65 @@ export default function FieldStaffPage() {
       }
     } catch (err) {
       console.error('Field data load error:', err)
+      setLoadError('Failed to load field data. Tap to retry.')
     } finally {
       setLoading(false)
     }
-  }, [params.slug, router])
-
-  async function loadFormsAndSubs(programId: string, uid: string) {
-    const [formsRes, subRes] = await Promise.all([
-      fetch(`/api/field/forms?program_id=${programId}`),
-      fetch(`/api/field/submissions?program_id=${programId}`),
-    ])
-    if (formsRes.ok) {
-      const j = await formsRes.json()
-      setForms((j.data ?? []).filter((f: FieldCollectionForm) => f.active))
-    }
-    if (subRes.ok) {
-      const j = await subRes.json()
-      setMySubmissions((j.data ?? []).filter((s: FieldSubmission) => s.submitted_by === uid))
-    }
-  }
+  }, [router, loadFormsAndSubs])
 
   useEffect(() => { load() }, [load])
+
+  // ── Online/offline detection ───────────────────────────────────────────────
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine)
+
+    const handleOnline = async () => {
+      setIsOnline(true)
+      const count = await queueCount()
+      if (count === 0) { setPendingCount(0); return }
+
+      setSyncing(true)
+      setSyncMsg(`Syncing ${count} offline submission${count > 1 ? 's' : ''}…`)
+
+      const result = await syncQueue((done, total) => {
+        setSyncMsg(`Syncing… ${done}/${total}`)
+      })
+
+      setSyncing(false)
+      const remaining = await queueCount()
+      setPendingCount(remaining)
+
+      if (result.succeeded > 0) {
+        setSyncMsg(`✓ Synced ${result.succeeded} submission${result.succeeded > 1 ? 's' : ''}`)
+      }
+      if (result.failed > 0) {
+        setSyncMsg(`${result.failed} submission${result.failed > 1 ? 's' : ''} failed to sync`)
+      }
+      setTimeout(() => setSyncMsg(''), 5_000)
+    }
+
+    const handleOffline = () => setIsOnline(false)
+
+    window.addEventListener('online',  handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    const handleSWMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'BACKGROUND_SYNC') handleOnline()
+    }
+    navigator.serviceWorker?.addEventListener('message', handleSWMessage)
+
+    return () => {
+      window.removeEventListener('online',  handleOnline)
+      window.removeEventListener('offline', handleOffline)
+      navigator.serviceWorker?.removeEventListener('message', handleSWMessage)
+    }
+  }, [])
+
+  // Refresh queue count on mount
+  useEffect(() => {
+    queueCount().then(setPendingCount).catch(() => {})
+  }, [])
 
   async function handleProgramChange(id: string) {
     setSelectedProgramId(id)
@@ -706,8 +718,23 @@ export default function FieldStaffPage() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 300, gap: 12 }}>
         <Loader2 size={28} style={{ color: COLORS.stone, animation: 'spin 1s linear infinite' }} />
+        <p style={{ fontSize: 13, color: COLORS.stone }}>Loading field data…</p>
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 300, gap: 12, padding: 24, textAlign: 'center' }}>
+        <p style={{ fontSize: 15, color: COLORS.crimson }}>{loadError}</p>
+        <button
+          onClick={() => { setLoading(true); load() }}
+          style={{ padding: '10px 20px', borderRadius: 10, background: COLORS.forest, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}
+        >
+          Retry
+        </button>
       </div>
     )
   }

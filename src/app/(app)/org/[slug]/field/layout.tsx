@@ -1,34 +1,44 @@
 'use client'
 
 // ── Field Layout ───────────────────────────────────────────────────────────────
-// Registers the service worker scoped to /org/*/field/** so offline caching
-// only applies to field routes. Also injects the PWA manifest link.
+// Registers the service worker and injects the PWA manifest link.
+// next/head is a Pages Router API and does nothing in the App Router;
+// we inject the tags directly via DOM manipulation inside useEffect.
 
 import { useEffect } from 'react'
-import Head from 'next/head'
 
 export default function FieldLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
+    // ── Manifest link ─────────────────────────────────────────────────────────
+    if (!document.querySelector('link[rel="manifest"]')) {
+      const link = Object.assign(document.createElement('link'), {
+        rel:  'manifest',
+        href: '/manifest.webmanifest',
+      })
+      document.head.appendChild(link)
+    }
+
+    // ── PWA meta tags ─────────────────────────────────────────────────────────
+    const metas: Record<string, string> = {
+      'theme-color':                          '#1B2A4A',
+      'mobile-web-app-capable':               'yes',
+      'apple-mobile-web-app-capable':         'yes',
+      'apple-mobile-web-app-status-bar-style':'black-translucent',
+    }
+    for (const [name, content] of Object.entries(metas)) {
+      if (!document.querySelector(`meta[name="${name}"]`)) {
+        const meta = Object.assign(document.createElement('meta'), { name, content })
+        document.head.appendChild(meta)
+      }
+    }
+
+    // ── Service Worker ────────────────────────────────────────────────────────
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker
         .register('/sw.js', { scope: '/' })
-        .catch((err) => {
-          // Non-fatal: offline features won't work but the app continues
-          console.warn('[FieldLayout] SW registration failed:', err)
-        })
+        .catch((err) => console.warn('[FieldLayout] SW registration failed:', err))
     }
   }, [])
 
-  return (
-    <>
-      <Head>
-        <link rel="manifest" href="/manifest.webmanifest" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="theme-color" content="#1B2A4A" />
-      </Head>
-      {children}
-    </>
-  )
+  return <>{children}</>
 }

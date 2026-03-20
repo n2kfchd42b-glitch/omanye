@@ -690,6 +690,7 @@ export default function FieldDataPage() {
   const [forms,          setForms]          = useState<FieldCollectionForm[]>([])
   const [submissions,    setSubmissions]    = useState<FieldSubmission[]>([])
   const [loading,        setLoading]        = useState(true)
+  const [loadError,      setLoadError]      = useState('')
   const [showFormModal,  setShowFormModal]  = useState(false)
   const [showSubmitModal,setShowSubmitModal]= useState(false)
   const [viewSubmission, setViewSubmission] = useState<FieldSubmission | null>(null)
@@ -704,33 +705,39 @@ export default function FieldDataPage() {
   const canSubmit = userRole === 'NGO_ADMIN' || userRole === 'NGO_STAFF'
 
   const load = useCallback(async () => {
+    setLoadError('')
     try {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.replace('/login'); return }
+      const { data: { user }, error: authErr } = await supabase.auth.getUser()
+      if (authErr || !user) { router.replace('/login'); return }
 
-      const { data: profileRaw } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-      const profile = profileRaw as { role: string } | null
-      setUserRole((profile?.role ?? null) as OmanyeRole)
-
-      const { data: prog } = await supabase.from('programs').select('name').eq('id', params.programId).single()
-      setProgramName((prog as { name: string } | null)?.name ?? '')
-
-      const [formsRes, subRes] = await Promise.all([
+      // Fetch profile, program name, forms, and submissions in parallel
+      const [profileRes, progRes, formsRes, subRes] = await Promise.all([
+        supabase.from('profiles').select('role').eq('id', user.id).single(),
+        supabase.from('programs').select('name').eq('id', params.programId).single(),
         fetch(`/api/field/forms?program_id=${params.programId}`),
         fetch(`/api/field/submissions?program_id=${params.programId}`),
       ])
 
+      const profile = profileRes.data as { role: string } | null
+      setUserRole((profile?.role ?? null) as OmanyeRole)
+      setProgramName((progRes.data as { name: string } | null)?.name ?? '')
+
       if (formsRes.ok) {
         const j = await formsRes.json()
         setForms(j.data ?? [])
+      } else {
+        setForms([])
       }
       if (subRes.ok) {
         const j = await subRes.json()
         setSubmissions(j.data ?? [])
+      } else {
+        setSubmissions([])
       }
     } catch (err) {
       console.error('Field data load error:', err)
+      setLoadError('Failed to load field data. Tap to retry.')
     } finally {
       setLoading(false)
     }
@@ -796,8 +803,24 @@ export default function FieldDataPage() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 300, gap: 12 }}>
         <Loader2 size={24} style={{ color: COLORS.stone, animation: 'spin 1s linear infinite' }} />
+        <p style={{ fontSize: 13, color: COLORS.stone }}>Loading field data…</p>
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 300, gap: 12, textAlign: 'center', padding: 24 }}>
+        <AlertCircle size={28} style={{ color: COLORS.crimson }} />
+        <p style={{ fontSize: 14, color: COLORS.crimson }}>{loadError}</p>
+        <button
+          onClick={() => { setLoading(true); load() }}
+          style={{ padding: '10px 20px', borderRadius: 10, background: COLORS.forest, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}
+        >
+          Retry
+        </button>
       </div>
     )
   }
