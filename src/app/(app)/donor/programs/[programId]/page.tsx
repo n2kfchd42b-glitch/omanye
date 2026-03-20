@@ -42,17 +42,20 @@ export default async function DonorProgramDetailPage({ params }: Props) {
     .eq('id', program.organization_id)
     .single()
 
-  // Fetch all indicators and updates
+  // Fetch all indicators and updates — filter to donor-visible rows at the
+  // query level (RLS enforces the same rule, this is defense-in-depth).
   const { data: allIndicators } = await supabase
     .from('indicators')
     .select('*')
     .eq('program_id', params.programId)
+    .eq('visible_to_donors', true)
     .order('sort_order', { ascending: true })
 
   const { data: updates } = await supabase
     .from('program_updates')
     .select('*')
     .eq('program_id', params.programId)
+    .eq('visible_to_donors', true)
     .order('published_at', { ascending: false })
 
   const programView = filterProgram(

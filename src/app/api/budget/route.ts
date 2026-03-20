@@ -95,8 +95,8 @@ export async function POST(req: NextRequest) {
       name:             body.name,
       allocated_amount: body.allocated_amount ?? 0,
       currency:         body.currency         ?? 'USD',
-      description:      body.description      ?? null,
-      color:            body.color            ?? null,
+      description:      body.description      ?? undefined,
+      color:            body.color            ?? undefined,
       sort_order:       body.sort_order       ?? 0,
       created_by:       user.id,
     })

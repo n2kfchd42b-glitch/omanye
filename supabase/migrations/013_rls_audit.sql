@@ -209,6 +209,50 @@ CREATE INDEX IF NOT EXISTS idx_expenditures_program_status
   ON public.expenditures(program_id, status);
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- SECTION 4: ADDITIONAL RESTRICTIVE POLICIES (added when migration renumbered 013)
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- ── 4a. field_collection_forms — no donor access ─────────────────────────────
+-- Donors have no business reading form schema definitions (field configs etc.)
+-- The ngo_read_forms policy gates on organization_id subquery; DONORs have
+-- organization_id = NULL so they already can't match, but a RESTRICTIVE policy
+-- makes this explicit and future-proof.
+
+DROP POLICY IF EXISTS "No donor access to field forms" ON public.field_collection_forms;
+
+CREATE POLICY "No donor access to field forms"
+  ON public.field_collection_forms
+  AS RESTRICTIVE
+  FOR SELECT
+  USING (
+    NOT EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid()
+        AND role = 'DONOR'
+    )
+  );
+
+-- ── 4b. reports — donors may never read non-visible reports ──────────────────
+-- The permissive donor_read_reports policy already requires visible_to_donors=TRUE.
+-- This RESTRICTIVE policy is a defense-in-depth guarantee: even if a future
+-- permissive policy were to accidentally grant broader donor access, donors can
+-- still never read a report unless visible_to_donors is explicitly set.
+
+DROP POLICY IF EXISTS "Donors only see visible reports" ON public.reports;
+
+CREATE POLICY "Donors only see visible reports"
+  ON public.reports
+  AS RESTRICTIVE
+  FOR SELECT
+  USING (
+    CASE
+      WHEN public.current_user_role() = 'DONOR'
+        THEN visible_to_donors = TRUE
+      ELSE TRUE  -- NGO members: unrestricted by this policy
+    END
+  );
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- ROLLBACK NOTES
 -- ─────────────────────────────────────────────────────────────────────────────
 -- To reverse the restrictive policies:
@@ -217,6 +261,8 @@ CREATE INDEX IF NOT EXISTS idx_expenditures_program_status
 --   DROP POLICY IF EXISTS "No donor access to field submissions"  ON public.field_submissions;
 --   DROP POLICY IF EXISTS "No donor access to ngo notifications"  ON public.notifications;
 --   DROP POLICY IF EXISTS "No ngo access to donor notifications"  ON public.donor_notifications;
+--   DROP POLICY IF EXISTS "No donor access to field forms"        ON public.field_collection_forms;
+--   DROP POLICY IF EXISTS "Donors only see visible reports"       ON public.reports;
 --
 -- To reverse indexes (non-destructive — only removes query optimization):
 --   DROP INDEX IF EXISTS idx_programs_org_status;

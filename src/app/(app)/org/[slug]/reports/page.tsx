@@ -142,6 +142,17 @@ export default function ReportsPage() {
     }
   }
 
+  async function handleArchive(id: string) {
+    if (!confirm('Archive this report? It will no longer be visible to donors.')) return
+    const res = await fetch(`/api/reports/${id}/archive`, { method: 'POST' })
+    if (res.ok) {
+      setReports(p => p.map(r => r.id === id ? { ...r, status: 'ARCHIVED' as ReportStatus, visible_to_donors: false } : r))
+      success('Report archived')
+    } else {
+      toastError('Could not archive report')
+    }
+  }
+
   if (loading) {
     return (
       <div style={{ maxWidth: 1040, margin: '0 auto' }}>
@@ -236,6 +247,7 @@ export default function ReportsPage() {
               onDelete={handleDelete}
               onPublish={handlePublish}
               onSubmit={handleSubmit}
+              onArchive={handleArchive}
               onView={() => router.push(`/org/${params.slug}/reports/${report.id}`)}
             />
           ))}
@@ -271,10 +283,11 @@ interface CardProps {
   onDelete:  (id: string) => void
   onPublish: (id: string, current: boolean) => void
   onSubmit:  (id: string) => void
+  onArchive: (id: string) => void
   onView:    () => void
 }
 
-function ReportCard({ report, isAdmin, canCreate, orgSlug, onDelete, onPublish, onSubmit, onView }: CardProps) {
+function ReportCard({ report, isAdmin, canCreate, orgSlug, onDelete, onPublish, onSubmit, onArchive, onView }: CardProps) {
   const typeStyle = REPORT_TYPE_COLORS[report.report_type] ?? { bg: COLORS.foam, text: COLORS.forest }
   const stStyle   = REPORT_STATUS_COLORS[report.status]
 
@@ -358,6 +371,9 @@ function ReportCard({ report, isAdmin, canCreate, orgSlug, onDelete, onPublish, 
         )}
         {(isAdmin || canCreate) && report.status === 'GENERATED' && (
           <ActionBtn icon={<Send size={13} />} label="Submit" onClick={() => onSubmit(report.id)} />
+        )}
+        {isAdmin && (report.status === 'GENERATED' || report.status === 'SUBMITTED') && (
+          <ActionBtn icon={<Archive size={13} />} label="Archive" onClick={() => onArchive(report.id)} />
         )}
         {(isAdmin) && report.status === 'DRAFT' && (
           <ActionBtn icon={<Trash2 size={13} />} label="Delete" onClick={() => onDelete(report.id)} danger />
