@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Plus, Upload, Link2, Database, RefreshCw } from 'lucide-react'
 import { COLORS, FONTS } from '@/lib/tokens'
 import { StatusBadge, SourceBadge } from '@/components/atoms/Badge'
@@ -236,6 +236,13 @@ export function DataHub({ datasets, setDatasets, programs }: DataHubProps) {
   const { open }    = useModal()
   const { success } = useToast()
   const [filterProgramId, setFilterProgramId] = useState<string>('')
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    function check() { setIsMobile(window.innerWidth < 768) }
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   function openConnect(integration: Integration) {
     open({
@@ -320,7 +327,7 @@ export function DataHub({ datasets, setDatasets, programs }: DataHubProps) {
         <h3 style={{ fontFamily: FONTS.heading, fontSize: 15, fontWeight: 600, color: COLORS.forest, marginBottom: 14 }}>
           Connect a Source
         </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: 14 }}>
           {INTEGRATIONS.map(intg => (
             <IntegrationCard key={intg.source} integration={intg} onConnect={() => openConnect(intg)} />
           ))}

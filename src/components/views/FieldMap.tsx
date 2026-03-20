@@ -1,10 +1,18 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Layers, RefreshCw, Wifi, Map } from 'lucide-react'
 import { COLORS, FONTS } from '@/lib/tokens'
 
 export function FieldMap() {
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    function check() { setIsMobile(window.innerWidth < 768) }
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
   return (
     <div style={{ maxWidth: 960, margin: '0 auto' }}>
       {/* Header */}
@@ -90,7 +98,7 @@ export function FieldMap() {
       </div>
 
       {/* Feature description cards */}
-      <div className="fade-up-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+      <div className="fade-up-2" style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: 14 }}>
         <FeatureCard
           icon={Layers}
           title="Layer Control"

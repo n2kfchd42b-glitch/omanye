@@ -41,7 +41,7 @@ export function FormField({ label, htmlFor, required, hint, error, children, cla
 
 const baseInput: React.CSSProperties = {
   width: '100%',
-  padding: '8px 12px',
+  padding: '10px 12px',
   fontSize: 14,
   borderRadius: 8,
   border: `1px solid ${COLORS.mist}`,

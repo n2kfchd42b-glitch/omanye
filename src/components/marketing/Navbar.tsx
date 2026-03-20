@@ -75,8 +75,8 @@ export function Navbar() {
 
         {/* Mobile menu toggle */}
         <button
-          className="md:hidden p-2 rounded-md"
-          style={{ color: 'rgba(255,255,255,0.8)' }}
+          className="md:hidden rounded-md flex items-center justify-center"
+          style={{ color: 'rgba(255,255,255,0.8)', width: 44, height: 44 }}
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label="Toggle menu"
         >
@@ -94,8 +94,8 @@ export function Navbar() {
             <Link
               key={link.href}
               href={link.href}
-              className="text-sm font-medium py-1"
-              style={{ color: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-instrument),system-ui,sans-serif' }}
+              className="text-sm font-medium flex items-center"
+              style={{ color: 'rgba(255,255,255,0.8)', fontFamily: 'var(--font-instrument),system-ui,sans-serif', minHeight: 44 }}
               onClick={() => setMobileOpen(false)}
             >
               {link.label}

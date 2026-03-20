@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { User as UserIcon, Building2, Bell, Shield, CreditCard, AlertTriangle } from 'lucide-react'
 import { COLORS, FONTS } from '@/lib/tokens'
 import { FormField, Input, Select } from '@/components/atoms/FormField'
@@ -47,6 +47,13 @@ interface SettingsProps {
 
 export function Settings({ user, setUser, alertRules, setAlertRules, programs }: SettingsProps) {
   const [section, setSection] = useState<SettingsSection>('profile')
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    function check() { setIsMobile(window.innerWidth < 768) }
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   return (
     <div style={{ maxWidth: 920, margin: '0 auto' }}>
@@ -55,9 +62,18 @@ export function Settings({ user, setUser, alertRules, setAlertRules, programs }:
         <p style={{ fontSize: 12, color: COLORS.stone, marginTop: 2 }}>Manage your workspace preferences</p>
       </div>
 
-      <div className="fade-up-1" style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: 24, alignItems: 'start' }}>
-        {/* Nav sidebar */}
-        <div className="card" style={{ padding: 8, overflow: 'hidden' }}>
+      <div className="fade-up-1" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '190px 1fr', gap: 24, alignItems: 'start' }}>
+        {/* Nav sidebar / mobile tab strip */}
+        <div
+          className="card"
+          style={{
+            padding: 8, overflow: isMobile ? 'auto' : 'hidden',
+            display: isMobile ? 'flex' : 'block',
+            flexDirection: isMobile ? 'row' : undefined,
+            gap: isMobile ? 4 : undefined,
+            WebkitOverflowScrolling: isMobile ? 'touch' : undefined,
+          }}
+        >
           {SECTIONS.map(s => {
             const Icon = s.icon
             const active = section === s.id
@@ -66,12 +82,17 @@ export function Settings({ user, setUser, alertRules, setAlertRules, programs }:
                 key={s.id}
                 onClick={() => setSection(s.id)}
                 style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '9px 12px', borderRadius: 8, textAlign: 'left',
+                  width: isMobile ? 'auto' : '100%',
+                  display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 10,
+                  padding: isMobile ? '8px 12px' : '9px 12px',
+                  borderRadius: 8, textAlign: 'left',
+                  whiteSpace: isMobile ? 'nowrap' : undefined,
+                  flexShrink: isMobile ? 0 : undefined,
                   background: active ? COLORS.foam : 'transparent',
                   color: active ? COLORS.forest : COLORS.stone,
                   fontSize: 13, fontWeight: active ? 600 : 400,
                   cursor: 'pointer', transition: 'all 0.15s',
+                  minHeight: 44,
                 }}
                 onMouseEnter={e => { if (!active) e.currentTarget.style.background = COLORS.snow }}
                 onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}

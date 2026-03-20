@@ -111,6 +111,13 @@ export function Documents({ documents, setDocuments, programs, user }: Documents
   const [comments, setComments] = useState<Comment[]>([])
   const [message,  setMessage]  = useState('')
   const chatRef = useRef<HTMLDivElement>(null)
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    function check() { setIsMobile(window.innerWidth < 768) }
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   // Update selected when documents change
   useEffect(() => {
@@ -178,7 +185,7 @@ export function Documents({ documents, setDocuments, programs, user }: Documents
         </button>
       </div>
 
-      <div className="fade-up-1" style={{ display: 'grid', gridTemplateColumns: selected ? '320px 1fr' : '1fr', gap: 20, alignItems: 'start' }}>
+      <div className="fade-up-1" style={{ display: 'grid', gridTemplateColumns: (!isMobile && selected) ? '320px 1fr' : '1fr', gap: 20, alignItems: 'start' }}>
         {/* Document list */}
         <div>
           {documents.length === 0 ? (

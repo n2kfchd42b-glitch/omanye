@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Plus, Users, Mail, CheckCircle2, Clock } from 'lucide-react'
 import { COLORS, FONTS } from '@/lib/tokens'
 import { RoleBadge }  from '@/components/atoms/Badge'
@@ -115,6 +115,13 @@ interface TeamProps {
 export function Team({ team, setTeam }: TeamProps) {
   const { open }    = useModal()
   const { success } = useToast()
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    function check() { setIsMobile(window.innerWidth < 768) }
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   function openInvite() {
     open({
@@ -150,7 +157,7 @@ export function Team({ team, setTeam }: TeamProps) {
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 320px', gap: 20, alignItems: 'start' }}>
         {/* Members */}
         <div className="fade-up-1">
           {team.length === 0 ? (

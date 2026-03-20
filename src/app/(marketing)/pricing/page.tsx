@@ -345,7 +345,8 @@ export default function PricingPage() {
             Full feature comparison
           </h2>
 
-          <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(15,27,51,0.08)' }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(15,27,51,0.08)', minWidth: 600 }}>
             {/* Header */}
             <div className="grid grid-cols-5" style={{ background: '#0F1B33', borderBottom: '1px solid rgba(212,175,92,0.15)' }}>
               <div className="p-4" />
@@ -386,6 +387,7 @@ export default function PricingPage() {
                 ))}
               </div>
             ))}
+          </div>
           </div>
         </div>
       </section>

@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   FolderOpen, Database, Users, TrendingUp,
   Plus, AlertCircle, ArrowRight, BarChart2,
@@ -41,6 +41,14 @@ const ACTIVITY_COLORS: Record<ActivityItem['type'], string> = {
 export function Dashboard({
   user, programs, datasets, team, onNavigate, stats, recentActivity,
 }: DashboardProps) {
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    function check() { setIsMobile(window.innerWidth < 768) }
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
   // Use server-fetched stats when available; fall back to client-side computation
   const activePrograms = stats?.activePrograms ?? programs.filter(p => p.status === 'active').length
   const totalBudget    = programs.reduce((s, p) => s + p.budget, 0)
@@ -85,7 +93,7 @@ export function Dashboard({
       {/* Stat cards */}
       <div
         className="fade-up-2"
-        style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 28 }}
+        style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 14, marginBottom: 28 }}
       >
         <StatCard
           icon={FolderOpen}
@@ -116,7 +124,7 @@ export function Dashboard({
       {/* Two-column */}
       <div
         className="fade-up-3"
-        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 28 }}
+        style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20, marginBottom: 28 }}
       >
         <div className="card" style={{ padding: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -224,7 +232,7 @@ export function Dashboard({
       </div>
 
       {/* Quick action cards */}
-      <div className="fade-up-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+      <div className="fade-up-4" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 14 }}>
         <QuickCard icon={FolderOpen} label="New Program"   desc="Create and track a program"          onClick={() => onNavigate('programs')} />
         <QuickCard icon={Database}   label="Connect Data"  desc="Link KoBoToolbox, REDCap or upload"  onClick={() => onNavigate('data-hub')} />
         <QuickCard icon={Users}      label="Invite Team"   desc="Add members to your workspace"       onClick={() => onNavigate('team')} />

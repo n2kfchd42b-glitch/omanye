@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ChevronLeft, Plus, MapPin, Calendar, Target, DollarSign, Users, Activity } from 'lucide-react'
 import { COLORS, FONTS } from '@/lib/tokens'
 import { StatusBadge, GenericBadge } from '@/components/atoms/Badge'
@@ -36,6 +36,13 @@ interface ProgramDetailProps {
 
 export function ProgramDetail({ program, onBack, onUpdate }: ProgramDetailProps) {
   const [tab, setTab] = useState<Tab>('overview')
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    function check() { setIsMobile(window.innerWidth < 768) }
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   if (!program) {
     return (
@@ -72,7 +79,7 @@ export function ProgramDetail({ program, onBack, onUpdate }: ProgramDetailProps)
         style={{
           borderRadius: 16,
           background: `linear-gradient(135deg, ${COLORS.forest} 0%, ${COLORS.canopy} 100%)`,
-          padding: '28px 32px',
+          padding: isMobile ? '20px 16px' : '28px 32px',
           marginBottom: 24,
           color: '#fff',
         }}
@@ -93,7 +100,7 @@ export function ProgramDetail({ program, onBack, onUpdate }: ProgramDetailProps)
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 24 }}>
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           {program.location && program.location !== 'TBD' && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: COLORS.mint }}>
               <MapPin size={12} /> {program.location}
@@ -115,18 +122,22 @@ export function ProgramDetail({ program, onBack, onUpdate }: ProgramDetailProps)
       {/* Tabs */}
       <div
         className="fade-up-2"
-        style={{ display: 'flex', gap: 2, borderBottom: `1px solid ${COLORS.mist}`, marginBottom: 24 }}
+        style={{
+          display: 'flex', gap: 2, borderBottom: `1px solid ${COLORS.mist}`, marginBottom: 24,
+          overflowX: 'auto', WebkitOverflowScrolling: 'touch',
+        }}
       >
         {TABS.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             style={{
-              padding: '10px 18px', fontSize: 13, fontWeight: tab === t.id ? 600 : 400,
+              padding: isMobile ? '10px 12px' : '10px 18px',
+              fontSize: 13, fontWeight: tab === t.id ? 600 : 400,
               color: tab === t.id ? COLORS.forest : COLORS.stone,
               borderBottom: `2px solid ${tab === t.id ? COLORS.sage : 'transparent'}`,
               cursor: 'pointer', transition: 'color 0.15s',
-              marginBottom: -1,
+              marginBottom: -1, flexShrink: 0, whiteSpace: 'nowrap',
             }}
           >
             {t.label}
@@ -139,7 +150,7 @@ export function ProgramDetail({ program, onBack, onUpdate }: ProgramDetailProps)
         {tab === 'overview'   && <OverviewTab   program={program} onUpdate={onUpdate} />}
         {tab === 'logframe'   && <LogframeMatrix program={program} onUpdate={onUpdate} />}
         {tab === 'indicators' && <IndicatorsTab program={program} onUpdate={onUpdate} />}
-        {tab === 'budget'     && <BudgetTab     program={program} onUpdate={onUpdate} />}
+        {tab === 'budget'     && <BudgetTab     program={program} onUpdate={onUpdate} isMobile={isMobile} />}
         {tab === 'team'       && <EmptyState icon={<Users size={22} />}    title="No team members assigned" description="Assign team members from the Team view." compact />}
         {tab === 'activity'   && <EmptyState icon={<Activity size={22} />} title="No activity yet"           description="Activity will appear as the program progresses." compact />}
       </div>
@@ -337,7 +348,7 @@ function AddIndicatorForm({ onSave }: { onSave: (i: Indicator) => void }) {
 
 // ── Budget tab ────────────────────────────────────────────────────────────────
 
-function BudgetTab({ program, onUpdate }: { program: Program; onUpdate: (p: Program) => void }) {
+function BudgetTab({ program, onUpdate, isMobile }: { program: Program; onUpdate: (p: Program) => void; isMobile: boolean }) {
   const { open } = useModal()
   const { success } = useToast()
   const totalAllocated = program.budgetCategories.reduce((s, c) => s + c.allocated, 0)
@@ -356,7 +367,7 @@ function BudgetTab({ program, onUpdate }: { program: Program; onUpdate: (p: Prog
   return (
     <div>
       {program.budget > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: 14, marginBottom: 20 }}>
           <StatPill label="Total Budget"  value={formatCurrency(program.budget, program.currency)} color={COLORS.forest} />
           <StatPill label="Allocated"     value={formatCurrency(totalAllocated, program.currency)} color={COLORS.fern}   />
           <StatPill label="Spent"         value={formatCurrency(totalSpent, program.currency)}     color={COLORS.amber}  />

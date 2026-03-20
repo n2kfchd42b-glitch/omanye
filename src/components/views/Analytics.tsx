@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Plus, BarChart2, TrendingUp, PieChart, Activity, GitBranch, Layers } from 'lucide-react'
 import { COLORS, FONTS } from '@/lib/tokens'
 import { StatusBadge } from '@/components/atoms/Badge'
@@ -137,6 +137,13 @@ export function Analytics({ analyses, setAnalyses, datasets, programs }: Analyti
   const { open }    = useModal()
   const { success } = useToast()
   const [filterProgramId, setFilterProgramId] = useState<string>('')
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    function check() { setIsMobile(window.innerWidth < 768) }
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   function openNew() {
     open({
@@ -206,7 +213,7 @@ export function Analytics({ analyses, setAnalyses, datasets, programs }: Analyti
         <h3 style={{ fontFamily: FONTS.heading, fontSize: 15, fontWeight: 600, color: COLORS.forest, marginBottom: 14 }}>
           Analysis Types
         </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: 14 }}>
           {ANALYSIS_TYPES.map(t => {
             const Icon = t.icon
             return (
