@@ -5,7 +5,7 @@ import {
   LayoutDashboard, FolderOpen,
   FileBarChart, RadioTower,
   Users, Settings, ChevronLeft, ChevronRight, X,
-  HandCoins, Shield, Database, BarChart2,
+  HandCoins, Shield, Database, BarChart2, Landmark, PenLine,
 } from 'lucide-react'
 import { COLORS, SPACING } from '@/lib/tokens'
 import { OmanyeLogo, OmanyeSymbol } from '@/components/Logo'
@@ -56,6 +56,17 @@ const WORKSPACE_NAV: NavItem[] = [
   },
 ]
 
+const FUNDING_NAV: NavItem[] = [
+  {
+    id: 'funders', label: 'Funders', icon: Landmark,
+    allowedRoles: ['Admin', 'Field Staff'],
+  },
+  {
+    id: 'grants', label: 'Grants', icon: PenLine,
+    allowedRoles: ['Admin', 'Field Staff'],
+  },
+]
+
 const SYSTEM_NAV: NavItem[] = [
   {
     id: 'audit', label: 'Audit Log', icon: Shield,
@@ -88,6 +99,7 @@ export function Sidebar({
   const desktopW = collapsed ? SPACING.sidebarWCollapsed : SPACING.sidebarW
 
   const visibleWorkspace = WORKSPACE_NAV.filter(item => item.allowedRoles.includes(user.role))
+  const visibleFunding   = FUNDING_NAV.filter(item => item.allowedRoles.includes(user.role))
   const visibleSystem    = SYSTEM_NAV.filter(item => item.allowedRoles.includes(user.role))
 
   // On mobile: fixed overlay drawer that slides in/out
@@ -190,6 +202,31 @@ export function Sidebar({
             onNav={handleNav}
           />
         ))}
+
+        {visibleFunding.length > 0 && (
+          <>
+            <div style={{ margin: '12px 0', borderTop: `1px solid rgba(255,255,255,0.06)` }} />
+            {!((!isMobile) && collapsed) && (
+              <p style={{
+                fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
+                letterSpacing: '0.1em', color: 'rgba(212,175,92,0.40)',
+                padding: '0 16px 8px',
+              }}>
+                Funding
+              </p>
+            )}
+            {visibleFunding.map(item => (
+              <NavLink
+                key={item.id}
+                item={item}
+                active={view === item.id}
+                pending={pendingNav === item.id}
+                collapsed={!isMobile && collapsed}
+                onNav={handleNav}
+              />
+            ))}
+          </>
+        )}
 
         {visibleSystem.length > 0 && (
           <>

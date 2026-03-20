@@ -233,6 +233,8 @@ export type ViewId =
   | 'team'
   | 'map'
   | 'settings'
+  | 'funders'
+  | 'grants'
 
 export type ToastVariant = 'success' | 'error' | 'warn'
 

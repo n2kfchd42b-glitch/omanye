@@ -23,6 +23,18 @@ interface OrgRow {
   subscription_tier:   string
   created_at:          string
   updated_at:          string
+  // Profile tag fields (added in migration 016)
+  focus_areas:          string[] | null
+  eligible_geographies: string[] | null
+  program_types:        string[] | null
+  annual_budget_range:  string | null
+  // Grant profile fields (added in migration 017)
+  mission_statement:       string | null
+  founding_year:           number | null
+  beneficiary_types:       string[] | null
+  past_program_summaries:  string | null
+  key_achievements:        string | null
+  typical_budget_range:    string | null
 }
 
 interface Props {
@@ -57,7 +69,7 @@ export default function OrgSettingsClient({
   const router  = useRouter()
   const isAdmin = userRole === 'NGO_ADMIN'
 
-  const [tab, setTab] = useState<'general' | 'profile' | 'billing' | 'danger'>('general')
+  const [tab, setTab] = useState<'general' | 'profile' | 'profile-tags' | 'grant-profile' | 'billing' | 'danger'>('general')
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
 
   const showToast = (msg: string, ok = true) => {
@@ -87,10 +99,10 @@ export default function OrgSettingsClient({
       </div>
 
       {/* Tab bar */}
-      <div style={{ display: 'flex', borderBottom: `2px solid ${COLORS.mist}`, marginBottom: 32 }}>
+      <div style={{ display: 'flex', borderBottom: `2px solid ${COLORS.mist}`, marginBottom: 32, overflowX: 'auto' }}>
         {(isAdmin
-          ? ['general', 'profile', 'billing', 'danger'] as const
-          : ['general', 'profile', 'billing'] as const
+          ? ['general', 'profile', 'profile-tags', 'grant-profile', 'billing', 'danger'] as const
+          : ['general', 'profile', 'profile-tags', 'grant-profile', 'billing'] as const
         ).map(t => (
           <button
             key={t}
@@ -109,7 +121,7 @@ export default function OrgSettingsClient({
             } as React.CSSProperties}
           >
             <span style={{ color: t === 'danger' ? COLORS.crimson : undefined }}>
-              {t === 'danger' ? 'Danger Zone' : t.charAt(0).toUpperCase() + t.slice(1)}
+              {t === 'danger' ? 'Danger Zone' : t === 'profile-tags' ? 'Profile Tags' : t === 'grant-profile' ? 'Grant Profile' : t.charAt(0).toUpperCase() + t.slice(1)}
             </span>
           </button>
         ))}
@@ -120,6 +132,12 @@ export default function OrgSettingsClient({
       )}
       {tab === 'profile' && (
         <ProfileTab org={org} isAdmin={isAdmin} onSave={() => { router.refresh(); showToast('Profile saved') }} onError={showToast} />
+      )}
+      {tab === 'profile-tags' && (
+        <ProfileTagsTab org={org} isAdmin={isAdmin} onSave={() => { router.refresh(); showToast('Profile tags saved') }} onError={showToast} />
+      )}
+      {tab === 'grant-profile' && (
+        <GrantProfileTab org={org} isAdmin={isAdmin} orgSlug={orgSlug} onSave={() => { router.refresh(); showToast('Grant profile saved') }} onError={showToast} />
       )}
       {tab === 'billing' && (
         <BillingTab org={org} orgSlug={orgSlug} />
@@ -360,6 +378,437 @@ function ProfileTab({ org, isAdmin, onSave, onError }: {
         >
           <Save size={14} />
           {loading ? 'Saving…' : 'Save Changes'}
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ── ProfileTagsTab ────────────────────────────────────────────────────────────
+
+const FOCUS_AREA_OPTIONS = [
+  'health', 'education', 'WASH', 'food security', 'livelihoods',
+  'protection', 'gender', 'climate', 'governance',
+]
+
+const GEOGRAPHY_OPTIONS = [
+  'Sub-Saharan Africa', 'West Africa', 'East Africa', 'Southern Africa', 'North Africa',
+  'Southeast Asia', 'South Asia', 'Latin America', 'Middle East', 'Global',
+]
+
+const PROGRAM_TYPE_OPTIONS = [
+  'direct implementation', 'capacity building', 'advocacy', 'research', 'emergency response',
+]
+
+const BUDGET_RANGE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'under_100k',  label: 'Under $100K' },
+  { value: '100k_500k',   label: '$100K – $500K' },
+  { value: '500k_1m',     label: '$500K – $1M' },
+  { value: '1m_5m',       label: '$1M – $5M' },
+  { value: 'above_5m',    label: 'Above $5M' },
+]
+
+function MultiSelect({
+  label, options, selected, disabled, onChange,
+}: {
+  label:    string
+  options:  string[]
+  selected: string[]
+  disabled: boolean
+  onChange: (vals: string[]) => void
+}) {
+  function toggle(v: string) {
+    if (selected.includes(v)) onChange(selected.filter(x => x !== v))
+    else onChange([...selected, v])
+  }
+
+  return (
+    <div>
+      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: COLORS.charcoal, marginBottom: 8 }}>
+        {label}
+      </label>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {options.map(opt => {
+          const active = selected.includes(opt)
+          return (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => !disabled && toggle(opt)}
+              disabled={disabled}
+              style={{
+                padding: '6px 14px',
+                borderRadius: 20,
+                fontSize: 13,
+                fontWeight: active ? 600 : 400,
+                border: `1.5px solid ${active ? COLORS.forest : COLORS.mist}`,
+                background: active ? COLORS.forest : '#ffffff',
+                color: active ? '#ffffff' : COLORS.slate,
+                cursor: disabled ? 'default' : 'pointer',
+                fontFamily: FONTS.body,
+                transition: 'all 0.15s',
+              }}
+            >
+              {opt}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function ProfileTagsTab({ org, isAdmin, onSave, onError }: {
+  org:     OrgRow; isAdmin: boolean
+  onSave:  () => void
+  onError: (msg: string, ok?: boolean) => void
+}) {
+  const [focusAreas,    setFocusAreas]    = useState<string[]>(org.focus_areas ?? [])
+  const [geographies,   setGeographies]   = useState<string[]>(org.eligible_geographies ?? [])
+  const [programTypes,  setProgramTypes]  = useState<string[]>(org.program_types ?? [])
+  const [budgetRange,   setBudgetRange]   = useState<string>(org.annual_budget_range ?? '')
+  const [loading,       setLoading]       = useState(false)
+
+  async function handleSave() {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/org/profile-tags', {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          focus_areas:          focusAreas,
+          eligible_geographies: geographies,
+          program_types:        programTypes,
+          annual_budget_range:  budgetRange || null,
+        }),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        onError((j as { message?: string }).message ?? 'Failed to save', false)
+        return
+      }
+      onSave()
+    } catch {
+      onError('Failed to save profile tags', false)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const isEmpty = focusAreas.length === 0 && geographies.length === 0 && programTypes.length === 0
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+      <div style={{
+        padding: '14px 18px', borderRadius: 10,
+        background: isEmpty ? '#FFF8E1' : `${COLORS.sage}15`,
+        border: `1px solid ${isEmpty ? '#FFD54F' : COLORS.sage}40`,
+      }}>
+        <p style={{ fontSize: 13, color: isEmpty ? '#795548' : COLORS.forest, margin: 0 }}>
+          {isEmpty
+            ? 'Complete your profile tags to unlock funder matching. The funder feed uses these tags to surface the most relevant grant opportunities for your organization.'
+            : 'Profile tags are set. These are used to match your organization to funder opportunities in the Funders feed.'}
+        </p>
+      </div>
+
+      <MultiSelect
+        label="Focus Areas"
+        options={FOCUS_AREA_OPTIONS}
+        selected={focusAreas}
+        disabled={!isAdmin}
+        onChange={setFocusAreas}
+      />
+
+      <MultiSelect
+        label="Eligible Geographies"
+        options={GEOGRAPHY_OPTIONS}
+        selected={geographies}
+        disabled={!isAdmin}
+        onChange={setGeographies}
+      />
+
+      <MultiSelect
+        label="Program Types"
+        options={PROGRAM_TYPE_OPTIONS}
+        selected={programTypes}
+        disabled={!isAdmin}
+        onChange={setProgramTypes}
+      />
+
+      <div>
+        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: COLORS.charcoal, marginBottom: 8 }}>
+          Annual Budget Range
+        </label>
+        <select
+          value={budgetRange}
+          onChange={e => setBudgetRange(e.target.value)}
+          disabled={!isAdmin}
+          style={{ ...inputStyle, maxWidth: 260 }}
+        >
+          <option value="">Select range…</option>
+          {BUDGET_RANGE_OPTIONS.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      </div>
+
+      {isAdmin && (
+        <button
+          onClick={handleSave}
+          disabled={loading}
+          style={{
+            alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 8,
+            padding: '10px 22px', background: loading ? COLORS.mist : COLORS.forest,
+            color: loading ? COLORS.stone : '#ffffff', border: 'none', borderRadius: 9,
+            fontSize: 14, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: FONTS.body,
+          }}
+        >
+          <Save size={14} />
+          {loading ? 'Saving…' : 'Save Profile Tags'}
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ── GrantProfileTab ───────────────────────────────────────────────────────────
+
+const BENEFICIARY_OPTIONS = [
+  'children', 'women', 'youth', 'elderly', 'refugees', 'IDPs',
+  'smallholder farmers', 'urban poor', 'rural communities', 'persons with disabilities',
+]
+
+function GrantProfileTab({ org, isAdmin, orgSlug, onSave, onError }: {
+  org:     OrgRow; isAdmin: boolean; orgSlug: string
+  onSave:  () => void
+  onError: (msg: string, ok?: boolean) => void
+}) {
+  const [mission,         setMission]         = useState(org.mission_statement ?? '')
+  const [foundingYear,    setFoundingYear]     = useState(org.founding_year?.toString() ?? '')
+  const [beneficiaries,   setBeneficiaries]    = useState<string[]>(org.beneficiary_types ?? [])
+  const [pastPrograms,    setPastPrograms]     = useState(org.past_program_summaries ?? '')
+  const [achievements,    setAchievements]     = useState(org.key_achievements ?? '')
+  const [budgetRange,     setBudgetRange]      = useState(org.typical_budget_range ?? '')
+  const [loading,         setLoading]          = useState(false)
+
+  const currentYear = new Date().getFullYear()
+
+  // Completion score: 5 fields (mission, founding year, beneficiaries, past programs, key achievements)
+  const filled = [
+    mission.trim().length > 0,
+    foundingYear.trim().length > 0,
+    beneficiaries.length > 0,
+    pastPrograms.trim().length > 0,
+    achievements.trim().length > 0,
+  ].filter(Boolean).length
+
+  function toggleBeneficiary(v: string) {
+    if (beneficiaries.includes(v)) setBeneficiaries(beneficiaries.filter(x => x !== v))
+    else setBeneficiaries([...beneficiaries, v])
+  }
+
+  async function handleSave() {
+    const yr = foundingYear ? Number(foundingYear) : null
+    if (yr !== null && (isNaN(yr) || yr < 1900 || yr > currentYear)) {
+      onError(`Founding year must be between 1900 and ${currentYear}`, false); return
+    }
+    if (mission.length > 500) { onError('Mission statement must be 500 characters or fewer', false); return }
+    if (pastPrograms.length > 1000) { onError('Past program summaries must be 1000 characters or fewer', false); return }
+    if (achievements.length > 500) { onError('Key achievements must be 500 characters or fewer', false); return }
+
+    setLoading(true)
+    try {
+      const res = await fetch('/api/org/grant-profile', {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          mission_statement:      mission || null,
+          founding_year:          yr,
+          beneficiary_types:      beneficiaries,
+          past_program_summaries: pastPrograms || null,
+          key_achievements:       achievements || null,
+          typical_budget_range:   budgetRange || null,
+        }),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        onError((j as { message?: string }).message ?? 'Failed to save', false)
+        return
+      }
+      onSave()
+    } catch {
+      onError('Failed to save grant profile', false)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const completionPct = Math.round((filled / 5) * 100)
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+      {/* Completion indicator */}
+      <div style={{
+        padding: '14px 18px', borderRadius: 10,
+        background: filled === 5 ? `${COLORS.sage}15` : '#FFF8E1',
+        border: `1px solid ${filled === 5 ? COLORS.sage : '#FFD54F'}40`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: filled === 5 ? COLORS.forest : '#795548', margin: 0 }}>
+            {filled === 5 ? 'Grant profile complete' : `Grant profile: ${filled} of 5 fields filled`}
+          </p>
+          <span style={{ fontSize: 12, fontWeight: 700, color: filled === 5 ? COLORS.sage : COLORS.amber }}>
+            {completionPct}%
+          </span>
+        </div>
+        <div style={{ height: 6, background: COLORS.mist, borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{
+            height: '100%',
+            width: `${completionPct}%`,
+            background: filled === 5 ? COLORS.sage : COLORS.amber,
+            borderRadius: 4,
+            transition: 'width 0.3s ease',
+          }} />
+        </div>
+        {filled < 5 && (
+          <p style={{ fontSize: 12, color: '#795548', margin: '8px 0 0' }}>
+            A complete grant profile helps the AI write more relevant and accurate proposals for your organization.
+          </p>
+        )}
+        {filled === 0 && (
+          <p style={{ fontSize: 12, color: '#795548', margin: '4px 0 0' }}>
+            Visit the <a href={`/org/${orgSlug}/grants`} style={{ color: COLORS.sky, textDecoration: 'none' }}>Grants page</a> to start generating proposals — you&apos;ll be prompted to complete this first.
+          </p>
+        )}
+      </div>
+
+      {/* Mission Statement */}
+      <div>
+        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: COLORS.charcoal, marginBottom: 6 }}>
+          Mission Statement
+          {!isAdmin && <span style={{ marginLeft: 8, fontSize: 11, color: COLORS.stone, fontWeight: 400 }}>(read-only)</span>}
+        </label>
+        <textarea
+          style={{ ...inputStyle, resize: 'vertical', minHeight: 100 }}
+          value={mission}
+          onChange={e => setMission(e.target.value.slice(0, 500))}
+          disabled={!isAdmin}
+          placeholder="Describe your organization's core mission and purpose…"
+          maxLength={500}
+        />
+        <p style={{ fontSize: 11, color: mission.length > 450 ? COLORS.amber : COLORS.stone, marginTop: 4 }}>
+          {mission.length}/500 characters
+        </p>
+      </div>
+
+      {/* Founding Year */}
+      <SettingsField label="Founding Year" disabled={!isAdmin}>
+        <input
+          style={{ ...inputStyle, maxWidth: 160 }}
+          type="number"
+          value={foundingYear}
+          onChange={e => setFoundingYear(e.target.value)}
+          disabled={!isAdmin}
+          placeholder={`e.g. 2010`}
+          min={1900}
+          max={currentYear}
+        />
+      </SettingsField>
+
+      {/* Beneficiary Types */}
+      <div>
+        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: COLORS.charcoal, marginBottom: 8 }}>
+          Beneficiary Types
+          {!isAdmin && <span style={{ marginLeft: 8, fontSize: 11, color: COLORS.stone, fontWeight: 400 }}>(read-only)</span>}
+        </label>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {BENEFICIARY_OPTIONS.map(opt => {
+            const active = beneficiaries.includes(opt)
+            return (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => isAdmin && toggleBeneficiary(opt)}
+                disabled={!isAdmin}
+                style={{
+                  padding: '6px 14px', borderRadius: 20, fontSize: 13,
+                  fontWeight: active ? 600 : 400,
+                  border: `1.5px solid ${active ? COLORS.forest : COLORS.mist}`,
+                  background: active ? COLORS.forest : '#ffffff',
+                  color: active ? '#ffffff' : COLORS.slate,
+                  cursor: !isAdmin ? 'default' : 'pointer',
+                  fontFamily: FONTS.body, transition: 'all 0.15s',
+                }}
+              >
+                {opt}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Past Program Summaries */}
+      <div>
+        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: COLORS.charcoal, marginBottom: 6 }}>
+          Past Program Summaries
+          {!isAdmin && <span style={{ marginLeft: 8, fontSize: 11, color: COLORS.stone, fontWeight: 400 }}>(read-only)</span>}
+        </label>
+        <textarea
+          style={{ ...inputStyle, resize: 'vertical', minHeight: 120 }}
+          value={pastPrograms}
+          onChange={e => setPastPrograms(e.target.value.slice(0, 1000))}
+          disabled={!isAdmin}
+          placeholder="Briefly describe 2–3 past programs: name, target group, outcomes…"
+          maxLength={1000}
+        />
+        <p style={{ fontSize: 11, color: pastPrograms.length > 900 ? COLORS.amber : COLORS.stone, marginTop: 4 }}>
+          {pastPrograms.length}/1000 characters
+        </p>
+      </div>
+
+      {/* Key Achievements */}
+      <div>
+        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: COLORS.charcoal, marginBottom: 6 }}>
+          Key Achievements
+          {!isAdmin && <span style={{ marginLeft: 8, fontSize: 11, color: COLORS.stone, fontWeight: 400 }}>(read-only)</span>}
+        </label>
+        <textarea
+          style={{ ...inputStyle, resize: 'vertical', minHeight: 100 }}
+          value={achievements}
+          onChange={e => setAchievements(e.target.value.slice(0, 500))}
+          disabled={!isAdmin}
+          placeholder="Notable outcomes, beneficiary numbers, awards, certifications…"
+          maxLength={500}
+        />
+        <p style={{ fontSize: 11, color: achievements.length > 450 ? COLORS.amber : COLORS.stone, marginTop: 4 }}>
+          {achievements.length}/500 characters
+        </p>
+      </div>
+
+      {/* Typical Budget Range */}
+      <SettingsField label="Typical Grant Budget Range" disabled={!isAdmin}>
+        <input
+          style={{ ...inputStyle, maxWidth: 320 }}
+          value={budgetRange}
+          onChange={e => setBudgetRange(e.target.value)}
+          disabled={!isAdmin}
+          placeholder="e.g. $50,000 – $200,000 USD"
+        />
+      </SettingsField>
+
+      {isAdmin && (
+        <button
+          onClick={handleSave}
+          disabled={loading}
+          style={{
+            alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 8,
+            padding: '10px 22px', background: loading ? COLORS.mist : COLORS.forest,
+            color: loading ? COLORS.stone : '#ffffff', border: 'none', borderRadius: 9,
+            fontSize: 14, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: FONTS.body,
+          }}
+        >
+          <Save size={14} />
+          {loading ? 'Saving…' : 'Save Grant Profile'}
         </button>
       )}
     </div>

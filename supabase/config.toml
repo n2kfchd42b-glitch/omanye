@@ -1,0 +1,23 @@
+[project]
+# Project ref is set via SUPABASE_PROJECT_REF env var or supabase link
+# Run: supabase link --project-ref <your-ref>
+
+# ── Edge function cron schedules ──────────────────────────────────────────────
+# Register the funder-digest cron via SQL after deploying:
+#
+#   SELECT cron.schedule(
+#     'funder-digest-weekly',
+#     '0 8 * * 1',
+#     $$
+#       SELECT net.http_post(
+#         url := current_setting('app.supabase_url') || '/functions/v1/funder-digest',
+#         headers := jsonb_build_object(
+#           'Authorization', 'Bearer ' || current_setting('app.service_role_key'),
+#           'Content-Type', 'application/json'
+#         ),
+#         body := '{}'::jsonb
+#       )
+#     $$
+#   );
+#
+# Or via the Supabase Dashboard → Database → Cron Jobs → New Cron Job

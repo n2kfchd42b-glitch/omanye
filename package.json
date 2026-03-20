@@ -11,6 +11,7 @@
     "test:watch": "jest --watch --testPathPattern=src/tests/smoke"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-avatar": "^1.1.0",
     "@radix-ui/react-dialog": "^1.1.1",

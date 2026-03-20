@@ -24,6 +24,8 @@ const VIEW_TITLE: Record<ViewId, string> = {
   map:              'Field Map',
   settings:         'Settings',
   donors:           'Donors',
+  funders:          'Funders',
+  grants:           'Grant Writing',
 }
 
 // ── Role badge ────────────────────────────────────────────────────────────────
