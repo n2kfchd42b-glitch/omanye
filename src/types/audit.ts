@@ -35,9 +35,15 @@ export type AuditAction =
   | 'team.member_removed'
   | 'team.role_changed'
   // Field
+  | 'field.form_created'
   | 'field.submission_created'
   | 'field.submission_reviewed'
   | 'field.submission_flagged'
+  // Deletions
+  | 'indicator.deleted'
+  | 'report.deleted'
+  // Reports
+  | 'report.archived'
 
 export interface AuditLogEntry {
   organizationId: string
@@ -165,7 +171,11 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   'team.member_joined':        'Team member joined',
   'team.member_removed':       'Removed team member',
   'team.role_changed':         'Changed team member role',
+  'field.form_created':         'Created field form',
   'field.submission_created':  'Created field submission',
   'field.submission_reviewed': 'Reviewed field submission',
   'field.submission_flagged':  'Flagged field submission',
+  'indicator.deleted':         'Deleted indicator',
+  'report.deleted':            'Deleted report',
+  'report.archived':           'Archived report',
 }

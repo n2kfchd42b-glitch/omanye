@@ -3,26 +3,24 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import type { CreateFormPayload } from '@/types/field'
+import { fieldCollectionFormSchema } from '@/lib/validation/schemas'
+import { unauthorized, forbidden, notFound, internalError, validationError, limitExceeded } from '@/lib/api/errors'
 import { checkLimit } from '@/lib/billing/limits'
+import { logAction } from '@/lib/audit/logger'
 
 export async function GET(req: NextRequest) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+  if (!user) return unauthorized()
 
-  // Require NGO role and org scoping
-  const { data: profileRaw } = await supabase
+  const { data: profile } = await supabase
     .from('profiles')
     .select('role, organization_id')
     .eq('id', user.id)
     .single()
 
-  const profile = profileRaw as { role: string; organization_id: string } | null
-  if (!profile?.organization_id) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
-  if (!['NGO_ADMIN', 'NGO_STAFF', 'NGO_VIEWER'].includes(profile.role)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  if (!profile?.organization_id) return unauthorized()
+  if (!['NGO_ADMIN', 'NGO_STAFF', 'NGO_VIEWER'].includes(profile.role)) return forbidden()
 
   const programId = req.nextUrl.searchParams.get('program_id')
 
@@ -37,7 +35,7 @@ export async function GET(req: NextRequest) {
   if (programId) query = query.eq('program_id', programId)
 
   const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return internalError(error.message)
 
   const forms = (data ?? []).map((f: Record<string, unknown>) => ({
     ...f,
@@ -51,38 +49,35 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+  if (!user) return unauthorized()
 
-  // NGO_ADMIN only
-  const { data: profileRaw } = await supabase
+  const { data: profile } = await supabase
     .from('profiles')
-    .select('role, organization_id')
+    .select('role, organization_id, full_name')
     .eq('id', user.id)
     .single()
 
-  const profile = profileRaw as { role: string; organization_id: string } | null
-  if (!profile || profile.role !== 'NGO_ADMIN') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  if (!profile?.organization_id || profile.role !== 'NGO_ADMIN') return forbidden()
 
-  const body: CreateFormPayload = await req.json()
-  if (!body.program_id || !body.name?.trim()) {
-    return NextResponse.json({ error: 'program_id and name are required' }, { status: 400 })
-  }
+  const parsed = fieldCollectionFormSchema.safeParse(await req.json())
+  if (!parsed.success) return validationError(parsed.error)
+  const body = parsed.data
 
-  // ── Plan limit check ───────────────────────────────────────────────────────
+  // Verify program belongs to this org
+  const { data: program } = await supabase
+    .from('programs')
+    .select('id')
+    .eq('id', body.program_id)
+    .eq('organization_id', profile.organization_id)
+    .single()
+
+  if (!program) return notFound('Program')
+
+  // ── Plan limit check ────────────────────────────────────────────────────────
   const limitCheck = await checkLimit(profile.organization_id, 'field_forms')
   if (!limitCheck.allowed) {
-    return NextResponse.json(
-      {
-        error:           'LIMIT_EXCEEDED',
-        message:         `You've reached your field forms limit (${limitCheck.current}/${limitCheck.limit}). Upgrade to add more forms.`,
-        limitType:       'field_forms',
-        current:         limitCheck.current,
-        limit:           limitCheck.limit,
-        upgradeRequired: limitCheck.upgradeRequired,
-      },
-      { status: 402 }
+    return limitExceeded(
+      `You've reached your field forms limit (${limitCheck.current}/${limitCheck.limit}). Upgrade to add more forms.`
     )
   }
 
@@ -96,11 +91,25 @@ export async function POST(req: NextRequest) {
       name:            body.name.trim(),
       description:     body.description ?? '',
       fields:          body.fields ?? [],
+      active:          body.active ?? true,
       created_by:      user.id,
     })
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return internalError(error.message)
+
+  void logAction({
+    organizationId: profile.organization_id,
+    actorId:        user.id,
+    actorName:      (profile as Record<string, unknown>).full_name as string ?? 'Unknown',
+    actorRole:      profile.role,
+    action:         'field.form_created',
+    entityType:     'field_form',
+    entityId:       (data as Record<string, unknown>).id as string,
+    entityName:     body.name,
+    metadata:       { program_id: body.program_id },
+  })
+
   return NextResponse.json({ data }, { status: 201 })
 }

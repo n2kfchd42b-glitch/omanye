@@ -158,10 +158,18 @@ export async function updateIndicator(
 // ── deleteIndicator ───────────────────────────────────────────────────────────
 
 export async function deleteIndicator(id: string): Promise<ActionResult> {
-  const { profile, supabase, error } = await requireAdmin()
+  const { user, profile, supabase, error } = await requireAdmin()
   if (error || !profile?.organization_id) {
     return { data: null, error: error ?? 'No organization' }
   }
+
+  // Fetch name before deleting for audit trail
+  const { data: indicator } = await supabase
+    .from('indicators')
+    .select('name, program_id')
+    .eq('id', id)
+    .eq('organization_id', profile.organization_id)
+    .single()
 
   const { error: dbError } = await supabase
     .from('indicators')
@@ -170,6 +178,18 @@ export async function deleteIndicator(id: string): Promise<ActionResult> {
     .eq('organization_id', profile.organization_id)
 
   if (dbError) return { data: null, error: dbError.message }
+
+  void logAction({
+    organizationId: profile.organization_id,
+    actorId:        user!.id,
+    actorName:      (profile as Record<string, unknown>).full_name as string ?? 'Unknown',
+    actorRole:      profile.role,
+    action:         'indicator.deleted',
+    entityType:     'indicator',
+    entityId:       id,
+    entityName:     (indicator as Record<string, unknown> | null)?.name as string ?? id,
+    metadata:       { program_id: (indicator as Record<string, unknown> | null)?.program_id as string },
+  })
 
   revalidatePath('/org')
   return { data: undefined, error: null }
@@ -317,7 +337,7 @@ export async function submitIndicatorUpdate(
         priority:       'HIGH',
       })))
     }
-  })()
+  })().catch(err => console.error('[indicators] notify off-track error:', err))
 
   revalidatePath('/org')
   return { data: updateRecord as IndicatorUpdate, error: null }

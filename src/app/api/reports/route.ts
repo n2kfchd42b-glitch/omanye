@@ -3,14 +3,23 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import type { CreateReportPayload } from '@/types/reports'
+import { createReportSchema } from '@/lib/validation/schemas'
+import { unauthorized, forbidden, notFound, internalError, validationError, limitExceeded } from '@/lib/api/errors'
 import { logActionForUser } from '@/lib/audit/logger'
 import { checkLimit } from '@/lib/billing/limits'
 
 export async function GET(req: NextRequest) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+  if (!user) return unauthorized()
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, organization_id')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.organization_id) return unauthorized()
 
   const programId = req.nextUrl.searchParams.get('program_id')
 
@@ -18,12 +27,13 @@ export async function GET(req: NextRequest) {
   const db: any = supabase
   let query = db.from('reports')
     .select('*, programs(name), profiles(full_name)')
+    .eq('organization_id', profile.organization_id)
     .order('created_at', { ascending: false })
 
   if (programId) query = query.eq('program_id', programId)
 
   const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return internalError(error.message)
 
   const reports = ((data as Record<string, unknown>[]) ?? []).map((r) => ({
     ...r,
@@ -39,32 +49,36 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+  if (!user) return unauthorized()
 
-  const body: CreateReportPayload = await req.json()
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, organization_id')
+    .eq('id', user.id)
+    .single()
 
+  if (!profile?.organization_id) return unauthorized()
+  if (!['NGO_ADMIN', 'NGO_STAFF'].includes(profile.role)) return forbidden()
+
+  const parsed = createReportSchema.safeParse(await req.json())
+  if (!parsed.success) return validationError(parsed.error)
+  const body = parsed.data
+
+  // Verify program belongs to this org
   const { data: program } = await supabase
     .from('programs')
     .select('organization_id')
     .eq('id', body.program_id)
+    .eq('organization_id', profile.organization_id)
     .single()
 
-  if (!program) return NextResponse.json({ error: 'Program not found' }, { status: 404 })
-  const prog = program as unknown as { organization_id: string }
+  if (!program) return notFound('Program')
 
-  // ── Plan limit check ───────────────────────────────────────────────────────
-  const limitCheck = await checkLimit(prog.organization_id, 'reports_per_month')
+  // ── Plan limit check ────────────────────────────────────────────────────────
+  const limitCheck = await checkLimit(profile.organization_id, 'reports_per_month')
   if (!limitCheck.allowed) {
-    return NextResponse.json(
-      {
-        error:           'LIMIT_EXCEEDED',
-        message:         `You've reached your monthly report limit (${limitCheck.current}/${limitCheck.limit}). Upgrade to generate more reports.`,
-        limitType:       'reports_per_month',
-        current:         limitCheck.current,
-        limit:           limitCheck.limit,
-        upgradeRequired: limitCheck.upgradeRequired,
-      },
-      { status: 402 }
+    return limitExceeded(
+      `You've reached your monthly report limit (${limitCheck.current}/${limitCheck.limit}). Upgrade to generate more reports.`
     )
   }
 
@@ -73,7 +87,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await db.from('reports')
     .insert({
       program_id:             body.program_id,
-      organization_id:        prog.organization_id,
+      organization_id:        profile.organization_id,
       title:                  body.title,
       report_type:            body.report_type,
       reporting_period_start: body.reporting_period_start ?? null,
@@ -86,10 +100,10 @@ export async function POST(req: NextRequest) {
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return internalError(error.message)
 
   void logActionForUser(user.id, {
-    organizationId: prog.organization_id,
+    organizationId: profile.organization_id,
     action:         'report.created',
     entityType:     'report',
     entityId:       (data as Record<string, unknown>).id as string,

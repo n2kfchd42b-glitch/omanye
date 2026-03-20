@@ -2,24 +2,15 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import type { OmanyeRole } from '@/lib/supabase/database.types'
+import { inviteTeamMemberSchema } from '@/lib/validation/schemas'
+import { unauthorized, forbidden, internalError, validationError, conflict, limitExceeded } from '@/lib/api/errors'
 import { logAction } from '@/lib/audit/logger'
 import { checkLimit } from '@/lib/billing/limits'
-
-interface InviteBody {
-  email:       string
-  full_name:   string
-  role:        OmanyeRole
-  message?:    string | null
-  program_ids?: string[]
-}
-
-const VALID_ROLES: OmanyeRole[] = ['NGO_ADMIN', 'NGO_STAFF', 'NGO_VIEWER']
 
 export async function POST(req: NextRequest) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+  if (!user) return unauthorized()
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -27,34 +18,20 @@ export async function POST(req: NextRequest) {
     .eq('id', user.id)
     .single()
 
-  if (!profile || profile.role !== 'NGO_ADMIN') {
-    return NextResponse.json({ error: 'Forbidden — NGO_ADMIN only' }, { status: 403 })
-  }
+  if (!profile || profile.role !== 'NGO_ADMIN') return forbidden()
+
   const orgId = profile.organization_id
-  if (!orgId) return NextResponse.json({ error: 'No organization' }, { status: 400 })
+  if (!orgId) return forbidden('No organization associated with this account')
 
-  const body: InviteBody = await req.json()
+  const parsed = inviteTeamMemberSchema.safeParse(await req.json())
+  if (!parsed.success) return validationError(parsed.error)
+  const body = parsed.data
 
-  if (!body.email || !body.role) {
-    return NextResponse.json({ error: 'email and role are required' }, { status: 400 })
-  }
-  if (!VALID_ROLES.includes(body.role)) {
-    return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
-  }
-
-  // ── Plan limit check ───────────────────────────────────────────────────────
+  // ── Plan limit check ────────────────────────────────────────────────────────
   const limitCheck = await checkLimit(orgId, 'team_members')
   if (!limitCheck.allowed) {
-    return NextResponse.json(
-      {
-        error:           'LIMIT_EXCEEDED',
-        message:         `You've reached your team member limit (${limitCheck.current}/${limitCheck.limit}). Upgrade to add more members.`,
-        limitType:       'team_members',
-        current:         limitCheck.current,
-        limit:           limitCheck.limit,
-        upgradeRequired: limitCheck.upgradeRequired,
-      },
-      { status: 402 }
+    return limitExceeded(
+      `You've reached your team member limit (${limitCheck.current}/${limitCheck.limit}). Upgrade to add more members.`
     )
   }
 
@@ -70,7 +47,7 @@ export async function POST(req: NextRequest) {
         .eq('id', existing.id)
         .single()
       if (existingProfile?.organization_id === orgId) {
-        return NextResponse.json({ error: 'This user is already a member of your organization' }, { status: 409 })
+        return conflict('This user is already a member of your organization')
       }
     }
   } catch { /* skip if admin not available */ }
@@ -99,7 +76,7 @@ export async function POST(req: NextRequest) {
     .select()
     .single()
 
-  if (invError) return NextResponse.json({ error: invError.message }, { status: 500 })
+  if (invError) return internalError(invError.message)
 
   // Fetch org info for the email
   const { data: org } = await supabase
@@ -137,7 +114,5 @@ export async function POST(req: NextRequest) {
     metadata:       { email: body.email, role: body.role },
   })
 
-  // If program_ids provided, create program access grants once the user accepts
-  // (stored on invitation for now; assignments created at accept time)
   return NextResponse.json({ data: invitation }, { status: 201 })
 }

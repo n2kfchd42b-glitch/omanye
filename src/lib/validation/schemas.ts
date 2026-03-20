@@ -9,17 +9,21 @@ const ACCESS_LEVELS = ['SUMMARY_ONLY', 'INDICATORS', 'INDICATORS_AND_BUDGET', 'F
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const programSchema = z.object({
-  name:         z.string().min(3).max(200),
-  objective:    z.string().max(500).optional(),
-  total_budget: z.number().positive().optional(),
-  currency:     z.string().length(3),
-  tags:         z.array(z.string().max(50)).max(10).optional().default([]),
-  status:       z.enum(['PLANNING', 'ACTIVE', 'COMPLETED', 'SUSPENDED']).optional(),
-  visibility:   z.enum(['PRIVATE', 'DONOR_ONLY', 'PUBLIC']).optional(),
-  start_date:   z.string().datetime({ offset: true }).optional().nullable(),
-  end_date:     z.string().datetime({ offset: true }).optional().nullable(),
-  location:     z.string().max(200).optional().nullable(),
-  description:  z.string().max(2000).optional().nullable(),
+  name:             z.string().min(3).max(200),
+  objective:        z.string().max(500).optional().nullable(),
+  total_budget:     z.number().positive().optional().nullable(),
+  currency:         z.string().length(3).default('USD'),
+  tags:             z.array(z.string().max(50)).max(10).optional().default([]),
+  status:           z.enum(['PLANNING', 'ACTIVE', 'COMPLETED', 'SUSPENDED']).optional().default('PLANNING'),
+  visibility:       z.enum(['PRIVATE', 'DONOR_ONLY', 'PUBLIC']).optional().default('PRIVATE'),
+  start_date:       z.string().datetime({ offset: true }).optional().nullable(),
+  end_date:         z.string().datetime({ offset: true }).optional().nullable(),
+  location:         z.string().max(200).optional().nullable(),
+  location_country: z.string().max(100).optional().nullable(),
+  location_region:  z.string().max(100).optional().nullable(),
+  description:      z.string().max(2000).optional().nullable(),
+  primary_funder:   z.string().max(200).optional().nullable(),
+  logframe_url:     z.string().url().optional().nullable(),
 })
 
 export type ProgramPayload = z.infer<typeof programSchema>
@@ -29,14 +33,15 @@ export type ProgramPayload = z.infer<typeof programSchema>
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const indicatorSchema = z.object({
-  name:          z.string().min(2).max(300),
-  target_value:  z.number().positive(),
-  unit:          z.string().max(50),
-  baseline:      z.number().optional().nullable(),
-  frequency:     z.enum(['WEEKLY', 'MONTHLY', 'QUARTERLY', 'ANNUALLY', 'ONCE']).optional(),
-  visible_to_donor: z.boolean().optional().default(false),
-  description:   z.string().max(500).optional().nullable(),
-  sort_order:    z.number().int().nonnegative().optional(),
+  program_id:       z.string().uuid(),
+  name:             z.string().min(2).max(300),
+  target_value:     z.number().positive(),
+  unit:             z.string().max(50),
+  baseline_value:   z.number().optional().nullable(),
+  frequency:        z.enum(['WEEKLY', 'MONTHLY', 'QUARTERLY', 'ANNUALLY', 'ONCE']).optional().default('MONTHLY'),
+  visible_to_donors: z.boolean().optional().default(false),
+  description:      z.string().max(500).optional().nullable(),
+  sort_order:       z.number().int().nonnegative().optional().default(0),
 })
 
 export type IndicatorPayload = z.infer<typeof indicatorSchema>
@@ -56,6 +61,22 @@ export const expenditureSchema = z.object({
 })
 
 export type ExpenditurePayload = z.infer<typeof expenditureSchema>
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Budget Category
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const budgetCategorySchema = z.object({
+  program_id:       z.string().uuid(),
+  name:             z.string().min(2).max(200),
+  allocated_amount: z.number().nonnegative().max(100_000_000).optional().default(0),
+  currency:         z.string().length(3).optional().default('USD'),
+  description:      z.string().max(500).optional().nullable(),
+  color:            z.string().max(20).optional().nullable(),
+  sort_order:       z.number().int().nonnegative().optional().default(0),
+})
+
+export type BudgetCategoryPayload = z.infer<typeof budgetCategorySchema>
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Donor Invite
@@ -95,9 +116,12 @@ export type CreateReportPayload = z.infer<typeof createReportSchema>
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const inviteTeamMemberSchema = z.object({
-  email:      z.string().email(),
-  role:       z.enum(['NGO_ADMIN', 'NGO_STAFF', 'NGO_VIEWER']),
-  expires_at: z.string().datetime({ offset: true }).optional(),
+  email:       z.string().email(),
+  role:        z.enum(['NGO_ADMIN', 'NGO_STAFF', 'NGO_VIEWER']),
+  full_name:   z.string().max(200).optional().nullable(),
+  message:     z.string().max(1000).optional().nullable(),
+  program_ids: z.array(z.string().uuid()).optional().default([]),
+  expires_at:  z.string().datetime({ offset: true }).optional(),
 })
 
 export type InviteTeamMemberPayload = z.infer<typeof inviteTeamMemberSchema>
@@ -129,10 +153,16 @@ export const fieldCollectionFormSchema = z.object({
 })
 
 export const fieldSubmissionSchema = z.object({
-  form_id:   z.string().uuid(),
-  data:      z.record(z.string(), z.unknown()),
-  location:  z.string().max(200).optional().nullable(),
-  notes:     z.string().max(1000).optional().nullable(),
+  program_id:      z.string().uuid(),
+  form_id:         z.string().uuid().optional().nullable(),
+  submission_date: z.string().optional().nullable(),
+  location_name:   z.string().max(200).optional().nullable(),
+  location_lat:    z.number().min(-90).max(90).optional().nullable(),
+  location_lng:    z.number().min(-180).max(180).optional().nullable(),
+  data:            z.record(z.string(), z.unknown()).default({}),
+  notes:           z.string().max(1000).optional().nullable(),
+  attachments:     z.array(z.string()).optional().default([]),
+  status:          z.enum(['SUBMITTED', 'REVIEWING', 'APPROVED', 'REJECTED']).optional().default('SUBMITTED'),
 })
 
 // ─────────────────────────────────────────────────────────────────────────────

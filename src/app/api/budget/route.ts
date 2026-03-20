@@ -3,7 +3,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { unauthorized, forbidden, notFound, internalError } from '@/lib/api/errors'
+import { budgetCategorySchema } from '@/lib/validation/schemas'
+import { unauthorized, forbidden, notFound, internalError, validationError, apiError, ErrorCode } from '@/lib/api/errors'
 
 export async function GET(req: NextRequest) {
   const supabase = createClient()
@@ -11,7 +12,7 @@ export async function GET(req: NextRequest) {
   if (!user) return unauthorized()
 
   const programId = req.nextUrl.searchParams.get('program_id')
-  if (!programId) return NextResponse.json({ error: 'program_id required' }, { status: 400 })
+  if (!programId) return apiError(ErrorCode.VALIDATION_ERROR, 'program_id query parameter is required')
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -72,7 +73,9 @@ export async function POST(req: NextRequest) {
   if (!profile?.organization_id) return unauthorized()
   if (!['NGO_ADMIN', 'NGO_STAFF'].includes(profile.role)) return forbidden()
 
-  const body = await req.json()
+  const parsed = budgetCategorySchema.safeParse(await req.json())
+  if (!parsed.success) return validationError(parsed.error)
+  const body = parsed.data
 
   // Verify program belongs to org
   const { data: program } = await supabase
@@ -82,7 +85,7 @@ export async function POST(req: NextRequest) {
     .eq('organization_id', profile.organization_id)
     .single()
 
-  if (!program) return notFound()
+  if (!program) return notFound('Program')
 
   const { data, error } = await supabase
     .from('budget_categories')

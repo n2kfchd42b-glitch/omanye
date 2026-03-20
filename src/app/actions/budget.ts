@@ -160,7 +160,7 @@ export async function submitExpenditure(
       link:           `/org/programs/${programId}/budget`,
       priority:       'MEDIUM',
     })))
-  })()
+  })().catch(err => console.error('[budget] notify submit error:', err))
 
   return { data: data as Expenditure, error: null }
 }
@@ -303,7 +303,7 @@ export async function approveExpenditure(
         }
       }
     }
-  })()
+  })().catch(err => console.error('[budget] notify approve error:', err))
 
   return { data: data as Expenditure, error: null }
 }
@@ -355,7 +355,7 @@ export async function rejectExpenditure(
         priority:       'MEDIUM',
       })
     }
-  })()
+  })().catch(err => console.error('[budget] notify reject error:', err))
 
   return { data: data as Expenditure, error: null }
 }

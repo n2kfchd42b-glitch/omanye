@@ -3,7 +3,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { unauthorized, forbidden, internalError, limitExceeded } from '@/lib/api/errors'
+import { programSchema } from '@/lib/validation/schemas'
+import { unauthorized, forbidden, internalError, limitExceeded, validationError } from '@/lib/api/errors'
 import { checkLimit } from '@/lib/billing/limits'
 import { logAction } from '@/lib/audit/logger'
 
@@ -54,26 +55,29 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const body = await req.json()
+  const parsed = programSchema.safeParse(await req.json())
+  if (!parsed.success) return validationError(parsed.error)
+  const body = parsed.data
 
   const { data, error } = await supabase
     .from('programs')
     .insert({
       organization_id:  profile.organization_id,
       name:             body.name,
-      status:           body.status          ?? 'PLANNING',
-      description:      body.description     ?? null,
-      objective:        body.objective       ?? null,
-      start_date:       body.start_date      ?? null,
-      end_date:         body.end_date        ?? null,
+      status:           body.status           ?? 'PLANNING',
+      description:      body.description      ?? null,
+      objective:        body.objective        ?? null,
+      start_date:       body.start_date       ?? null,
+      end_date:         body.end_date         ?? null,
+      total_budget:     body.total_budget     ?? null,
+      currency:         body.currency         ?? 'USD',
+      tags:             body.tags             ?? [],
+      visibility:       body.visibility       ?? 'PRIVATE',
+      location:         body.location         ?? null,
       location_country: body.location_country ?? null,
       location_region:  body.location_region  ?? null,
       primary_funder:   body.primary_funder   ?? null,
-      total_budget:     body.total_budget     ?? null,
-      currency:         body.currency         ?? 'USD',
       logframe_url:     body.logframe_url     ?? null,
-      tags:             body.tags             ?? [],
-      visibility:       body.visibility       ?? 'PRIVATE',
       created_by:       user.id,
     })
     .select()

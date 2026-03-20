@@ -3,13 +3,14 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import type { NotificationPreferences } from '@/types/audit'
+import { notificationPrefsSchema } from '@/lib/validation/schemas'
+import { unauthorized, internalError, validationError } from '@/lib/api/errors'
 import { HIGH_PRIORITY_TYPES } from '@/types/audit'
 
 export async function GET() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+  if (!user) return unauthorized()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db: any = supabase
@@ -19,7 +20,7 @@ export async function GET() {
     .eq('profile_id', user.id)
     .maybeSingle()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return internalError(error.message)
 
   // Return defaults if no row yet
   if (!data) {
@@ -45,24 +46,17 @@ export async function GET() {
 export async function PATCH(req: NextRequest) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+  if (!user) return unauthorized()
 
-  const body = await req.json() as Partial<NotificationPreferences>
+  const parsed = notificationPrefsSchema.partial().safeParse(await req.json())
+  if (!parsed.success) return validationError(parsed.error)
+  const body = parsed.data
 
   // HIGH priority notifications cannot be disabled — enforce here
-  // notify_budget_warnings covers BUDGET_WARNING (HIGH)
-  // notify_indicator_updates covers INDICATOR_OFF_TRACK (HIGH)
-  // notify_donor_activity covers DONOR_ACCESS_REQUESTED (HIGH)
-  const enforced: Partial<NotificationPreferences> = { ...body }
-  if (HIGH_PRIORITY_TYPES.includes('INDICATOR_OFF_TRACK'))  enforced.notify_indicator_updates = true
-  if (HIGH_PRIORITY_TYPES.includes('BUDGET_WARNING'))       enforced.notify_budget_warnings   = true
-  if (HIGH_PRIORITY_TYPES.includes('DONOR_ACCESS_REQUESTED')) enforced.notify_donor_activity  = true
-
-  // Remove read-only fields
-  delete enforced.id
-  delete enforced.profile_id
-  delete enforced.created_at
-  delete enforced.updated_at
+  const enforced = { ...body }
+  if (HIGH_PRIORITY_TYPES.includes('INDICATOR_OFF_TRACK'))    enforced.notify_indicator_updates = true
+  if (HIGH_PRIORITY_TYPES.includes('BUDGET_WARNING'))         enforced.notify_budget_warnings   = true
+  if (HIGH_PRIORITY_TYPES.includes('DONOR_ACCESS_REQUESTED')) enforced.notify_donor_activity    = true
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db: any = supabase
@@ -72,6 +66,6 @@ export async function PATCH(req: NextRequest) {
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return internalError(error.message)
   return NextResponse.json({ data })
 }

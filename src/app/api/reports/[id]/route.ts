@@ -5,7 +5,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { UpdateReportPayload } from '@/types/reports'
-import { unauthorized, forbidden, notFound, internalError } from '@/lib/api/errors'
+import { unauthorized, forbidden, notFound, internalError, conflict } from '@/lib/api/errors'
+import { logActionForUser } from '@/lib/audit/logger'
 
 interface RouteParams { params: { id: string } }
 
@@ -106,7 +107,7 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
   const db: any = supabase
   const { data: existing } = await db
     .from('reports')
-    .select('id, status, programs(organization_id)')
+    .select('id, title, status, program_id, programs(organization_id)')
     .eq('id', params.id)
     .single()
 
@@ -114,10 +115,20 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
   const r = existing as Record<string, unknown>
   const prog = r.programs as { organization_id: string } | null
   if (prog?.organization_id !== profile.organization_id) return notFound()
-  if (r.status !== 'DRAFT') return NextResponse.json({ error: 'Only DRAFT reports can be deleted' }, { status: 409 })
+  if (r.status !== 'DRAFT') return conflict('Only DRAFT reports can be deleted')
 
   const { error } = await db.from('reports').delete().eq('id', params.id)
 
   if (error) return internalError(error.message)
-  return NextResponse.json({ success: true })
+
+  void logActionForUser(user!.id, {
+    organizationId: profile.organization_id,
+    action:         'report.deleted',
+    entityType:     'report',
+    entityId:       params.id,
+    entityName:     r.title as string,
+    metadata:       { program_id: r.program_id as string },
+  })
+
+  return NextResponse.json({ data: null })
 }
