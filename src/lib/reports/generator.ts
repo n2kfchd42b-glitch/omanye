@@ -95,6 +95,7 @@ async function buildKeyIndicators(programId: string): Promise<IndicatorReportRow
     .from('indicators')
     .select('id, name, category, unit, target_value, current_value')
     .eq('program_id', programId)
+    .eq('visible_to_donors', true)          // only donor-visible indicators in reports
     .order('sort_order', { ascending: true })
 
   const rows = (data as IndicatorRow[] | null) ?? []
@@ -173,6 +174,16 @@ async function buildAppendix(
 ): Promise<AppendixContent> {
   const supabase = createClient()
 
+  // Resolve which indicators are visible to donors so the appendix history
+  // never exposes updates for internally-hidden indicators.
+  const { data: visibleInds } = await supabase
+    .from('indicators')
+    .select('id')
+    .eq('program_id', programId)
+    .eq('visible_to_donors', true)
+
+  const visibleIds = (visibleInds ?? []).map((i: { id: string }) => i.id)
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let iuQuery: any = supabase
     .from('indicator_updates')
@@ -180,6 +191,25 @@ async function buildAppendix(
     .eq('program_id', programId)
     .order('recorded_at', { ascending: false })
     .limit(50)
+
+  // Only include updates for donor-visible indicators
+  if (visibleIds.length > 0) {
+    iuQuery = iuQuery.in('indicator_id', visibleIds)
+  } else {
+    // No visible indicators — return empty updates without hitting the DB
+    const [catRes] = await Promise.all([
+      supabase.from('v_category_spend').select('name, spent, currency').eq('program_id', programId).order('sort_order', { ascending: true }),
+    ])
+    const catRows = (catRes.data as { name: string; spent: number | null; currency: string | null }[] | null) ?? []
+    return {
+      indicator_updates: [],
+      expenditure_totals: catRows.map((c) => ({
+        category_name: c.name,
+        total_spent:   c.spent    ?? 0,
+        currency:      c.currency ?? 'USD',
+      })),
+    }
+  }
 
   if (periodStart) iuQuery = iuQuery.gte('recorded_at', periodStart)
   if (periodEnd)   iuQuery = iuQuery.lte('recorded_at', periodEnd + 'T23:59:59Z')

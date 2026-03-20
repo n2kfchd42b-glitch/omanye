@@ -3,14 +3,15 @@
 // Mobile-friendly field staff submission view
 // Optimized for tablet / phone use in the field
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Loader2, Plus, ChevronRight, ChevronLeft, Send, ArrowLeft, ClipboardList, History } from 'lucide-react'
+import { Loader2, Plus, ChevronRight, ChevronLeft, Send, ArrowLeft, ClipboardList, History, MapPin, Camera, Wifi, WifiOff, RefreshCw, X } from 'lucide-react'
 import { COLORS, FONTS } from '@/lib/tokens'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
-import type { FieldCollectionForm, FieldSubmission, FormField, CreateSubmissionPayload } from '@/types/field'
+import type { FieldCollectionForm, FieldSubmission, FormField, CreateSubmissionPayload, QueuedSubmission, OfflineAttachment } from '@/types/field'
 import { SUBMISSION_STATUS_LABELS, SUBMISSION_STATUS_COLORS, FORM_FIELD_TYPE_LABELS } from '@/types/field'
+import { enqueue, syncQueue, queueCount } from '@/lib/field/offline-queue'
 
 // ── Wizard step renderer ──────────────────────────────────────────────────────
 
@@ -119,21 +120,30 @@ function WizardField({
 // ── Form Wizard ───────────────────────────────────────────────────────────────
 
 function FormWizard({
-  form, programId, onClose, onSubmitted,
+  form, programId, isOnline, onClose, onSubmitted, onQueued,
 }: {
-  form: FieldCollectionForm
-  programId: string
-  onClose: () => void
+  form:        FieldCollectionForm
+  programId:   string
+  isOnline:    boolean
+  onClose:     () => void
   onSubmitted: (sub: FieldSubmission) => void
+  onQueued:    () => void
 }) {
   const allSteps = ['meta', ...form.fields.map((_, i) => `field_${i}`), 'review']
   const [stepIndex, setStepIndex] = useState(0)
   const [locationName, setLocationName] = useState('')
-  const [notes, setNotes] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
-  const [fieldData, setFieldData] = useState<Record<string, unknown>>({})
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
+  const [locationLat,  setLocationLat]  = useState<number | null>(null)
+  const [locationLng,  setLocationLng]  = useState<number | null>(null)
+  const [gpsLoading,   setGpsLoading]   = useState(false)
+  const [gpsError,     setGpsError]     = useState('')
+  const [notes, setNotes]               = useState('')
+  const [date,  setDate]                = useState(new Date().toISOString().slice(0, 10))
+  const [fieldData, setFieldData]       = useState<Record<string, unknown>>({})
+  const [photos,    setPhotos]          = useState<OfflineAttachment[]>([])
+  const [submitting, setSubmitting]     = useState(false)
+  const [queuing,    setQueuing]        = useState(false)
+  const [error,      setError]          = useState('')
+  const photoInputRef                   = useRef<HTMLInputElement>(null)
 
   const currentStep = allSteps[stepIndex]
   const isLastStep  = stepIndex === allSteps.length - 1
@@ -149,6 +159,59 @@ function FormWizard({
     return true
   }
 
+  // ── GPS ─────────────────────────────────────────────────────────────────────
+
+  function captureGPS() {
+    if (!('geolocation' in navigator)) {
+      setGpsError('GPS not available on this device')
+      return
+    }
+    setGpsLoading(true); setGpsError('')
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocationLat(pos.coords.latitude)
+        setLocationLng(pos.coords.longitude)
+        setGpsLoading(false)
+      },
+      (err) => {
+        setGpsError(err.message)
+        setGpsLoading(false)
+      },
+      { enableHighAccuracy: true, timeout: 15_000 }
+    )
+  }
+
+  // ── Photo capture ────────────────────────────────────────────────────────────
+
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    if (photos.length + files.length > 5) {
+      setError('Maximum 5 photos allowed')
+      return
+    }
+    setError('')
+
+    files.forEach((file) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        setPhotos((prev) => [
+          ...prev,
+          { name: file.name, dataUri: reader.result as string, type: file.type },
+        ])
+      }
+      reader.readAsDataURL(file)
+    })
+
+    // Reset input so the same file can be re-selected
+    if (photoInputRef.current) photoInputRef.current.value = ''
+  }
+
+  function removePhoto(index: number) {
+    setPhotos((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  // ── Submit (online) ──────────────────────────────────────────────────────────
+
   async function submit() {
     setSubmitting(true); setError('')
     try {
@@ -157,9 +220,13 @@ function FormWizard({
         form_id:         form.id,
         submission_date: date,
         location_name:   locationName,
+        location_lat:    locationLat,
+        location_lng:    locationLng,
         data:            fieldData,
         notes,
         status:          'SUBMITTED',
+        sync_source:     'direct',
+        attachments:     photos.map((p) => ({ name: p.name, url: p.dataUri, type: p.type })),
       }
       const res = await fetch('/api/field/submissions', {
         method: 'POST',
@@ -173,6 +240,34 @@ function FormWizard({
       setError(e instanceof Error ? e.message : 'Submission failed')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  // ── Queue for offline sync ───────────────────────────────────────────────────
+
+  async function queueOffline() {
+    setQueuing(true); setError('')
+    try {
+      const queued: QueuedSubmission = {
+        id:             crypto.randomUUID(),
+        programId,
+        formId:         form.id,
+        submissionDate: date,
+        locationName,
+        locationLat,
+        locationLng,
+        data:           fieldData,
+        notes,
+        attachments:    photos,
+        queuedAt:       new Date().toISOString(),
+        failCount:      0,
+      }
+      await enqueue(queued)
+      onQueued()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save offline')
+    } finally {
+      setQueuing(false)
     }
   }
 
@@ -224,9 +319,34 @@ function FormWizard({
               style={{
                 width: '100%', padding: '14px 16px', borderRadius: 12,
                 border: `2px solid ${COLORS.mist}`, fontSize: 16, color: COLORS.charcoal,
-                boxSizing: 'border-box', marginBottom: 20,
+                boxSizing: 'border-box', marginBottom: 14,
               }}
             />
+
+            {/* GPS capture */}
+            <button
+              onClick={captureGPS}
+              disabled={gpsLoading}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '10px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                background: locationLat ? COLORS.foam : '#fff',
+                border: `2px solid ${locationLat ? COLORS.forest : COLORS.mist}`,
+                color: locationLat ? COLORS.forest : COLORS.slate,
+                cursor: gpsLoading ? 'wait' : 'pointer',
+                marginBottom: 14,
+              }}
+            >
+              {gpsLoading
+                ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} />
+                : <MapPin size={15} />}
+              {locationLat
+                ? `GPS: ${locationLat.toFixed(5)}, ${locationLng?.toFixed(5)}`
+                : gpsLoading ? 'Getting GPS…' : 'Capture GPS location'}
+            </button>
+            {gpsError && (
+              <p style={{ fontSize: 12, color: COLORS.crimson, marginBottom: 14 }}>{gpsError}</p>
+            )}
 
             <label style={{ fontSize: 13, fontWeight: 600, color: COLORS.slate, display: 'block', marginBottom: 8 }}>
               Submission Date
@@ -276,6 +396,14 @@ function FormWizard({
                 <span style={{ fontSize: 13, color: COLORS.stone, minWidth: 120 }}>Location</span>
                 <span style={{ fontSize: 13, color: COLORS.charcoal, fontWeight: 500 }}>{locationName}</span>
               </div>
+              {locationLat && (
+                <div style={{ display: 'flex', gap: 10, marginBottom: 10, paddingBottom: 10, borderBottom: `1px solid ${COLORS.mist}` }}>
+                  <span style={{ fontSize: 13, color: COLORS.stone, minWidth: 120 }}>GPS</span>
+                  <span style={{ fontSize: 13, color: COLORS.charcoal, fontWeight: 500 }}>
+                    {locationLat.toFixed(5)}, {locationLng?.toFixed(5)}
+                  </span>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 10, marginBottom: 10, paddingBottom: 10, borderBottom: `1px solid ${COLORS.mist}` }}>
                 <span style={{ fontSize: 13, color: COLORS.stone, minWidth: 120 }}>Date</span>
                 <span style={{ fontSize: 13, color: COLORS.charcoal, fontWeight: 500 }}>{formatDate(date)}</span>
@@ -302,17 +430,80 @@ function FormWizard({
               style={{
                 width: '100%', padding: '14px 16px', borderRadius: 12,
                 border: `2px solid ${COLORS.mist}`, fontSize: 14, color: COLORS.charcoal,
-                resize: 'vertical', boxSizing: 'border-box',
+                resize: 'vertical', boxSizing: 'border-box', marginBottom: 20,
               }}
             />
 
-            {/* Offline note */}
-            <div style={{ marginTop: 16, padding: '10px 14px', background: COLORS.foam, borderRadius: 10, fontSize: 12, color: COLORS.slate }}>
-              💡 <strong>Tip:</strong> Save as draft if you have no connection. Offline support coming soon.
+            {/* Photo capture */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: COLORS.slate, display: 'block', marginBottom: 10 }}>
+                Photos ({photos.length}/5)
+              </label>
+
+              {/* Thumbnails */}
+              {photos.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+                  {photos.map((photo, idx) => (
+                    <div key={idx} style={{ position: 'relative', width: 72, height: 72 }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={photo.dataUri}
+                        alt={photo.name}
+                        style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: `2px solid ${COLORS.mist}` }}
+                      />
+                      <button
+                        onClick={() => removePhoto(idx)}
+                        style={{
+                          position: 'absolute', top: -6, right: -6,
+                          width: 20, height: 20, borderRadius: '50%',
+                          background: COLORS.crimson, color: '#fff', border: 'none',
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 10, padding: 0,
+                        }}
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {photos.length < 5 && (
+                <>
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    multiple
+                    onChange={handlePhotoChange}
+                    style={{ display: 'none' }}
+                  />
+                  <button
+                    onClick={() => photoInputRef.current?.click()}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '10px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                      background: '#fff', border: `2px solid ${COLORS.mist}`,
+                      color: COLORS.slate, cursor: 'pointer',
+                    }}
+                  >
+                    <Camera size={15} /> Add photo
+                  </button>
+                </>
+              )}
             </div>
 
+            {/* Offline status */}
+            {!isOnline && (
+              <div style={{ padding: '10px 14px', background: '#FEF3C7', borderRadius: 10, fontSize: 12, color: '#92400E', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <WifiOff size={14} />
+                <span>You&apos;re offline — this submission will be saved to your device and synced when you reconnect.</span>
+              </div>
+            )}
+
             {error && (
-              <div style={{ marginTop: 12, padding: '10px 14px', background: '#FEE2E2', borderRadius: 10, fontSize: 12, color: COLORS.crimson }}>
+              <div style={{ padding: '10px 14px', background: '#FEE2E2', borderRadius: 10, fontSize: 12, color: COLORS.crimson }}>
                 {error}
               </div>
             )}
@@ -323,19 +514,35 @@ function FormWizard({
       {/* Bottom action */}
       <div style={{ padding: '16px 20px', background: '#1A2B4A', borderTop: `1px solid ${COLORS.mist}` }}>
         {isLastStep ? (
-          <button
-            onClick={submit}
-            disabled={submitting}
-            style={{
-              width: '100%', padding: '16px', borderRadius: 14, fontSize: 16, fontWeight: 700,
-              background: COLORS.gold, color: COLORS.forest, cursor: submitting ? 'wait' : 'pointer',
-              border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              opacity: submitting ? 0.7 : 1,
-            }}
-          >
-            {submitting ? <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={18} />}
-            {submitting ? 'Submitting…' : 'Submit'}
-          </button>
+          isOnline ? (
+            <button
+              onClick={submit}
+              disabled={submitting}
+              style={{
+                width: '100%', padding: '16px', borderRadius: 14, fontSize: 16, fontWeight: 700,
+                background: COLORS.gold, color: COLORS.forest, cursor: submitting ? 'wait' : 'pointer',
+                border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                opacity: submitting ? 0.7 : 1,
+              }}
+            >
+              {submitting ? <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={18} />}
+              {submitting ? 'Submitting…' : 'Submit'}
+            </button>
+          ) : (
+            <button
+              onClick={queueOffline}
+              disabled={queuing}
+              style={{
+                width: '100%', padding: '16px', borderRadius: 14, fontSize: 16, fontWeight: 700,
+                background: '#D97706', color: '#fff', cursor: queuing ? 'wait' : 'pointer',
+                border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                opacity: queuing ? 0.7 : 1,
+              }}
+            >
+              {queuing ? <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> : <WifiOff size={18} />}
+              {queuing ? 'Saving…' : 'Save for later sync'}
+            </button>
+          )
         ) : (
           <button
             onClick={() => setStepIndex(p => p + 1)}
@@ -362,14 +569,78 @@ export default function FieldStaffPage() {
   const params = useParams<{ slug: string }>()
   const router = useRouter()
 
-  const [activeTab, setActiveTab]     = useState<'forms' | 'history'>('forms')
-  const [programs,   setPrograms]     = useState<{ id: string; name: string }[]>([])
+  const [activeTab,        setActiveTab]        = useState<'forms' | 'history'>('forms')
+  const [programs,         setPrograms]          = useState<{ id: string; name: string }[]>([])
   const [selectedProgramId, setSelectedProgramId] = useState('')
-  const [forms,      setForms]        = useState<FieldCollectionForm[]>([])
-  const [mySubmissions, setMySubmissions] = useState<FieldSubmission[]>([])
-  const [loading,    setLoading]      = useState(true)
-  const [wizard,     setWizard]       = useState<FieldCollectionForm | null>(null)
-  const [userId,     setUserId]       = useState('')
+  const [forms,            setForms]             = useState<FieldCollectionForm[]>([])
+  const [mySubmissions,    setMySubmissions]     = useState<FieldSubmission[]>([])
+  const [loading,          setLoading]           = useState(true)
+  const [wizard,           setWizard]            = useState<FieldCollectionForm | null>(null)
+  const [userId,           setUserId]            = useState('')
+  const [isOnline,         setIsOnline]          = useState(true)
+  const [pendingCount,     setPendingCount]      = useState(0)
+  const [syncing,          setSyncing]           = useState(false)
+  const [syncMsg,          setSyncMsg]           = useState('')
+
+  // ── Online/offline detection ───────────────────────────────────────────────
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine)
+
+    const handleOnline = async () => {
+      setIsOnline(true)
+      // Attempt auto-sync when connection is restored
+      const count = await queueCount()
+      if (count === 0) { setPendingCount(0); return }
+
+      setSyncing(true)
+      setSyncMsg(`Syncing ${count} offline submission${count > 1 ? 's' : ''}…`)
+
+      const result = await syncQueue((done, total) => {
+        setSyncMsg(`Syncing… ${done}/${total}`)
+      })
+
+      setSyncing(false)
+      setPendingCount(await queueCount())
+
+      if (result.succeeded > 0) {
+        setSyncMsg(`✓ Synced ${result.succeeded} submission${result.succeeded > 1 ? 's' : ''}`)
+        // Reload submissions list to show newly synced items
+        if (selectedProgramId) await loadFormsAndSubs(selectedProgramId, userId)
+      }
+      if (result.failed > 0) {
+        setSyncMsg(`${result.failed} submission${result.failed > 1 ? 's' : ''} failed to sync`)
+      }
+
+      // Clear message after a few seconds
+      setTimeout(() => setSyncMsg(''), 5_000)
+    }
+
+    const handleOffline = () => setIsOnline(false)
+
+    window.addEventListener('online',  handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    // Also wire up background-sync messages from the service worker
+    const handleSWMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'BACKGROUND_SYNC') handleOnline()
+    }
+    navigator.serviceWorker?.addEventListener('message', handleSWMessage)
+
+    return () => {
+      window.removeEventListener('online',  handleOnline)
+      window.removeEventListener('offline', handleOffline)
+      navigator.serviceWorker?.removeEventListener('message', handleSWMessage)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProgramId, userId])
+
+  // Refresh queue count on mount
+  useEffect(() => {
+    queueCount().then(setPendingCount).catch(() => {})
+  }, [])
+
+  // ── Data loading ───────────────────────────────────────────────────────────
 
   const load = useCallback(async () => {
     try {
@@ -429,6 +700,10 @@ export default function FieldStaffPage() {
     if (id) await loadFormsAndSubs(id, userId)
   }
 
+  async function refreshQueueCount() {
+    setPendingCount(await queueCount())
+  }
+
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300 }}>
@@ -445,7 +720,61 @@ export default function FieldStaffPage() {
           <h1 style={{ fontFamily: FONTS.heading, fontSize: 20, fontWeight: 700, color: COLORS.forest, flex: 1 }}>
             Field Data
           </h1>
+
+          {/* Online/offline indicator */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '4px 10px', borderRadius: 20,
+            background: isOnline ? '#D1FAE5' : '#FEF3C7',
+            fontSize: 12, fontWeight: 600,
+            color: isOnline ? '#065F46' : '#92400E',
+          }}>
+            {isOnline ? <Wifi size={12} /> : <WifiOff size={12} />}
+            {isOnline ? 'Online' : 'Offline'}
+          </div>
+
+          {/* Pending queue badge */}
+          {pendingCount > 0 && (
+            <button
+              onClick={async () => {
+                if (!isOnline) return
+                setSyncing(true)
+                const result = await syncQueue((done, total) => setSyncMsg(`${done}/${total}`))
+                setSyncing(false)
+                setPendingCount(await queueCount())
+                if (result.succeeded > 0 && selectedProgramId) {
+                  await loadFormsAndSubs(selectedProgramId, userId)
+                }
+                setTimeout(() => setSyncMsg(''), 4_000)
+              }}
+              disabled={!isOnline || syncing}
+              title={isOnline ? 'Tap to sync now' : 'Will sync when online'}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '4px 10px', borderRadius: 20,
+                background: '#FEF3C7', border: 'none', cursor: isOnline ? 'pointer' : 'default',
+                fontSize: 12, fontWeight: 600, color: '#92400E',
+              }}
+            >
+              {syncing
+                ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                : <RefreshCw size={12} />}
+              {pendingCount} queued
+            </button>
+          )}
         </div>
+
+        {/* Sync status message */}
+        {syncMsg && (
+          <div style={{
+            padding: '8px 12px', borderRadius: 8, fontSize: 12,
+            background: syncMsg.startsWith('✓') ? '#D1FAE5' : '#FEF3C7',
+            color: syncMsg.startsWith('✓') ? '#065F46' : '#92400E',
+            marginBottom: 8,
+          }}>
+            {syncMsg}
+          </div>
+        )}
 
         {/* Program selector */}
         {programs.length > 1 && (
@@ -533,13 +862,17 @@ export default function FieldStaffPage() {
                   </button>
                 ))}
 
-                {/* Offline note */}
-                <div style={{
-                  padding: '12px 16px', background: COLORS.foam, borderRadius: 12,
-                  fontSize: 12, color: COLORS.slate, marginTop: 4,
-                }}>
-                  💡 <strong>Save draft if no connection.</strong> Full offline support is coming soon.
-                </div>
+                {/* Offline tip */}
+                {!isOnline && (
+                  <div style={{
+                    padding: '12px 16px', background: '#FEF3C7', borderRadius: 12,
+                    fontSize: 12, color: '#92400E', marginTop: 4,
+                    display: 'flex', gap: 8, alignItems: 'flex-start',
+                  }}>
+                    <WifiOff size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+                    <span>You&apos;re offline. Complete a form and tap <strong>Save for later sync</strong> — it will upload automatically when you reconnect.</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -599,10 +932,15 @@ export default function FieldStaffPage() {
         <FormWizard
           form={wizard}
           programId={selectedProgramId}
+          isOnline={isOnline}
           onClose={() => setWizard(null)}
           onSubmitted={sub => {
             setMySubmissions(prev => [{ ...sub, form_name: wizard.name } as FieldSubmission, ...prev])
             setWizard(null)
+          }}
+          onQueued={() => {
+            setWizard(null)
+            refreshQueueCount()
           }}
         />
       )}

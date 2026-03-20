@@ -56,8 +56,10 @@ export default function ReportsPage() {
   const [reports,   setReports]   = useState<Report[]>([])
   const [loading,   setLoading]   = useState(true)
   const [filter,    setFilter]    = useState<FilterTab>('all')
-  const [showModal, setShowModal] = useState(false)
-  const [preselect, setPreselect] = useState<string | null>(null)
+  const [showModal,       setShowModal]       = useState(false)
+  const [preselect,       setPreselect]       = useState<string | null>(null)
+  const [archiveConfirmId, setArchiveConfirmId] = useState<string | null>(null)
+  const [archiving,       setArchiving]       = useState(false)
 
   // Load data
   const load = useCallback(async () => {
@@ -142,11 +144,18 @@ export default function ReportsPage() {
     }
   }
 
-  async function handleArchive(id: string) {
-    if (!confirm('Archive this report? It will no longer be visible to donors.')) return
-    const res = await fetch(`/api/reports/${id}/archive`, { method: 'POST' })
+  function handleArchive(id: string) {
+    setArchiveConfirmId(id)
+  }
+
+  async function confirmArchive() {
+    if (!archiveConfirmId) return
+    setArchiving(true)
+    const res = await fetch(`/api/reports/${archiveConfirmId}/archive`, { method: 'POST' })
+    setArchiving(false)
+    setArchiveConfirmId(null)
     if (res.ok) {
-      setReports(p => p.map(r => r.id === id ? { ...r, status: 'ARCHIVED' as ReportStatus, visible_to_donors: false } : r))
+      setReports(p => p.map(r => r.id === archiveConfirmId ? { ...r, status: 'ARCHIVED' as ReportStatus, visible_to_donors: false } : r))
       success('Report archived')
     } else {
       toastError('Could not archive report')
@@ -251,6 +260,71 @@ export default function ReportsPage() {
               onView={() => router.push(`/org/${params.slug}/reports/${report.id}`)}
             />
           ))}
+        </div>
+      )}
+
+      {/* Archive confirmation modal */}
+      {archiveConfirmId && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 200,
+          background: 'rgba(15,30,50,0.55)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '0 16px',
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: 16, padding: '28px 28px 24px',
+            width: '100%', maxWidth: 440,
+            boxShadow: '0 8px 40px rgba(0,0,0,0.18)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              <div style={{
+                width: 40, height: 40, borderRadius: 10, background: '#FEF3C7',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <Archive size={18} style={{ color: '#92400E' }} />
+              </div>
+              <h2 style={{ fontFamily: FONTS.heading, fontSize: 17, fontWeight: 700, color: COLORS.forest }}>
+                Archive this report?
+              </h2>
+            </div>
+            <p style={{ fontSize: 13, color: COLORS.slate, lineHeight: 1.65, marginBottom: 8 }}>
+              Archived reports remain accessible and can still be viewed, but they cannot be
+              edited or re-submitted. Donors will no longer see this report in their portal.
+            </p>
+            <p style={{ fontSize: 12, color: COLORS.stone, marginBottom: 22 }}>
+              To restore a report you will need to contact your platform administrator.
+            </p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setArchiveConfirmId(null)}
+                disabled={archiving}
+                style={{
+                  padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 500,
+                  background: COLORS.foam, color: COLORS.slate,
+                  border: `1px solid ${COLORS.mist}`, cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmArchive}
+                disabled={archiving}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                  background: '#92400E', color: '#fff',
+                  border: 'none', cursor: archiving ? 'wait' : 'pointer',
+                  opacity: archiving ? 0.75 : 1,
+                }}
+              >
+                {archiving
+                  ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                  : <Archive size={13} />
+                }
+                {archiving ? 'Archiving…' : 'Archive report'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

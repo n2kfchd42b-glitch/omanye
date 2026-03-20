@@ -1,7 +1,15 @@
 -- ─────────────────────────────────────────────────────────────────────────────
--- OMANYE  —  RLS Audit & Hardening + Performance Indexes  —  Migration 010
+-- OMANYE  —  RLS Audit & Hardening + Performance Indexes  —  Migration 013
 -- Run with:  supabase db push
 -- Rollback:  see ROLLBACK section at bottom of file
+--
+-- RENAME HISTORY:
+--   Originally created as 010_rls_audit.sql.  At the time, 010_contact_submissions.sql
+--   already existed, creating a duplicate 010_ prefix that would cause ordering
+--   ambiguity on a fresh supabase db push.  This file was therefore renamed to
+--   013_rls_audit.sql (after 012_funder_opportunities.sql) so the migration
+--   sequence is unambiguous.  SQL content is unchanged from the original.
+--   Additional RESTRICTIVE policies (Section 4) were appended during the rename.
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- ─────────────────────────────────────────────────────────────────────────────

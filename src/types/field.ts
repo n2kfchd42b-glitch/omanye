@@ -3,6 +3,7 @@
 // ── Enums ─────────────────────────────────────────────────────────────────────
 
 export type SubmissionStatus = 'DRAFT' | 'SUBMITTED' | 'REVIEWED' | 'FLAGGED'
+export type SyncSource = 'direct' | 'batch_sync'
 
 export const SUBMISSION_STATUS_LABELS: Record<SubmissionStatus, string> = {
   DRAFT:     'Draft',
@@ -66,10 +67,15 @@ export interface FieldSubmission {
   notes:           string
   attachments:     SubmissionAttachment[]
   status:          SubmissionStatus
-  reviewed_by:     string | null
-  reviewed_at:     string | null
-  created_at:      string
-  updated_at:      string
+  reviewed_by:        string | null
+  reviewed_at:        string | null
+  sync_source:        SyncSource
+  device_metadata:    Record<string, unknown> | null
+  flagged_for_review: boolean
+  flag_reason:        string | null
+  rejection_reason:   string | null
+  created_at:         string
+  updated_at:         string
   // Joined
   submitter_name?: string
   reviewer_name?:  string
@@ -119,4 +125,32 @@ export interface CreateSubmissionPayload {
   notes?:          string
   attachments?:    SubmissionAttachment[]
   status?:         SubmissionStatus
+  sync_source?:    SyncSource
+  device_metadata?: Record<string, unknown>
+}
+
+// ── Offline queue types ────────────────────────────────────────────────────────
+
+export interface QueuedSubmission {
+  /** Client-generated UUID used to deduplicate during sync */
+  id:              string
+  programId:       string
+  formId:          string | null
+  submissionDate:  string
+  locationName:    string
+  locationLat:     number | null
+  locationLng:     number | null
+  data:            Record<string, unknown>
+  notes:           string
+  /** Attachments stored as base64 data URIs while offline */
+  attachments:     OfflineAttachment[]
+  queuedAt:        string
+  /** How many sync attempts have failed */
+  failCount:       number
+}
+
+export interface OfflineAttachment {
+  name:     string
+  dataUri:  string
+  type:     string
 }

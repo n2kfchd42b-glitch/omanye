@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import {
   Plus, X, Loader2, Eye, Flag, CheckCircle2,
-  ArrowLeft, ClipboardList, Database, Trash2, Edit2, AlertCircle,
+  ArrowLeft, ClipboardList, Database, Trash2, Edit2, AlertCircle, ShieldAlert,
 } from 'lucide-react'
 import { COLORS, FONTS } from '@/lib/tokens'
 import { createClient } from '@/lib/supabase/client'
@@ -695,6 +695,10 @@ export default function FieldDataPage() {
   const [viewSubmission, setViewSubmission] = useState<FieldSubmission | null>(null)
   const [statusFilter,   setStatusFilter]   = useState<string>('all')
   const [searchTerm,     setSearchTerm]     = useState('')
+  const [activeSection,  setActiveSection]  = useState<'all' | 'moderation'>('all')
+  const [rejectTarget,   setRejectTarget]   = useState<string | null>(null)
+  const [rejectReason,   setRejectReason]   = useState('')
+  const [moderating,     setModerating]     = useState(false)
 
   const isAdmin = userRole === 'NGO_ADMIN'
   const canSubmit = userRole === 'NGO_ADMIN' || userRole === 'NGO_STAFF'
@@ -740,6 +744,8 @@ export default function FieldDataPage() {
     if (res.ok) setForms(prev => prev.map(f => f.id === id ? { ...f, active: false } : f))
   }
 
+  const flaggedSubs = submissions.filter(s => s.flagged_for_review)
+
   const filteredSubs = submissions.filter(s => {
     if (statusFilter !== 'all' && s.status !== statusFilter) return false
     if (searchTerm) {
@@ -752,6 +758,41 @@ export default function FieldDataPage() {
     }
     return true
   })
+
+  async function handleApprove(id: string) {
+    setModerating(true)
+    try {
+      const res = await fetch(`/api/field/submissions/${id}/approve`, { method: 'PATCH' })
+      if (res.ok) {
+        setSubmissions(prev => prev.map(s =>
+          s.id === id ? { ...s, status: 'REVIEWED' as const, flagged_for_review: false, flag_reason: null } : s
+        ))
+      }
+    } finally {
+      setModerating(false)
+    }
+  }
+
+  async function handleReject() {
+    if (!rejectTarget || !rejectReason.trim()) return
+    setModerating(true)
+    try {
+      const res = await fetch(`/api/field/submissions/${rejectTarget}/reject`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ rejection_reason: rejectReason.trim() }),
+      })
+      if (res.ok) {
+        setSubmissions(prev => prev.map(s =>
+          s.id === rejectTarget ? { ...s, rejection_reason: rejectReason.trim() } : s
+        ))
+        setRejectTarget(null)
+        setRejectReason('')
+      }
+    } finally {
+      setModerating(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -789,6 +830,39 @@ export default function FieldDataPage() {
 
       {/* Tab bar */}
       <ProgramTabBar slug={params.slug} programId={params.programId} active="field" />
+
+      {/* Section tab bar (all submissions vs moderation queue) */}
+      {isAdmin && (
+        <div style={{ display: 'flex', gap: 2, padding: '0 24px', background: '#1A2B4A', borderBottom: `1px solid ${COLORS.mist}` }}>
+          {([
+            { id: 'all',        label: 'All Submissions' },
+            { id: 'moderation', label: 'Needs Review', count: flaggedSubs.length },
+          ] as const).map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveSection(tab.id)}
+              style={{
+                padding: '10px 14px', fontSize: 13, whiteSpace: 'nowrap',
+                fontWeight: activeSection === tab.id ? 600 : 400,
+                color: activeSection === tab.id ? COLORS.forest : COLORS.stone,
+                borderBottom: activeSection === tab.id ? `2px solid ${COLORS.forest}` : '2px solid transparent',
+                background: 'none', cursor: 'pointer', marginBottom: -1,
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              {tab.label}
+              {'count' in tab && tab.count > 0 && (
+                <span style={{
+                  padding: '1px 6px', borderRadius: 10, fontSize: 10, fontWeight: 700,
+                  background: '#FEE2E2', color: COLORS.crimson,
+                }}>
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div style={{ maxWidth: 1040, margin: '0 auto', padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: 28 }}>
 
@@ -871,8 +945,91 @@ export default function FieldDataPage() {
           )}
         </section>
 
+        {/* ── Moderation Queue (Needs Review) ── */}
+        {activeSection === 'moderation' && isAdmin && (
+          <section>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <div>
+                <h2 style={{ fontFamily: FONTS.heading, fontSize: 18, fontWeight: 700, color: COLORS.forest, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <ShieldAlert size={20} style={{ color: COLORS.crimson }} />
+                  Moderation Queue
+                </h2>
+                <p style={{ fontSize: 12, color: COLORS.stone }}>
+                  Submissions flagged for review (e.g. from offline batch sync with missing data)
+                </p>
+              </div>
+            </div>
+
+            {flaggedSubs.length === 0 ? (
+              <div className="card" style={{ padding: '32px 24px', textAlign: 'center' }}>
+                <CheckCircle2 size={28} style={{ color: '#38A169', marginBottom: 10 }} />
+                <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.forest, marginBottom: 4 }}>Queue is clear</p>
+                <p style={{ fontSize: 12, color: COLORS.stone }}>No submissions are awaiting moderation.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {flaggedSubs.map(sub => (
+                  <div key={sub.id} className="card" style={{ padding: '16px 20px', borderLeft: `3px solid ${COLORS.crimson}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.forest }}>
+                            {sub.location_name || 'Unknown location'}
+                          </span>
+                          <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 6, background: '#FEE2E2', color: COLORS.crimson }}>
+                            FLAGGED
+                          </span>
+                        </div>
+                        <p style={{ fontSize: 12, color: COLORS.stone, marginBottom: sub.flag_reason ? 6 : 0 }}>
+                          {formatDate(sub.submission_date)} · {sub.submitter_name ?? 'Unknown'}
+                          {sub.form_name && ` · ${sub.form_name}`}
+                        </p>
+                        {sub.flag_reason && (
+                          <p style={{ fontSize: 12, color: '#92400E', background: '#FEF3C7', padding: '6px 10px', borderRadius: 6, marginTop: 6 }}>
+                            ⚠️ {sub.flag_reason}
+                          </p>
+                        )}
+                        {sub.rejection_reason && (
+                          <p style={{ fontSize: 12, color: COLORS.crimson, marginTop: 6, fontStyle: 'italic' }}>
+                            Rejection reason: {sub.rejection_reason}
+                          </p>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                        <button
+                          onClick={() => setViewSubmission(sub)}
+                          style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 500, background: COLORS.foam, color: COLORS.slate, cursor: 'pointer', border: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+                        >
+                          <Eye size={11} /> View
+                        </button>
+                        <button
+                          onClick={() => handleApprove(sub.id)}
+                          disabled={moderating}
+                          style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#38A16920', color: '#38A169', cursor: 'pointer', border: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+                        >
+                          {moderating ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle2 size={11} />}
+                          Approve
+                        </button>
+                        {!sub.rejection_reason && (
+                          <button
+                            onClick={() => { setRejectTarget(sub.id); setRejectReason('') }}
+                            disabled={moderating}
+                            style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#FEE2E2', color: COLORS.crimson, cursor: 'pointer', border: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+                          >
+                            <X size={11} /> Reject
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
         {/* ── Submissions ── */}
-        <section>
+        {activeSection === 'all' && <section>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <div>
               <h2 style={{ fontFamily: FONTS.heading, fontSize: 18, fontWeight: 700, color: COLORS.forest, marginBottom: 2 }}>
@@ -997,10 +1154,67 @@ export default function FieldDataPage() {
               </table>
             </div>
           )}
-        </section>
+        </section>}
       </div>
 
       {/* Modals */}
+
+      {/* Reject reason modal */}
+      {rejectTarget && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(2px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+          }}
+          onClick={() => setRejectTarget(null)}
+        >
+          <div
+            style={{ width: '100%', maxWidth: 460, background: '#1A2B4A', borderRadius: 16, boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ padding: '18px 24px', borderBottom: `1px solid ${COLORS.mist}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ fontFamily: FONTS.heading, fontSize: 17, fontWeight: 600, color: COLORS.forest }}>Reject Submission</h2>
+              <button onClick={() => setRejectTarget(null)} style={{ background: 'none', cursor: 'pointer', color: COLORS.stone }}><X size={18} /></button>
+            </div>
+            <div style={{ padding: '20px 24px' }}>
+              <p style={{ fontSize: 13, color: COLORS.stone, marginBottom: 12 }}>
+                Explain why this submission is being rejected. The reason will be recorded for audit purposes.
+              </p>
+              <textarea
+                value={rejectReason}
+                onChange={e => setRejectReason(e.target.value)}
+                rows={4}
+                placeholder="e.g. GPS coordinates outside programme area, missing required fields…"
+                autoFocus
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${COLORS.mist}`, fontSize: 13, color: COLORS.charcoal, resize: 'vertical', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ padding: '14px 24px', borderTop: `1px solid ${COLORS.mist}`, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button
+                onClick={() => setRejectTarget(null)}
+                style={{ padding: '8px 18px', borderRadius: 8, fontSize: 13, background: COLORS.foam, color: COLORS.slate, cursor: 'pointer', border: 'none' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReject}
+                disabled={moderating || !rejectReason.trim()}
+                style={{
+                  padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                  background: COLORS.crimson, color: '#fff', cursor: moderating ? 'wait' : 'pointer',
+                  border: 'none', opacity: (moderating || !rejectReason.trim()) ? 0.5 : 1,
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}
+              >
+                {moderating && <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />}
+                Confirm Rejection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showFormModal && (
         <FormBuilderModal
           programId={params.programId}

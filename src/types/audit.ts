@@ -39,6 +39,7 @@ export type AuditAction =
   | 'field.submission_created'
   | 'field.submission_reviewed'
   | 'field.submission_flagged'
+  | 'field.batch_sync'
   // Deletions
   | 'indicator.deleted'
   | 'report.deleted'
@@ -175,6 +176,7 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   'field.submission_created':  'Created field submission',
   'field.submission_reviewed': 'Reviewed field submission',
   'field.submission_flagged':  'Flagged field submission',
+  'field.batch_sync':          'Batch-synced offline submissions',
   'indicator.deleted':         'Deleted indicator',
   'report.deleted':            'Deleted report',
   'report.archived':           'Archived report',

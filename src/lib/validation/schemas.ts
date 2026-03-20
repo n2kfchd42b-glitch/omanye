@@ -163,6 +163,20 @@ export const fieldSubmissionSchema = z.object({
   notes:           z.string().max(1000).optional().nullable(),
   attachments:     z.array(z.string()).optional().default([]),
   status:          z.enum(['SUBMITTED', 'REVIEWING', 'APPROVED', 'REJECTED']).optional().default('SUBMITTED'),
+  sync_source:     z.enum(['direct', 'batch_sync']).optional().default('direct'),
+  device_metadata: z.record(z.string(), z.unknown()).optional().nullable(),
+})
+
+export const batchSubmissionSchema = z.object({
+  submissions: z
+    .array(
+      fieldSubmissionSchema.extend({
+        /** Client-generated idempotency key — deduplicated server-side */
+        client_id: z.string().uuid(),
+      })
+    )
+    .min(1)
+    .max(50),
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
