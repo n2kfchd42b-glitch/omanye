@@ -61,12 +61,12 @@ export default function LoginPage() {
         .single()
 
       if (!profile?.onboarding_complete) {
-        router.push('/onboarding')
+        router.replace('/onboarding')
         return
       }
 
       if (profile.role === 'DONOR') {
-        router.push('/donor/dashboard')
+        router.replace('/donor/dashboard')
         return
       }
 
@@ -88,7 +88,7 @@ export default function LoginPage() {
         return
       }
 
-      router.push(`/org/${org.slug}/dashboard`)
+      router.replace(`/org/${org.slug}/dashboard`)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An unexpected error occurred.'
       setError(message)

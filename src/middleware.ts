@@ -236,7 +236,7 @@ export async function middleware(request: NextRequest) {
 
   // ── Authenticated hitting auth/home → redirect to their home ───────────────
   if (isAuthRoute || pathname === '/') {
-    const redirect = await redirectToHome(request, role, organization_id)
+    const redirect = await redirectToHome(request, supabase, role, organization_id)
     return applySecurityHeaders(redirect, origin)
   }
 
@@ -254,7 +254,7 @@ export async function middleware(request: NextRequest) {
   // ── /org/* — NGO roles only ─────────────────────────────────────────────────
   if (pathname.startsWith('/org/')) {
     if (!['NGO_ADMIN', 'NGO_STAFF', 'NGO_VIEWER'].includes(role)) {
-      const redirect = await redirectToHome(request, role, organization_id)
+      const redirect = await redirectToHome(request, supabase, role, organization_id)
       return applySecurityHeaders(redirect, origin)
     }
   }
@@ -262,7 +262,7 @@ export async function middleware(request: NextRequest) {
   // ── /donor/* — DONOR role only ──────────────────────────────────────────────
   if (pathname.startsWith('/donor/')) {
     if (role !== 'DONOR') {
-      const redirect = await redirectToHome(request, role, organization_id)
+      const redirect = await redirectToHome(request, supabase, role, organization_id)
       return applySecurityHeaders(redirect, origin)
     }
   }
@@ -274,6 +274,8 @@ export async function middleware(request: NextRequest) {
 
 async function redirectToHome(
   request: NextRequest,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   role: string,
   organizationId: string | null
 ): Promise<NextResponse> {
@@ -285,12 +287,7 @@ async function redirectToHome(
   }
 
   if (organizationId) {
-    const { createClient } = await import('@supabase/supabase-js')
-    const admin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-    const { data: org } = await admin
+    const { data: org } = await supabase
       .from('organizations')
       .select('slug')
       .eq('id', organizationId)
