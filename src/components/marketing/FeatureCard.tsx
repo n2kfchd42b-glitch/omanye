@@ -53,7 +53,7 @@ export function FeatureCard({ icon, title, description, variant = 'light' }: Fea
           className="text-sm leading-relaxed"
           style={{
             fontFamily: 'var(--font-instrument),system-ui,sans-serif',
-            color: isDark ? 'rgba(255,255,255,0.55)' : 'rgba(15,27,51,0.6)',
+            color: isDark ? 'rgba(255,255,255,0.75)' : 'rgba(15,27,51,0.72)',
           }}
         >
           {description}

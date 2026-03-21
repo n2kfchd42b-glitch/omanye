@@ -84,7 +84,7 @@ export function PlanCard({
               </span>
               <span
                 className="text-sm mb-1"
-                style={{ color: highlighted ? 'rgba(15,27,51,0.6)' : 'rgba(255,255,255,0.5)' }}
+                style={{ color: highlighted ? 'rgba(15,27,51,0.7)' : 'rgba(255,255,255,0.72)' }}
               >
                 /mo
               </span>
@@ -94,7 +94,7 @@ export function PlanCard({
         {billing === 'annual' && price.monthly > 0 && (
           <p
             className="text-xs mb-2"
-            style={{ color: highlighted ? 'rgba(15,27,51,0.6)' : 'rgba(255,255,255,0.4)' }}
+            style={{ color: highlighted ? 'rgba(15,27,51,0.7)' : 'rgba(255,255,255,0.65)' }}
           >
             Billed annually (${price.annual}/yr)
           </p>
@@ -102,7 +102,7 @@ export function PlanCard({
         <p
           className="text-sm leading-relaxed"
           style={{
-            color: highlighted ? 'rgba(15,27,51,0.75)' : 'rgba(255,255,255,0.55)',
+            color: highlighted ? 'rgba(15,27,51,0.82)' : 'rgba(255,255,255,0.75)',
             fontFamily: 'var(--font-instrument),system-ui,sans-serif',
           }}
         >
@@ -121,7 +121,7 @@ export function PlanCard({
             <span
               className="text-sm leading-snug"
               style={{
-                color: highlighted ? 'rgba(15,27,51,0.85)' : 'rgba(255,255,255,0.7)',
+                color: highlighted ? 'rgba(15,27,51,0.9)' : 'rgba(255,255,255,0.85)',
                 fontFamily: 'var(--font-instrument),system-ui,sans-serif',
               }}
             >

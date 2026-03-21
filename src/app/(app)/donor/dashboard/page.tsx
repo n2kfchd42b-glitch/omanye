@@ -60,7 +60,7 @@ export default async function DonorDashboardPage() {
   return (
       <main style={{ padding: '24px 24px 40px', maxWidth: 900, margin: '0 auto' }}>
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 26, fontWeight: 700, color: COLORS.ink, fontFamily: 'Palatino, Georgia, serif', marginBottom: 6 }}>
+          <h1 style={{ fontSize: 26, fontWeight: 700, color: COLORS.charcoal, fontFamily: 'Palatino, Georgia, serif', marginBottom: 6 }}>
             Donor Portal
           </h1>
           <p style={{ fontSize: 15, color: COLORS.slate }}>

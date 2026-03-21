@@ -40,14 +40,14 @@ export function EmptyState({ icon, title, description, action, compact = false }
           fontFamily: 'var(--font-fraunces), Georgia, serif',
           fontSize: compact ? 14 : 16,
           fontWeight: 600,
-          color: COLORS.slate,
+          color: '#C4D4E8',
           marginBottom: 4,
         }}
       >
         {title}
       </h3>
       {description && (
-        <p style={{ fontSize: 13, color: COLORS.stone, maxWidth: 280 }}>{description}</p>
+        <p style={{ fontSize: 13, color: '#A8B8CC', maxWidth: 280 }}>{description}</p>
       )}
       {action && <div style={{ marginTop: 16 }}>{action}</div>}
     </div>

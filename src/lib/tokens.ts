@@ -15,8 +15,8 @@ export const COLORS = {
 
   // Extended palette
   pearl:    '#1A2B4A',  // navy card / input bg
-  stone:    '#6B7A99',  // subtle text
-  slate:    '#A0AEC0',  // muted text
+  stone:    '#8A9BB8',  // subtle text (was #6B7A99, raised for contrast)
+  slate:    '#B8C8DC',  // muted text  (was #A0AEC0, raised for contrast)
   charcoal: '#FFFFFF',  // primary text
   sky:      '#60A5FA',  // links, info
   amber:    '#D4AF5C',  // warnings
@@ -43,17 +43,17 @@ export const SPACING = {
 export const STATUS_MAP: Record<string, { bg: string; text: string; dot: string }> = {
   // Program statuses
   active:     { bg: '#D4AF5C22', text: '#D4AF5C', dot: '#D4AF5C' },
-  planning:   { bg: '#1A2B4A',   text: '#A0AEC0', dot: '#6B7A99' },
-  paused:     { bg: '#1A2B4A',   text: '#6B7A99', dot: '#6B7A99' },
+  planning:   { bg: '#1A2B4A',   text: '#B8C8DC', dot: '#8A9BB8' },
+  paused:     { bg: '#1A2B4A',   text: '#A8B8CC', dot: '#8A9BB8' },
   completed:  { bg: '#38A16920', text: '#38A169', dot: '#38A169' },
   // Document statuses
-  draft:      { bg: '#1A2B4A',   text: '#A0AEC0', dot: '#6B7A99' },
+  draft:      { bg: '#1A2B4A',   text: '#B8C8DC', dot: '#8A9BB8' },
   in_review:  { bg: '#1A3A5C',   text: '#60A5FA', dot: '#60A5FA' },
   approved:   { bg: '#38A16920', text: '#38A169', dot: '#38A169' },
   submitted:  { bg: '#1A3A5C',   text: '#60A5FA', dot: '#60A5FA' },
   // Dataset statuses
   clean:      { bg: '#38A16920', text: '#38A169', dot: '#38A169' },
-  processing: { bg: '#1A2B4A',   text: '#A0AEC0', dot: '#6B7A99' },
+  processing: { bg: '#1A2B4A',   text: '#B8C8DC', dot: '#8A9BB8' },
   review:     { bg: '#1A3A5C',   text: '#60A5FA', dot: '#60A5FA' },
   error:      { bg: '#E53E3E20', text: '#E53E3E', dot: '#E53E3E' },
   // Analysis statuses
@@ -68,8 +68,8 @@ export const ROLE_MAP: Record<string, { bg: string; text: string }> = {
   'Field Staff':   { bg: '#1A3A5C', text: '#60A5FA' },
   'M&E Officer':   { bg: '#1A2B4A', text: '#D4AF5C' },
   'Donor':         { bg: '#1A3A5C', text: '#60A5FA' },
-  'Supervisor':    { bg: '#1A2B4A', text: '#A0AEC0' },
-  'Viewer':        { bg: '#243352', text: '#A0AEC0' },
+  'Supervisor':    { bg: '#1A2B4A', text: '#C4D4E8' },
+  'Viewer':        { bg: '#243352', text: '#C4D4E8' },
   'Admin':         { bg: '#0F1B33', text: '#D4AF5C' },
 }
 
@@ -78,8 +78,8 @@ export const ROLE_MAP: Record<string, { bg: string; text: string }> = {
 export const SOURCE_MAP: Record<string, { bg: string; text: string }> = {
   'KoBoToolbox':   { bg: '#1A3A5C', text: '#60A5FA' },
   'REDCap':        { bg: '#1A2B4A', text: '#D4AF5C' },
-  'ODK Central':   { bg: '#1A2B4A', text: '#A0AEC0' },
-  'Upload':        { bg: '#243352', text: '#A0AEC0' },
+  'ODK Central':   { bg: '#1A2B4A', text: '#C4D4E8' },
+  'Upload':        { bg: '#243352', text: '#C4D4E8' },
   'Google Sheets': { bg: '#1A2B4A', text: '#D4AF5C' },
 }
 
@@ -88,10 +88,10 @@ export const SOURCE_MAP: Record<string, { bg: string; text: string }> = {
 export const DOCTYPE_MAP: Record<string, { bg: string; text: string }> = {
   logframe:   { bg: '#1A2B4A', text: '#D4AF5C' },
   report:     { bg: '#1A3A5C', text: '#60A5FA' },
-  framework:  { bg: '#1A2B4A', text: '#A0AEC0' },
-  manual:     { bg: '#243352', text: '#A0AEC0' },
+  framework:  { bg: '#1A2B4A', text: '#C4D4E8' },
+  manual:     { bg: '#243352', text: '#C4D4E8' },
   proposal:   { bg: '#E53E3E20', text: '#E53E3E' },
-  other:      { bg: '#243352', text: '#A0AEC0' },
+  other:      { bg: '#243352', text: '#C4D4E8' },
 }
 
 // ── Avatar palette ─────────────────────────────────────────────────────────────

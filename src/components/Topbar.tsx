@@ -35,9 +35,9 @@ const VIEW_TITLE: Record<ViewId, string> = {
 const ROLE_BADGE: Record<string, { bg: string; text: string }> = {
   Admin:         { bg: '#0F1B33',  text: '#D4AF5C'  },
   'Field Staff': { bg: '#1A3A5C',  text: '#60A5FA'  },
-  'M&E Officer': { bg: '#1A2B4A',  text: '#A0AEC0'  },
-  Supervisor:    { bg: '#1A2B4A',  text: '#A0AEC0'  },
-  Viewer:        { bg: '#243352',  text: '#6B7A99'  },
+  'M&E Officer': { bg: '#1A2B4A',  text: '#C4D4E8'  },
+  Supervisor:    { bg: '#1A2B4A',  text: '#C4D4E8'  },
+  Viewer:        { bg: '#243352',  text: '#B8C8DC'  },
   Donor:         { bg: '#1A3A5C',  text: '#60A5FA'  },
 }
 

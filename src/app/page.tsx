@@ -135,7 +135,7 @@ function HeroSection() {
               Measure real impact.
             </h1>
 
-            <p className="text-lg leading-relaxed max-w-xl" style={{ color: 'rgba(255,255,255,0.65)', ...sans }}>
+            <p className="text-lg leading-relaxed max-w-xl" style={{ color: 'rgba(255,255,255,0.82)', ...sans }}>
               OMANYE gives NGOs a unified workspace to run programs, track indicators, and share
               progress with donors — on their own terms.
             </p>
@@ -164,7 +164,7 @@ function HeroSection() {
 
             {/* Social proof */}
             <div className="flex flex-col gap-3 pt-4">
-              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.45)', ...sans }}>
+              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.68)', ...sans }}>
                 Trusted by NGOs across 12 countries
               </p>
               <div className="flex items-center gap-3 flex-wrap">
@@ -248,7 +248,7 @@ function ProblemSection() {
         >
           NGO reporting shouldn&apos;t feel like punishment
         </h2>
-        <p className="text-base mb-16" style={{ color: 'rgba(15,27,51,0.55)', ...sans }}>
+        <p className="text-base mb-16" style={{ color: 'rgba(15,27,51,0.72)', ...sans }}>
           Most NGO tools were built for finance teams, not field workers or mission-driven managers.
         </p>
         <div className="grid md:grid-cols-3 gap-6">
@@ -293,7 +293,7 @@ function HowItWorksSection() {
           <h2 className="text-3xl lg:text-4xl font-bold mb-4" style={{ color: 'white', ...serif }}>
             One platform. Full control.
           </h2>
-          <p className="text-base" style={{ color: 'rgba(255,255,255,0.5)', ...sans }}>
+          <p className="text-base" style={{ color: 'rgba(255,255,255,0.72)', ...sans }}>
             Whether you run programs or fund them, OMANYE gives you clarity.
           </p>
         </div>
@@ -332,7 +332,7 @@ function HowItWorksSection() {
               <h3 className="font-semibold text-base leading-snug" style={{ color: 'white', ...serif }}>
                 {title}
               </h3>
-              <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.5)', ...sans }}>
+              <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.72)', ...sans }}>
                 {body}
               </p>
             </div>
@@ -351,7 +351,7 @@ function FeaturesSection() {
           <h2 className="text-3xl lg:text-4xl font-bold mb-4" style={{ color: '#0F1B33', ...serif }}>
             Everything your NGO needs
           </h2>
-          <p className="text-base max-w-2xl mx-auto" style={{ color: 'rgba(15,27,51,0.55)', ...sans }}>
+          <p className="text-base max-w-2xl mx-auto" style={{ color: 'rgba(15,27,51,0.72)', ...sans }}>
             Purpose-built for program managers, field staff, and the donors who fund them.
           </p>
         </div>
@@ -385,7 +385,7 @@ function DonorTrustSection() {
               &ldquo;OMANYE changed how we communicate with our funders. We share what matters,
               protect what&apos;s internal, and our donors feel more connected than ever.&rdquo;
             </blockquote>
-            <p className="text-sm font-medium" style={{ color: 'rgba(15,27,51,0.5)', ...sans }}>
+            <p className="text-sm font-medium" style={{ color: 'rgba(15,27,51,0.72)', ...sans }}>
               — Placeholder NGO Name, Ghana
             </p>
           </div>
@@ -421,7 +421,7 @@ function DonorTrustSection() {
                 </div>
               </div>
             ))}
-            <p className="text-xs text-center mt-2" style={{ color: 'rgba(15,27,51,0.35)', ...sans }}>
+            <p className="text-xs text-center mt-2" style={{ color: 'rgba(15,27,51,0.58)', ...sans }}>
               You control exactly what each donor sees
             </p>
           </div>
@@ -484,9 +484,9 @@ function PricingPreviewSection() {
           <Link
             href="/pricing"
             className="text-sm font-medium underline underline-offset-4 transition-colors duration-150"
-            style={{ color: 'rgba(255,255,255,0.5)', ...sans }}
+            style={{ color: 'rgba(255,255,255,0.72)', ...sans }}
             onMouseEnter={(e) => (e.currentTarget.style.color = '#D4AF5C')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.5)')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.72)')}
           >
             View full pricing details
           </Link>
@@ -494,9 +494,9 @@ function PricingPreviewSection() {
           <Link
             href="/contact"
             className="text-sm font-medium underline underline-offset-4 transition-colors duration-150"
-            style={{ color: 'rgba(255,255,255,0.5)', ...sans }}
+            style={{ color: 'rgba(255,255,255,0.72)', ...sans }}
             onMouseEnter={(e) => (e.currentTarget.style.color = '#D4AF5C')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.5)')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.72)')}
           >
             Enterprise? Let&apos;s talk
           </Link>
@@ -518,7 +518,7 @@ function CTABannerSection() {
         <h2 className="text-3xl lg:text-4xl font-bold mb-4" style={{ color: '#0F1B33', ...serif }}>
           Ready to bring clarity to your programs?
         </h2>
-        <p className="text-base mb-10" style={{ color: 'rgba(15,27,51,0.7)', ...sans }}>
+        <p className="text-base mb-10" style={{ color: 'rgba(15,27,51,0.82)', ...sans }}>
           Start free — no credit card required. Set up your workspace in minutes.
         </p>
         <div className="flex flex-wrap gap-4 justify-center">
