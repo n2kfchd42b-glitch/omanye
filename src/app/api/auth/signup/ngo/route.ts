@@ -54,9 +54,6 @@ export async function POST(request: Request) {
 
   // 2. Confirm email via admin so the user can sign in immediately.
   const { error: confirmError } = await adminClient.auth.admin.updateUserById(userId, { email_confirm: true })
-  if (confirmError) {
-    // Non-fatal — user can still confirm via email link
-  }
 
   // 3. Create organization
   const { data: org, error: orgError } = await adminClient
@@ -96,9 +93,10 @@ export async function POST(request: Request) {
     )
   }
 
-  // 5. Probe whether the user can sign in right now (email confirmed or not).
-  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-  const canSignInNow = !signInError
+  // 5. Determine whether the user can sign in immediately.
+  //    authData.session is non-null when Supabase has email confirmation disabled.
+  //    Alternatively, if the admin email-confirm call succeeded, the user is confirmed.
+  const canSignInNow = !!authData.session || !confirmError
 
   return NextResponse.json({ success: true, canSignInNow })
 }

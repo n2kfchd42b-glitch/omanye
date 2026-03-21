@@ -102,7 +102,7 @@ export default function DonorSignupPage() {
       return
     }
 
-    router.push('/onboarding')
+    router.replace('/onboarding')
   }
 
   return (

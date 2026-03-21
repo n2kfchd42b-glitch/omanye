@@ -116,7 +116,7 @@ export default function NGOSignupPage() {
       return
     }
 
-    router.push('/onboarding')
+    router.replace('/onboarding')
   }
 
   return (
