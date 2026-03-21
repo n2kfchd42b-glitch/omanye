@@ -239,13 +239,35 @@ async function buildAppendix(
 
 // ── Main generator ────────────────────────────────────────────────────────────
 
+export interface TemplateSectionConfig {
+  section_key:  string
+  included:     boolean
+  detail_level: 'summary' | 'standard' | 'detailed'
+}
+
+/**
+ * @param templateSections  — optional per-section config from a report template.
+ *   When provided, sections NOT marked included are excluded, and detail_level
+ *   controls how much data each section renders.
+ *   summary  = headline figures + short narrative only
+ *   standard = current full output (default)
+ *   detailed = standard + full raw tables in Appendix
+ */
 export async function generateReportContent(
-  programId:   string,
-  sections:    ReportSection[],
-  periodStart: string | null,
-  periodEnd:   string | null,
-  challenges:  string | null,
+  programId:       string,
+  sections:        ReportSection[],
+  periodStart:     string | null,
+  periodEnd:       string | null,
+  challenges:      string | null,
+  templateSections?: TemplateSectionConfig[],
 ): Promise<GeneratedReportContent> {
+  // Apply template section filter: remove sections the template excludes
+  if (templateSections && templateSections.length > 0) {
+    const included = new Set(
+      templateSections.filter(ts => ts.included).map(ts => ts.section_key)
+    )
+    sections = sections.filter(s => included.has(s))
+  }
   const content: GeneratedReportContent = {}
 
   const needsOverview   = sections.includes('PROGRAM_OVERVIEW')   || sections.includes('EXECUTIVE_SUMMARY')

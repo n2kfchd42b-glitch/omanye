@@ -26,6 +26,8 @@ const VIEW_TITLE: Record<ViewId, string> = {
   donors:           'Donors',
   funders:          'Funders',
   grants:           'Grant Writing',
+  matches:          'Funder Matches',
+  impact:           'Impact Estimates',
 }
 
 // ── Role badge ────────────────────────────────────────────────────────────────

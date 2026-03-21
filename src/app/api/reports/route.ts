@@ -94,6 +94,8 @@ export async function POST(req: NextRequest) {
       reporting_period_end:   body.reporting_period_end   ?? null,
       sections:               body.sections,
       challenges:             body.challenges ?? null,
+      donor_id:               body.donor_id   ?? null,
+      overrides:              body.overrides  ?? null,
       created_by:             user.id,
       status:                 'DRAFT',
     })

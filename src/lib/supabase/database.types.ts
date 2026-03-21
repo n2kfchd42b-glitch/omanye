@@ -557,6 +557,35 @@ type ProgramAssignmentInsert = {
 }
 type ProgramAssignmentUpdate = Partial<ProgramAssignmentInsert>
 
+// ── Program Health Scores ─────────────────────────────────────────────────────
+
+type ProgramHealthScoreRow = {
+  id:                   string
+  program_id:           string
+  organization_id:      string
+  composite_score:      number
+  budget_score:         number
+  indicator_score:      number
+  field_activity_score: number
+  rag_status:           'green' | 'amber' | 'red'
+  score_factors:        unknown[]
+  calculated_at:        string
+  created_at:           string
+}
+type ProgramHealthScoreInsert = {
+  id?:                   string
+  program_id:            string
+  organization_id:       string
+  composite_score:       number
+  budget_score:          number
+  indicator_score:       number
+  field_activity_score:  number
+  rag_status:            'green' | 'amber' | 'red'
+  score_factors?:        unknown[]
+  calculated_at?:        string
+  created_at?:           string
+}
+
 // ── Report types ──────────────────────────────────────────────────────────────
 
 type ReportRow = {
@@ -710,6 +739,12 @@ export interface Database {
         Row:           ProgramAssignmentRow
         Insert:        ProgramAssignmentInsert
         Update:        ProgramAssignmentUpdate
+        Relationships: []
+      }
+      program_health_scores: {
+        Row:           ProgramHealthScoreRow
+        Insert:        ProgramHealthScoreInsert
+        Update:        never
         Relationships: []
       }
     }

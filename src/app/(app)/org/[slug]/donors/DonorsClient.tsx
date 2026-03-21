@@ -322,6 +322,16 @@ function DonorsTab({ donors, orgSlug, isAdmin }: {
             {isAdmin && (
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                 <button
+                  onClick={() => router.push(`/org/${orgSlug}/donors/${donor.donor_id}/templates`)}
+                  style={{
+                    padding: '7px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600,
+                    background: COLORS.foam, color: COLORS.slate, border: `1px solid ${COLORS.mist}`,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
+                  }}
+                >
+                  <MessageSquare size={12} /> Templates
+                </button>
+                <button
                   onClick={() => router.push(`/org/${orgSlug}/donors/${donor.donor_id}`)}
                   style={{
                     padding: '7px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600,

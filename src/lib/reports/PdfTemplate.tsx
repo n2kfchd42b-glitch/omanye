@@ -152,17 +152,19 @@ function StatusBadge({ status }: { status: 'on_track' | 'at_risk' | 'off_track' 
 // ── Cover Page ────────────────────────────────────────────────────────────────
 
 interface CoverProps {
-  title:       string
-  programName: string
-  orgName:     string
-  period:      string
-  donorName?:  string | null
-  generatedAt: string
+  title:        string
+  programName:  string
+  orgName:      string
+  period:       string
+  donorName?:   string | null
+  generatedAt:  string
+  primaryColor: string
+  accentColor:  string
 }
 
-function CoverPage({ title, programName, orgName, period, donorName, generatedAt }: CoverProps) {
+function CoverPage({ title, programName, orgName, period, donorName, generatedAt, primaryColor, accentColor }: CoverProps) {
   return (
-    <Page size="A4" style={s.coverPage}>
+    <Page size="A4" style={[s.coverPage, { backgroundColor: primaryColor }]}>
       <View style={s.coverInner}>
         {/* Top row: wordmark + adinkra */}
         <View style={s.coverTop}>
@@ -172,13 +174,13 @@ function CoverPage({ title, programName, orgName, period, donorName, generatedAt
 
         {/* Center: title + meta */}
         <View style={s.coverMiddle}>
-          <View style={s.goldLine} />
+          <View style={[s.goldLine, { backgroundColor: accentColor }]} />
           <Text style={s.coverTitle}>{title}</Text>
-          <Text style={s.coverSub}>{programName}</Text>
+          <Text style={[s.coverSub, { color: accentColor }]}>{programName}</Text>
           <Text style={s.coverMeta}>{orgName}</Text>
           <Text style={s.coverMeta}>Reporting period: {period}</Text>
           {donorName && (
-            <Text style={s.coverDonor}>Prepared for {donorName}</Text>
+            <Text style={[s.coverDonor, { color: accentColor }]}>Prepared for {donorName}</Text>
           )}
         </View>
 
@@ -195,18 +197,20 @@ function CoverPage({ title, programName, orgName, period, donorName, generatedAt
 // ── Content Page wrapper ──────────────────────────────────────────────────────
 
 function ContentPage({
-  title, pageNum, orgName, children,
+  title, pageNum, orgName, primaryColor, accentColor, children,
 }: {
-  title: string; pageNum: number; orgName: string; children: React.ReactNode
+  title: string; pageNum: number; orgName: string
+  primaryColor: string; accentColor: string
+  children: React.ReactNode
 }) {
   return (
     <Page size="A4" style={s.page}>
       {/* Header */}
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: primaryColor }]}>
         <Text style={s.headerTitle}>{title}</Text>
         <Text style={s.headerPage}>Page {pageNum}</Text>
       </View>
-      <View style={s.headerGoldLine} />
+      <View style={[s.headerGoldLine, { backgroundColor: accentColor }]} />
 
       {/* Body */}
       <View style={s.body}>{children}</View>
@@ -466,13 +470,23 @@ function AppendixSection({ content }: { content: GeneratedReportContent['appendi
 
 // ── Main Document ─────────────────────────────────────────────────────────────
 
+export interface PdfBranding {
+  primary_color?: string
+  accent_color?:  string
+  logo_url?:      string
+}
+
 export interface PdfTemplateProps {
   report:      Report
   orgName:     string
   donorName?:  string | null
+  branding?:   PdfBranding | null
 }
 
-export function PdfTemplate({ report, orgName, donorName }: PdfTemplateProps) {
+export function PdfTemplate({ report, orgName, donorName, branding }: PdfTemplateProps) {
+  // Apply branding overrides to the palette at render time
+  const primary = branding?.primary_color || C.navy
+  const accent  = branding?.accent_color  || C.gold
   const content = report.content as GeneratedReportContent
   const sections = (report.sections ?? []) as ReportSection[]
   const hasSection = (s: ReportSection) => sections.includes(s)
@@ -502,47 +516,49 @@ export function PdfTemplate({ report, orgName, donorName }: PdfTemplateProps) {
         period={periodLabel}
         donorName={donorName}
         generatedAt={generatedAt}
+        primaryColor={primary}
+        accentColor={accent}
       />
 
       {/* Content pages — each section on its own page */}
       {hasSection('EXECUTIVE_SUMMARY') && content.executiveSummary && (
-        <ContentPage title={reportTitle} pageNum={++pageNum} orgName={orgName}>
+        <ContentPage title={reportTitle} pageNum={++pageNum} orgName={orgName} primaryColor={primary} accentColor={accent}>
           <ExecSummarySection content={content.executiveSummary} />
         </ContentPage>
       )}
 
       {hasSection('PROGRAM_OVERVIEW') && content.programOverview && (
-        <ContentPage title={reportTitle} pageNum={++pageNum} orgName={orgName}>
+        <ContentPage title={reportTitle} pageNum={++pageNum} orgName={orgName} primaryColor={primary} accentColor={accent}>
           <ProgramOverviewSection content={content.programOverview} />
         </ContentPage>
       )}
 
       {hasSection('KEY_INDICATORS') && content.keyIndicators && content.keyIndicators.length > 0 && (
-        <ContentPage title={reportTitle} pageNum={++pageNum} orgName={orgName}>
+        <ContentPage title={reportTitle} pageNum={++pageNum} orgName={orgName} primaryColor={primary} accentColor={accent}>
           <KeyIndicatorsSection indicators={content.keyIndicators} />
         </ContentPage>
       )}
 
       {hasSection('BUDGET_SUMMARY') && content.budgetSummary && (
-        <ContentPage title={reportTitle} pageNum={++pageNum} orgName={orgName}>
+        <ContentPage title={reportTitle} pageNum={++pageNum} orgName={orgName} primaryColor={primary} accentColor={accent}>
           <BudgetSummarySection content={content.budgetSummary} />
         </ContentPage>
       )}
 
       {hasSection('FIELD_DATA_SUMMARY') && content.fieldDataSummary && (
-        <ContentPage title={reportTitle} pageNum={++pageNum} orgName={orgName}>
+        <ContentPage title={reportTitle} pageNum={++pageNum} orgName={orgName} primaryColor={primary} accentColor={accent}>
           <FieldDataSection content={content.fieldDataSummary} />
         </ContentPage>
       )}
 
       {hasSection('CHALLENGES') && (
-        <ContentPage title={reportTitle} pageNum={++pageNum} orgName={orgName}>
+        <ContentPage title={reportTitle} pageNum={++pageNum} orgName={orgName} primaryColor={primary} accentColor={accent}>
           <ChallengesSection challenges={content.challenges} />
         </ContentPage>
       )}
 
       {hasSection('APPENDIX') && content.appendix && (
-        <ContentPage title={reportTitle} pageNum={++pageNum} orgName={orgName}>
+        <ContentPage title={reportTitle} pageNum={++pageNum} orgName={orgName} primaryColor={primary} accentColor={accent}>
           <AppendixSection content={content.appendix} />
         </ContentPage>
       )}

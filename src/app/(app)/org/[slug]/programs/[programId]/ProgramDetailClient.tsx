@@ -1027,8 +1027,11 @@ function ReportsTab({
   programId, orgSlug, canCreate,
 }: { programId: string; orgSlug: string; canCreate: boolean }) {
   const router = useRouter()
-  const [reports, setReports]   = React.useState<Array<Record<string, unknown>>>([])
-  const [loading, setLoading]   = React.useState(true)
+  const [reports, setReports]     = React.useState<Array<Record<string, unknown>>>([])
+  const [loading, setLoading]     = React.useState(true)
+  const [bulkLoading, setBulkLoading] = React.useState(false)
+  const [bulkResult,  setBulkResult]  = React.useState<{ created: number; failed: number } | null>(null)
+  const [showBulkConfirm, setShowBulkConfirm] = React.useState(false)
 
   React.useEffect(() => {
     fetch(`/api/reports?program_id=${programId}`)
@@ -1036,6 +1039,34 @@ function ReportsTab({
       .then(json => { setReports(json.data ?? []); setLoading(false) })
       .catch(() => setLoading(false))
   }, [programId])
+
+  async function handleBulkGenerate() {
+    setShowBulkConfirm(false)
+    setBulkLoading(true)
+    setBulkResult(null)
+    try {
+      const res = await fetch('/api/reports/bulk-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          program_id:  programId,
+          report_type: 'PROGRESS',
+          reporting_period_start: null,
+          reporting_period_end:   null,
+          challenges:             null,
+          sections:               ['EXECUTIVE_SUMMARY', 'PROGRAM_OVERVIEW', 'KEY_INDICATORS', 'FIELD_DATA_SUMMARY', 'CHALLENGES'],
+        }),
+      })
+      const json = await res.json()
+      setBulkResult({ created: json.created ?? 0, failed: json.failed ?? 0 })
+      // Reload reports
+      const listRes = await fetch(`/api/reports?program_id=${programId}`)
+      const listJson = await listRes.json()
+      setReports(listJson.data ?? [])
+    } finally {
+      setBulkLoading(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -1047,22 +1078,95 @@ function ReportsTab({
 
   return (
     <div>
+      {/* Bulk result banner */}
+      {bulkResult && (
+        <div style={{
+          padding: '10px 14px', borderRadius: 8, marginBottom: 16,
+          background: bulkResult.failed > 0 ? '#FEF3C7' : '#F0FDF4',
+          border: `1px solid ${bulkResult.failed > 0 ? '#FDE68A' : '#BBF7D0'}`,
+          fontSize: 13, color: bulkResult.failed > 0 ? '#92400E' : '#166534',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          {bulkResult.created > 0
+            ? `✓ Generated ${bulkResult.created} report${bulkResult.created !== 1 ? 's' : ''} for donors.`
+            : 'No reports generated.'
+          }
+          {bulkResult.failed > 0 && ` (${bulkResult.failed} failed)`}
+          <button onClick={() => setBulkResult(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'inherit' }}>×</button>
+        </div>
+      )}
+
+      {/* Bulk confirm dialog */}
+      {showBulkConfirm && (
+        <div style={{
+          padding: '14px 16px', borderRadius: 8, marginBottom: 16,
+          background: '#EFF6FF', border: '1px solid #BFDBFE',
+          fontSize: 13, color: '#1E40AF',
+        }}>
+          <p style={{ fontWeight: 600, marginBottom: 6 }}>Generate for all active donors?</p>
+          <p style={{ fontSize: 12, marginBottom: 12 }}>
+            This will create and generate a Progress Report for every donor with active access to this program,
+            using their configured template. Reports will be in GENERATED status (not yet visible to donors).
+          </p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={handleBulkGenerate}
+              style={{
+                padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600,
+                background: COLORS.forest, color: '#fff', border: 'none', cursor: 'pointer',
+              }}
+            >
+              Confirm
+            </button>
+            <button
+              onClick={() => setShowBulkConfirm(false)}
+              style={{
+                padding: '6px 14px', borderRadius: 7, fontSize: 12,
+                background: COLORS.foam, color: COLORS.slate,
+                border: `1px solid ${COLORS.mist}`, cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <p style={{ fontSize: 13, color: COLORS.stone }}>
           {reports.length} report{reports.length !== 1 ? 's' : ''} for this program
         </p>
         {canCreate && (
-          <button
-            onClick={() => router.push(`/org/${orgSlug}/reports`)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-              background: COLORS.gold, color: COLORS.forest, cursor: 'pointer', border: 'none',
-            }}
-          >
-            <Plus size={13} /> New Report
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => setShowBulkConfirm(true)}
+              disabled={bulkLoading}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                background: COLORS.foam, color: COLORS.fern,
+                border: `1px solid ${COLORS.mist}`, cursor: bulkLoading ? 'not-allowed' : 'pointer',
+                opacity: bulkLoading ? 0.6 : 1,
+              }}
+            >
+              {bulkLoading
+                ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                : <Users size={13} />
+              }
+              {bulkLoading ? 'Generating…' : 'All Donors'}
+            </button>
+            <button
+              onClick={() => router.push(`/org/${orgSlug}/reports`)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                background: COLORS.gold, color: COLORS.forest, cursor: 'pointer', border: 'none',
+              }}
+            >
+              <Plus size={13} /> New Report
+            </button>
+          </div>
         )}
       </div>
 

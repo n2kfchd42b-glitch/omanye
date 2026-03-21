@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import {
   Plus, Eye, EyeOff, FileText, Trash2, Send, Archive,
   Loader2, ExternalLink, ChevronRight, Calendar, FileBarChart,
+  Users, ToggleLeft, ToggleRight, Info, Copy, Check,
 } from 'lucide-react'
 import { COLORS, FONTS } from '@/lib/tokens'
 import { createClient } from '@/lib/supabase/client'
@@ -20,6 +21,13 @@ import {
 } from '@/types/reports'
 import type { Report, ReportType, ReportStatus, ReportSection, CreateReportPayload } from '@/types/reports'
 import type { OmanyeRole } from '@/lib/supabase/database.types'
+import type { ReportTemplate, TemplateSection, DetailLevel } from '@/types/report-templates'
+
+const DETAIL_LEVEL_LABELS: Record<DetailLevel, string> = {
+  summary:  'Summary',
+  standard: 'Standard',
+  detailed: 'Detailed',
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -53,9 +61,11 @@ export default function ReportsPage() {
   const [userRole,  setUserRole]  = useState<OmanyeRole | null>(null)
   const [orgId,     setOrgId]     = useState<string | null>(null)
   const [programs,  setPrograms]  = useState<Program[]>([])
+  const [donors,    setDonors]    = useState<{ id: string; full_name: string | null; email: string }[]>([])
   const [reports,   setReports]   = useState<Report[]>([])
   const [loading,   setLoading]   = useState(true)
   const [filter,    setFilter]    = useState<FilterTab>('all')
+  const [donorFilter, setDonorFilter] = useState<string>('all')
   const [showModal,       setShowModal]       = useState(false)
   const [preselect,       setPreselect]       = useState<string | null>(null)
   const [archiveConfirmId, setArchiveConfirmId] = useState<string | null>(null)
@@ -82,29 +92,51 @@ export default function ReportsPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const db: any = supabase
 
-      // Fetch programs + reports in parallel using direct Supabase queries.
+      // Fetch programs and reports in parallel using direct Supabase queries.
       // RLS (ngo_read_reports) enforces org-scoping at the DB level, eliminating
       // the extra auth waterfall that fetch('/api/reports') would add.
-      const [progsResult, reportsResult] = await Promise.all([
+      const [progsResult, dpaResult, reportsResult] = await Promise.all([
         supabase
           .from('programs')
           .select('id, name, status')
           .eq('organization_id', profile.organization_id)
           .is('deleted_at', null)
           .order('name'),
+        // Donors are profiles — get unique donor_ids from donor_program_access
+        supabase
+          .from('donor_program_access')
+          .select('donor_id')
+          .eq('organization_id', profile.organization_id)
+          .eq('active', true),
         db
           .from('reports')
-          .select('id, title, report_type, reporting_period_start, reporting_period_end, status, visible_to_donors, submitted_at, created_at, program_id, organization_id, programs(name)')
+          .select('id, title, report_type, reporting_period_start, reporting_period_end, status, visible_to_donors, submitted_at, created_at, program_id, organization_id, donor_id, programs(name), profiles!reports_donor_id_fkey(full_name)')
           .order('created_at', { ascending: false }),
       ])
 
       setPrograms((progsResult.data ?? []) as Program[])
 
-      const rawReports = (reportsResult.data ?? []) as unknown as (Record<string, unknown> & { programs?: { name: string } | null })[]
+      // Fetch donor profiles for the filter dropdown
+      const donorIds = Array.from(new Set((dpaResult.data ?? []).map((r: { donor_id: string }) => r.donor_id)))
+      if (donorIds.length > 0) {
+        const { data: donorProfiles } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', donorIds)
+        setDonors((donorProfiles ?? []).map((p: { id: string; full_name: string | null }) => ({
+          id: p.id,
+          full_name: p.full_name,
+          email: '',
+        })))
+      }
+
+      const rawReports = (reportsResult.data ?? []) as unknown as (Record<string, unknown> & { programs?: { name: string } | null; profiles?: { full_name: string | null } | null })[]
       setReports(rawReports.map(r => ({
         ...r,
         program_name: r.programs?.name ?? null,
+        donor_name:   r.profiles?.full_name ?? null,
         programs:     undefined,
+        profiles:     undefined,
       })) as unknown as Report[])
     } finally {
       setLoading(false)
@@ -116,9 +148,9 @@ export default function ReportsPage() {
   const canCreate = userRole === 'NGO_ADMIN' || userRole === 'NGO_STAFF'
   const isAdmin   = userRole === 'NGO_ADMIN'
 
-  const filtered = filter === 'all'
-    ? reports
-    : reports.filter(r => r.status === filter)
+  const filtered = reports
+    .filter(r => filter === 'all' || r.status === filter)
+    .filter(r => donorFilter === 'all' || (r as Report & { donor_id?: string | null }).donor_id === donorFilter)
 
   async function handleDelete(id: string) {
     if (!confirm('Delete this draft report?')) return
@@ -244,6 +276,29 @@ export default function ReportsPage() {
         ))}
       </div>
 
+      {/* Donor filter */}
+      {donors.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <Users size={13} style={{ color: COLORS.stone }} />
+          <span style={{ fontSize: 12, color: COLORS.stone }}>Donor:</span>
+          <select
+            value={donorFilter}
+            onChange={e => setDonorFilter(e.target.value)}
+            style={{
+              padding: '4px 10px', borderRadius: 7, fontSize: 12,
+              border: `1px solid ${COLORS.mist}`, background: COLORS.foam,
+              color: COLORS.charcoal, cursor: 'pointer',
+            }}
+          >
+            <option value="all">All donors</option>
+            <option value="">No donor linked</option>
+            {donors.map(d => (
+              <option key={d.id} value={d.id}>{d.full_name ?? d.email}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Reports list */}
       {filtered.length === 0 ? (
         <div className="card" style={{ padding: 0 }}>
@@ -260,7 +315,7 @@ export default function ReportsPage() {
           {filtered.map(report => (
             <ReportCard
               key={report.id}
-              report={report}
+              report={report as Report & { donor_id?: string | null; donor_name?: string | null }}
               isAdmin={isAdmin}
               canCreate={canCreate}
               orgSlug={params.slug}
@@ -343,6 +398,7 @@ export default function ReportsPage() {
       {showModal && (
         <NewReportModal
           programs={programs}
+          donors={donors}
           preselectedProgramId={preselect}
           orgId={orgId!}
           onClose={() => setShowModal(false)}
@@ -361,7 +417,7 @@ export default function ReportsPage() {
 // ── Report Card ───────────────────────────────────────────────────────────────
 
 interface CardProps {
-  report:    Report
+  report:    Report & { donor_id?: string | null; donor_name?: string | null }
   isAdmin:   boolean
   canCreate: boolean
   orgSlug:   string
@@ -373,8 +429,16 @@ interface CardProps {
 }
 
 function ReportCard({ report, isAdmin, canCreate, orgSlug, onDelete, onPublish, onSubmit, onArchive, onView }: CardProps) {
-  const typeStyle = REPORT_TYPE_COLORS[report.report_type] ?? { bg: COLORS.foam, text: COLORS.forest }
-  const stStyle   = REPORT_STATUS_COLORS[report.status]
+  const typeStyle  = REPORT_TYPE_COLORS[report.report_type] ?? { bg: COLORS.foam, text: COLORS.forest }
+  const stStyle    = REPORT_STATUS_COLORS[report.status]
+  const [copied, setCopied] = useState(false)
+
+  async function copyDonorPortalLink() {
+    const url = `${window.location.origin}/portal/${orgSlug}/reports/${report.id}`
+    await navigator.clipboard.writeText(url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const periodLabel = [
     report.reporting_period_start ? formatDate(report.reporting_period_start) : null,
@@ -418,6 +482,12 @@ function ReportCard({ report, isAdmin, canCreate, orgSlug, onDelete, onPublish, 
           {report.program_name && (
             <GenericBadge label={report.program_name} bg={COLORS.foam} text={COLORS.forest} />
           )}
+          {report.donor_id && (
+            <GenericBadge
+              label={report.donor_name ?? 'Donor'}
+              bg="#FDF4FF" text="#7E22CE"
+            />
+          )}
           <GenericBadge
             label={REPORT_TYPE_LABELS[report.report_type]}
             bg={typeStyle.bg} text={typeStyle.text}
@@ -446,6 +516,13 @@ function ReportCard({ report, isAdmin, canCreate, orgSlug, onDelete, onPublish, 
         style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0 }}
         onClick={e => e.stopPropagation()}
       >
+        {report.visible_to_donors && (
+          <ActionBtn
+            icon={copied ? <Check size={13} /> : <Copy size={13} />}
+            label={copied ? 'Copied!' : 'Portal Link'}
+            onClick={copyDonorPortalLink}
+          />
+        )}
         <ActionBtn icon={<ExternalLink size={13} />} label="Preview" onClick={onView} />
         {isAdmin && report.status !== 'ARCHIVED' && (
           <ActionBtn
@@ -498,6 +575,7 @@ function ActionBtn({
 
 interface ModalProps {
   programs:              Program[]
+  donors:                { id: string; full_name: string | null; email: string }[]
   preselectedProgramId:  string | null
   orgId:                 string
   onClose:               () => void
@@ -513,12 +591,13 @@ const DEFAULT_SECTIONS: ReportSection[] = [
   'APPENDIX',
 ]
 
-function NewReportModal({ programs, preselectedProgramId, onClose, onCreated }: ModalProps) {
+function NewReportModal({ programs, donors, preselectedProgramId, onClose, onCreated }: ModalProps) {
   const { success, error: toastError } = useToast()
 
   const [step,          setStep]         = useState<1 | 2 | 3>(1)
   const [programId,     setProgramId]    = useState(preselectedProgramId ?? programs[0]?.id ?? '')
   const [reportType,    setReportType]   = useState<ReportType>('PROGRESS')
+  const [donorId,       setDonorId]      = useState<string>('')
   const [periodStart,   setPeriodStart]  = useState('')
   const [periodEnd,     setPeriodEnd]    = useState('')
   const [title,         setTitle]        = useState('')
@@ -528,6 +607,8 @@ function NewReportModal({ programs, preselectedProgramId, onClose, onCreated }: 
   const [loading,       setLoading]      = useState(false)
   const [generating,    setGenerating]   = useState(false)
   const [createdReport, setCreatedReport] = useState<Report | null>(null)
+  const [appliedTemplate, setAppliedTemplate] = useState<ReportTemplate | null>(null)
+  const [templateOverrides, setTemplateOverrides] = useState<TemplateSection[]>([])
 
   const selectedProgram = programs.find(p => p.id === programId)
 
@@ -537,6 +618,27 @@ function NewReportModal({ programs, preselectedProgramId, onClose, onCreated }: 
       setTitle(autoTitle(selectedProgram.name, reportType))
     }
   }, [selectedProgram, reportType])
+
+  // Fetch applicable template when donor or report type changes (for step 3 preview)
+  useEffect(() => {
+    if (!donorId && !reportType) return
+    const params = new URLSearchParams({ report_type: reportType })
+    if (donorId) params.set('donor_id', donorId)
+    else params.set('donor_id', 'org')
+
+    fetch(`/api/report-templates?${params}`)
+      .then(r => r.json())
+      .then(json => {
+        const templates: ReportTemplate[] = json.data ?? []
+        // Prefer donor-specific; fall back to org default
+        const donorTpl = donorId ? templates.find(t => t.donor_id === donorId) : null
+        const orgTpl   = templates.find(t => t.donor_id === null)
+        const resolved = donorTpl ?? orgTpl ?? null
+        setAppliedTemplate(resolved)
+        setTemplateOverrides(resolved?.sections ?? [])
+      })
+      .catch(() => { /* best-effort */ })
+  }, [donorId, reportType])
 
   // Check if program has budget
   useEffect(() => {
@@ -565,7 +667,12 @@ function NewReportModal({ programs, preselectedProgramId, onClose, onCreated }: 
     if (!programId || !title.trim()) return
     setLoading(true)
     try {
-      const payload: CreateReportPayload = {
+      // Build one-time overrides only if user changed something from the template
+      const overridesPayload = templateOverrides.length > 0
+        ? { sections: templateOverrides }
+        : null
+
+      const payload: CreateReportPayload & { donor_id?: string | null; overrides?: object | null } = {
         program_id:             programId,
         title:                  title.trim(),
         report_type:            reportType,
@@ -573,6 +680,8 @@ function NewReportModal({ programs, preselectedProgramId, onClose, onCreated }: 
         reporting_period_end:   periodEnd   || null,
         sections,
         challenges:             challenges || null,
+        donor_id:               donorId || null,
+        overrides:              overridesPayload,
       }
       const res = await fetch('/api/reports', {
         method: 'POST',
@@ -677,6 +786,20 @@ function NewReportModal({ programs, preselectedProgramId, onClose, onCreated }: 
                 />
               </FormField>
 
+              {donors.length > 0 && (
+                <FormField label="Link to Donor (optional)" htmlFor="rp-donor">
+                  <Select
+                    id="rp-donor"
+                    value={donorId}
+                    onChange={e => setDonorId(e.target.value)}
+                    options={[
+                      { value: '', label: 'No donor — org-level report' },
+                      ...donors.map(d => ({ value: d.id, label: d.full_name ?? d.email })),
+                    ]}
+                  />
+                </FormField>
+              )}
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <FormField label="Period Start" htmlFor="rp-start">
                   <Input id="rp-start" type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)} />
@@ -752,28 +875,101 @@ function NewReportModal({ programs, preselectedProgramId, onClose, onCreated }: 
             </div>
           )}
 
-          {/* ── Step 3: Preview & Generate ── */}
+          {/* ── Step 3: Template Preview & Generate ── */}
           {step === 3 && (
             <div>
               <p style={{ fontSize: 13, color: COLORS.slate, marginBottom: 16 }}>
                 Review the report structure below, then click Generate to fetch live program data and build your report.
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
-                {sections.map(section => (
-                  <div key={section} style={{
-                    padding: '10px 14px', borderRadius: 8,
-                    background: COLORS.snow,
-                    border: `1px solid ${COLORS.mist}`,
-                    display: 'flex', gap: 10, alignItems: 'center',
-                  }}>
-                    <FileText size={14} style={{ color: COLORS.sage, flexShrink: 0 }} />
-                    <div>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.forest }}>{SECTION_LABELS[section]}</p>
-                      <p style={{ fontSize: 11, color: COLORS.stone }}>{SECTION_DESCRIPTIONS[section]}</p>
+
+              {/* Template badge */}
+              {appliedTemplate && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '10px 14px', borderRadius: 8, marginBottom: 12,
+                  background: '#EFF6FF', border: '1px solid #BFDBFE',
+                }}>
+                  <Info size={13} style={{ color: '#2563EB', flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, color: '#1E40AF' }}>
+                    Using template: <strong>{appliedTemplate.template_name}</strong>
+                    {appliedTemplate.donor_id ? ' (donor-specific)' : ' (org default)'}
+                    {' '}— adjust detail levels below for this report only.
+                  </span>
+                </div>
+              )}
+
+              {/* Template section overrides */}
+              {templateOverrides.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
+                  {templateOverrides.map(ts => {
+                    const isIncluded = sections.includes(ts.section_key as ReportSection) && ts.included
+                    return (
+                      <div key={ts.section_key} style={{
+                        padding: '10px 14px', borderRadius: 8,
+                        background: isIncluded ? COLORS.foam : COLORS.snow,
+                        border: `1px solid ${isIncluded ? COLORS.mist : '#e5e7eb'}`,
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        opacity: isIncluded ? 1 : 0.5,
+                      }}>
+                        <button
+                          onClick={() => setTemplateOverrides(prev => prev.map(s =>
+                            s.section_key === ts.section_key ? { ...s, included: !s.included } : s
+                          ))}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}
+                        >
+                          {isIncluded
+                            ? <ToggleRight size={18} color={COLORS.fern} />
+                            : <ToggleLeft  size={18} color={COLORS.stone} />
+                          }
+                        </button>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: 12, fontWeight: 600, color: COLORS.forest }}>
+                            {SECTION_LABELS[ts.section_key as ReportSection]}
+                          </p>
+                        </div>
+                        {isIncluded && (
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            {(['summary', 'standard', 'detailed'] as DetailLevel[]).map(level => (
+                              <button
+                                key={level}
+                                onClick={() => setTemplateOverrides(prev => prev.map(s =>
+                                  s.section_key === ts.section_key ? { ...s, detail_level: level } : s
+                                ))}
+                                style={{
+                                  padding: '3px 8px', borderRadius: 5, fontSize: 10, fontWeight: 600,
+                                  background: ts.detail_level === level ? COLORS.forest : COLORS.foam,
+                                  color: ts.detail_level === level ? '#fff' : COLORS.stone,
+                                  border: `1px solid ${ts.detail_level === level ? COLORS.forest : COLORS.mist}`,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {DETAIL_LEVEL_LABELS[level]}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
+                  {sections.map(section => (
+                    <div key={section} style={{
+                      padding: '10px 14px', borderRadius: 8,
+                      background: COLORS.snow,
+                      border: `1px solid ${COLORS.mist}`,
+                      display: 'flex', gap: 10, alignItems: 'center',
+                    }}>
+                      <FileText size={14} style={{ color: COLORS.sage, flexShrink: 0 }} />
+                      <div>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.forest }}>{SECTION_LABELS[section]}</p>
+                        <p style={{ fontSize: 11, color: COLORS.stone }}>{SECTION_DESCRIPTIONS[section]}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
 
               <div style={{
                 background: COLORS.foam, borderRadius: 10, padding: '14px 16px',
@@ -782,6 +978,9 @@ function NewReportModal({ programs, preselectedProgramId, onClose, onCreated }: 
                 <strong style={{ color: COLORS.forest }}>"{title}"</strong>
                 <br />
                 Program: {selectedProgram?.name} · Type: {REPORT_TYPE_LABELS[reportType]}
+                {donorId && donors.find(d => d.id === donorId) && (
+                  <> · Donor: {donors.find(d => d.id === donorId)?.full_name ?? donors.find(d => d.id === donorId)?.email}</>
+                )}
               </div>
             </div>
           )}

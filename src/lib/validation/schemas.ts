@@ -107,6 +107,8 @@ export const createReportSchema = z.object({
   challenges:             z.string().max(2000).optional().nullable(),
   reporting_period_start: z.string().datetime({ offset: true }).optional().nullable(),
   reporting_period_end:   z.string().datetime({ offset: true }).optional().nullable(),
+  donor_id:               z.string().uuid().optional().nullable(),
+  overrides:              z.record(z.string(), z.unknown()).optional().nullable(),
 })
 
 export type CreateReportPayload = z.infer<typeof createReportSchema>
