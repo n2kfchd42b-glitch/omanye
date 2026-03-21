@@ -5,23 +5,29 @@
 
 -- ── New enums ─────────────────────────────────────────────────────────────────
 
-CREATE TYPE public.expenditure_status AS ENUM (
-  'PENDING',
-  'APPROVED',
-  'REJECTED',
-  'VOID'
-);
+DO $$ BEGIN
+  CREATE TYPE public.expenditure_status AS ENUM (
+    'PENDING',
+    'APPROVED',
+    'REJECTED',
+    'VOID'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE public.tranche_status AS ENUM (
-  'EXPECTED',
-  'RECEIVED',
-  'DELAYED',
-  'CANCELLED'
-);
+DO $$ BEGIN
+  CREATE TYPE public.tranche_status AS ENUM (
+    'EXPECTED',
+    'RECEIVED',
+    'DELAYED',
+    'CANCELLED'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ── budget_categories ─────────────────────────────────────────────────────────
 
-CREATE TABLE public.budget_categories (
+CREATE TABLE IF NOT EXISTS public.budget_categories (
   id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   program_id       UUID        NOT NULL REFERENCES public.programs(id)      ON DELETE CASCADE,
   organization_id  UUID        NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
@@ -35,6 +41,7 @@ CREATE TABLE public.budget_categories (
   updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+DROP TRIGGER IF EXISTS budget_categories_updated_at ON public.budget_categories;
 CREATE TRIGGER budget_categories_updated_at
   BEFORE UPDATE ON public.budget_categories
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
@@ -43,7 +50,7 @@ ALTER TABLE public.budget_categories ENABLE ROW LEVEL SECURITY;
 
 -- ── expenditures ──────────────────────────────────────────────────────────────
 
-CREATE TABLE public.expenditures (
+CREATE TABLE IF NOT EXISTS public.expenditures (
   id                   UUID                       PRIMARY KEY DEFAULT gen_random_uuid(),
   program_id           UUID                       NOT NULL REFERENCES public.programs(id)          ON DELETE CASCADE,
   organization_id      UUID                       NOT NULL REFERENCES public.organizations(id)     ON DELETE CASCADE,
@@ -64,6 +71,7 @@ CREATE TABLE public.expenditures (
   updated_at           TIMESTAMPTZ                NOT NULL DEFAULT NOW()
 );
 
+DROP TRIGGER IF EXISTS expenditures_updated_at ON public.expenditures;
 CREATE TRIGGER expenditures_updated_at
   BEFORE UPDATE ON public.expenditures
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
@@ -73,7 +81,7 @@ ALTER TABLE public.expenditures ENABLE ROW LEVEL SECURITY;
 -- ── budget_amendments ─────────────────────────────────────────────────────────
 -- Immutable audit trail — no UPDATE or DELETE.
 
-CREATE TABLE public.budget_amendments (
+CREATE TABLE IF NOT EXISTS public.budget_amendments (
   id               UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
   program_id       UUID          NOT NULL REFERENCES public.programs(id)           ON DELETE CASCADE,
   organization_id  UUID          NOT NULL REFERENCES public.organizations(id)      ON DELETE CASCADE,
@@ -89,7 +97,7 @@ ALTER TABLE public.budget_amendments ENABLE ROW LEVEL SECURITY;
 
 -- ── funding_tranches ──────────────────────────────────────────────────────────
 
-CREATE TABLE public.funding_tranches (
+CREATE TABLE IF NOT EXISTS public.funding_tranches (
   id              UUID                  PRIMARY KEY DEFAULT gen_random_uuid(),
   program_id      UUID                  NOT NULL REFERENCES public.programs(id)      ON DELETE CASCADE,
   organization_id UUID                  NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
@@ -107,6 +115,7 @@ CREATE TABLE public.funding_tranches (
   updated_at      TIMESTAMPTZ           NOT NULL DEFAULT NOW()
 );
 
+DROP TRIGGER IF EXISTS funding_tranches_updated_at ON public.funding_tranches;
 CREATE TRIGGER funding_tranches_updated_at
   BEFORE UPDATE ON public.funding_tranches
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
@@ -117,20 +126,20 @@ ALTER TABLE public.funding_tranches ENABLE ROW LEVEL SECURITY;
 -- Indexes
 -- ─────────────────────────────────────────────────────────────────────────────
 
-CREATE INDEX idx_budget_categories_program   ON public.budget_categories(program_id);
-CREATE INDEX idx_budget_categories_org       ON public.budget_categories(organization_id);
-CREATE INDEX idx_expenditures_program        ON public.expenditures(program_id);
-CREATE INDEX idx_expenditures_org            ON public.expenditures(organization_id);
-CREATE INDEX idx_expenditures_category       ON public.expenditures(budget_category_id);
-CREATE INDEX idx_expenditures_status         ON public.expenditures(status);
-CREATE INDEX idx_expenditures_date           ON public.expenditures(transaction_date DESC);
-CREATE INDEX idx_expenditures_submitted_by   ON public.expenditures(submitted_by);
-CREATE INDEX idx_budget_amendments_program   ON public.budget_amendments(program_id);
-CREATE INDEX idx_budget_amendments_org       ON public.budget_amendments(organization_id);
-CREATE INDEX idx_funding_tranches_program    ON public.funding_tranches(program_id);
-CREATE INDEX idx_funding_tranches_org        ON public.funding_tranches(organization_id);
-CREATE INDEX idx_funding_tranches_donor      ON public.funding_tranches(donor_id);
-CREATE INDEX idx_funding_tranches_status     ON public.funding_tranches(status);
+CREATE INDEX IF NOT EXISTS idx_budget_categories_program   ON public.budget_categories(program_id);
+CREATE INDEX IF NOT EXISTS idx_budget_categories_org       ON public.budget_categories(organization_id);
+CREATE INDEX IF NOT EXISTS idx_expenditures_program        ON public.expenditures(program_id);
+CREATE INDEX IF NOT EXISTS idx_expenditures_org            ON public.expenditures(organization_id);
+CREATE INDEX IF NOT EXISTS idx_expenditures_category       ON public.expenditures(budget_category_id);
+CREATE INDEX IF NOT EXISTS idx_expenditures_status         ON public.expenditures(status);
+CREATE INDEX IF NOT EXISTS idx_expenditures_date           ON public.expenditures(transaction_date DESC);
+CREATE INDEX IF NOT EXISTS idx_expenditures_submitted_by   ON public.expenditures(submitted_by);
+CREATE INDEX IF NOT EXISTS idx_budget_amendments_program   ON public.budget_amendments(program_id);
+CREATE INDEX IF NOT EXISTS idx_budget_amendments_org       ON public.budget_amendments(organization_id);
+CREATE INDEX IF NOT EXISTS idx_funding_tranches_program    ON public.funding_tranches(program_id);
+CREATE INDEX IF NOT EXISTS idx_funding_tranches_org        ON public.funding_tranches(organization_id);
+CREATE INDEX IF NOT EXISTS idx_funding_tranches_donor      ON public.funding_tranches(donor_id);
+CREATE INDEX IF NOT EXISTS idx_funding_tranches_status     ON public.funding_tranches(status);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Computed Views
@@ -197,11 +206,13 @@ GROUP BY bc.id;
 -- ── budget_categories ─────────────────────────────────────────────────────────
 
 -- NGO members can read categories for their org
+DROP POLICY IF EXISTS "ngo_members_select_budget_categories" ON public.budget_categories;
 CREATE POLICY "ngo_members_select_budget_categories"
   ON public.budget_categories FOR SELECT
   USING (public.is_ngo_member(organization_id));
 
 -- NGO_ADMIN only creates/updates/deletes categories
+DROP POLICY IF EXISTS "ngo_admin_insert_budget_categories" ON public.budget_categories;
 CREATE POLICY "ngo_admin_insert_budget_categories"
   ON public.budget_categories FOR INSERT
   WITH CHECK (
@@ -209,15 +220,18 @@ CREATE POLICY "ngo_admin_insert_budget_categories"
     AND public.current_user_role() = 'NGO_ADMIN'
   );
 
+DROP POLICY IF EXISTS "ngo_admin_update_budget_categories" ON public.budget_categories;
 CREATE POLICY "ngo_admin_update_budget_categories"
   ON public.budget_categories FOR UPDATE
   USING (public.is_ngo_admin(organization_id));
 
+DROP POLICY IF EXISTS "ngo_admin_delete_budget_categories" ON public.budget_categories;
 CREATE POLICY "ngo_admin_delete_budget_categories"
   ON public.budget_categories FOR DELETE
   USING (public.is_ngo_admin(organization_id));
 
 -- Donors: readable if INDICATORS_AND_BUDGET or FULL
+DROP POLICY IF EXISTS "donors_select_budget_categories" ON public.budget_categories;
 CREATE POLICY "donors_select_budget_categories"
   ON public.budget_categories FOR SELECT
   USING (
@@ -236,11 +250,13 @@ CREATE POLICY "donors_select_budget_categories"
 -- ── expenditures ──────────────────────────────────────────────────────────────
 
 -- NGO members can read expenditures for their org
+DROP POLICY IF EXISTS "ngo_members_select_expenditures" ON public.expenditures;
 CREATE POLICY "ngo_members_select_expenditures"
   ON public.expenditures FOR SELECT
   USING (public.is_ngo_member(organization_id));
 
 -- NGO_ADMIN and NGO_STAFF can submit (creates PENDING)
+DROP POLICY IF EXISTS "ngo_editors_insert_expenditures" ON public.expenditures;
 CREATE POLICY "ngo_editors_insert_expenditures"
   ON public.expenditures FOR INSERT
   WITH CHECK (
@@ -250,6 +266,7 @@ CREATE POLICY "ngo_editors_insert_expenditures"
 
 -- NGO_ADMIN can update any expenditure (approve/reject/void)
 -- NGO_STAFF can only update their own PENDING expenditures
+DROP POLICY IF EXISTS "ngo_admin_update_expenditures" ON public.expenditures;
 CREATE POLICY "ngo_admin_update_expenditures"
   ON public.expenditures FOR UPDATE
   USING (
@@ -263,6 +280,7 @@ CREATE POLICY "ngo_admin_update_expenditures"
   );
 
 -- NGO_STAFF can delete their own PENDING; NGO_ADMIN can delete any PENDING
+DROP POLICY IF EXISTS "ngo_delete_expenditures" ON public.expenditures;
 CREATE POLICY "ngo_delete_expenditures"
   ON public.expenditures FOR DELETE
   USING (
@@ -280,11 +298,13 @@ CREATE POLICY "ngo_delete_expenditures"
 -- ── budget_amendments ─────────────────────────────────────────────────────────
 
 -- NGO members can read amendments
+DROP POLICY IF EXISTS "ngo_members_select_amendments" ON public.budget_amendments;
 CREATE POLICY "ngo_members_select_amendments"
   ON public.budget_amendments FOR SELECT
   USING (public.is_ngo_member(organization_id));
 
 -- Only NGO_ADMIN can create amendments
+DROP POLICY IF EXISTS "ngo_admin_insert_amendments" ON public.budget_amendments;
 CREATE POLICY "ngo_admin_insert_amendments"
   ON public.budget_amendments FOR INSERT
   WITH CHECK (
@@ -297,11 +317,13 @@ CREATE POLICY "ngo_admin_insert_amendments"
 -- ── funding_tranches ──────────────────────────────────────────────────────────
 
 -- NGO members can read all tranches for their org
+DROP POLICY IF EXISTS "ngo_members_select_tranches" ON public.funding_tranches;
 CREATE POLICY "ngo_members_select_tranches"
   ON public.funding_tranches FOR SELECT
   USING (public.is_ngo_member(organization_id));
 
 -- NGO_ADMIN can create and update tranches
+DROP POLICY IF EXISTS "ngo_admin_insert_tranches" ON public.funding_tranches;
 CREATE POLICY "ngo_admin_insert_tranches"
   ON public.funding_tranches FOR INSERT
   WITH CHECK (
@@ -309,12 +331,14 @@ CREATE POLICY "ngo_admin_insert_tranches"
     AND public.current_user_role() = 'NGO_ADMIN'
   );
 
+DROP POLICY IF EXISTS "ngo_admin_update_tranches" ON public.funding_tranches;
 CREATE POLICY "ngo_admin_update_tranches"
   ON public.funding_tranches FOR UPDATE
   USING (public.is_ngo_admin(organization_id));
 
 -- Donors: readable if INDICATORS_AND_BUDGET and it's their tranche,
 --   OR access_level = FULL (see all tranches for programs they have full access to)
+DROP POLICY IF EXISTS "donors_select_tranches" ON public.funding_tranches;
 CREATE POLICY "donors_select_tranches"
   ON public.funding_tranches FOR SELECT
   USING (

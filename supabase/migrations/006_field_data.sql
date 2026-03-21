@@ -3,7 +3,10 @@
 
 -- ── Enums ─────────────────────────────────────────────────────────────────────
 
-CREATE TYPE submission_status AS ENUM ('DRAFT', 'SUBMITTED', 'REVIEWED', 'FLAGGED');
+DO $$ BEGIN
+  CREATE TYPE submission_status AS ENUM ('DRAFT', 'SUBMITTED', 'REVIEWED', 'FLAGGED');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ── field_collection_forms ────────────────────────────────────────────────────
 -- NGO defines what field staff collect
@@ -21,9 +24,9 @@ CREATE TABLE IF NOT EXISTS field_collection_forms (
   updated_at      timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_field_forms_program    ON field_collection_forms(program_id);
-CREATE INDEX idx_field_forms_org        ON field_collection_forms(organization_id);
-CREATE INDEX idx_field_forms_active     ON field_collection_forms(active);
+CREATE INDEX IF NOT EXISTS idx_field_forms_program    ON field_collection_forms(program_id);
+CREATE INDEX IF NOT EXISTS idx_field_forms_org        ON field_collection_forms(organization_id);
+CREATE INDEX IF NOT EXISTS idx_field_forms_active     ON field_collection_forms(active);
 
 -- ── field_submissions ─────────────────────────────────────────────────────────
 
@@ -47,19 +50,21 @@ CREATE TABLE IF NOT EXISTS field_submissions (
   updated_at      timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_field_submissions_program  ON field_submissions(program_id);
-CREATE INDEX idx_field_submissions_org      ON field_submissions(organization_id);
-CREATE INDEX idx_field_submissions_by       ON field_submissions(submitted_by);
-CREATE INDEX idx_field_submissions_status   ON field_submissions(status);
-CREATE INDEX idx_field_submissions_date     ON field_submissions(submission_date DESC);
-CREATE INDEX idx_field_submissions_form     ON field_submissions(form_id);
+CREATE INDEX IF NOT EXISTS idx_field_submissions_program  ON field_submissions(program_id);
+CREATE INDEX IF NOT EXISTS idx_field_submissions_org      ON field_submissions(organization_id);
+CREATE INDEX IF NOT EXISTS idx_field_submissions_by       ON field_submissions(submitted_by);
+CREATE INDEX IF NOT EXISTS idx_field_submissions_status   ON field_submissions(status);
+CREATE INDEX IF NOT EXISTS idx_field_submissions_date     ON field_submissions(submission_date DESC);
+CREATE INDEX IF NOT EXISTS idx_field_submissions_form     ON field_submissions(form_id);
 
 -- ── Updated-at triggers ───────────────────────────────────────────────────────
 
+DROP TRIGGER IF EXISTS trg_field_forms_updated_at ON field_collection_forms;
 CREATE TRIGGER trg_field_forms_updated_at
   BEFORE UPDATE ON field_collection_forms
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
+DROP TRIGGER IF EXISTS trg_field_submissions_updated_at ON field_submissions;
 CREATE TRIGGER trg_field_submissions_updated_at
   BEFORE UPDATE ON field_submissions
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
@@ -71,6 +76,7 @@ ALTER TABLE field_submissions       ENABLE ROW LEVEL SECURITY;
 
 -- field_collection_forms policies
 -- NGO members can read forms for their org
+DROP POLICY IF EXISTS "ngo_read_forms" ON field_collection_forms;
 CREATE POLICY "ngo_read_forms" ON field_collection_forms
   FOR SELECT USING (
     organization_id IN (
@@ -79,6 +85,7 @@ CREATE POLICY "ngo_read_forms" ON field_collection_forms
   );
 
 -- NGO_ADMIN can insert / update / delete forms
+DROP POLICY IF EXISTS "ngo_admin_write_forms" ON field_collection_forms;
 CREATE POLICY "ngo_admin_write_forms" ON field_collection_forms
   FOR ALL USING (
     organization_id IN (
@@ -89,6 +96,7 @@ CREATE POLICY "ngo_admin_write_forms" ON field_collection_forms
 
 -- field_submissions policies
 -- NGO members can read all submissions for their org
+DROP POLICY IF EXISTS "ngo_read_submissions" ON field_submissions;
 CREATE POLICY "ngo_read_submissions" ON field_submissions
   FOR SELECT USING (
     organization_id IN (
@@ -97,6 +105,7 @@ CREATE POLICY "ngo_read_submissions" ON field_submissions
   );
 
 -- NGO_STAFF and NGO_ADMIN can insert submissions
+DROP POLICY IF EXISTS "ngo_staff_insert_submissions" ON field_submissions;
 CREATE POLICY "ngo_staff_insert_submissions" ON field_submissions
   FOR INSERT WITH CHECK (
     organization_id IN (
@@ -106,6 +115,7 @@ CREATE POLICY "ngo_staff_insert_submissions" ON field_submissions
   );
 
 -- NGO_ADMIN can update submissions (for review / flag)
+DROP POLICY IF EXISTS "ngo_admin_update_submissions" ON field_submissions;
 CREATE POLICY "ngo_admin_update_submissions" ON field_submissions
   FOR UPDATE USING (
     organization_id IN (
@@ -115,6 +125,7 @@ CREATE POLICY "ngo_admin_update_submissions" ON field_submissions
   );
 
 -- NGO_STAFF can update their own DRAFT submissions
+DROP POLICY IF EXISTS "ngo_staff_update_own_draft" ON field_submissions;
 CREATE POLICY "ngo_staff_update_own_draft" ON field_submissions
   FOR UPDATE USING (
     submitted_by = auth.uid() AND status = 'DRAFT'

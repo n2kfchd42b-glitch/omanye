@@ -5,27 +5,36 @@
 
 -- ── New enums ─────────────────────────────────────────────────────────────────
 
-CREATE TYPE public.program_visibility AS ENUM (
-  'PRIVATE',      -- only org team sees it
-  'DONOR_ONLY',   -- visible to linked donors per their access level
-  'PUBLIC'        -- visible on public org profile (future feature, scaffold now)
-);
+DO $$ BEGIN
+  CREATE TYPE public.program_visibility AS ENUM (
+    'PRIVATE',      -- only org team sees it
+    'DONOR_ONLY',   -- visible to linked donors per their access level
+    'PUBLIC'        -- visible on public org profile (future feature, scaffold now)
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE public.indicator_frequency AS ENUM (
-  'WEEKLY',
-  'MONTHLY',
-  'QUARTERLY',
-  'ANNUALLY',
-  'ONCE'
-);
+DO $$ BEGIN
+  CREATE TYPE public.indicator_frequency AS ENUM (
+    'WEEKLY',
+    'MONTHLY',
+    'QUARTERLY',
+    'ANNUALLY',
+    'ONCE'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE public.update_type AS ENUM (
-  'PROGRESS',
-  'MILESTONE',
-  'CHALLENGE',
-  'DONOR_REPORT',
-  'FIELD_DISPATCH'
-);
+DO $$ BEGIN
+  CREATE TYPE public.update_type AS ENUM (
+    'PROGRESS',
+    'MILESTONE',
+    'CHALLENGE',
+    'DONOR_REPORT',
+    'FIELD_DISPATCH'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ── Extend programs table ─────────────────────────────────────────────────────
 -- Migration 001 created programs with: id, organization_id, name, status,
@@ -49,7 +58,7 @@ ALTER TABLE public.programs
 
 -- ── indicators ────────────────────────────────────────────────────────────────
 
-CREATE TABLE public.indicators (
+CREATE TABLE IF NOT EXISTS public.indicators (
   id                 UUID                       PRIMARY KEY DEFAULT gen_random_uuid(),
   program_id         UUID                       NOT NULL REFERENCES public.programs(id)      ON DELETE CASCADE,
   organization_id    UUID                       NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
@@ -70,6 +79,7 @@ CREATE TABLE public.indicators (
   updated_at         TIMESTAMPTZ                NOT NULL DEFAULT NOW()
 );
 
+DROP TRIGGER IF EXISTS indicators_updated_at ON public.indicators;
 CREATE TRIGGER indicators_updated_at
   BEFORE UPDATE ON public.indicators
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
@@ -79,7 +89,7 @@ ALTER TABLE public.indicators ENABLE ROW LEVEL SECURITY;
 -- ── indicator_updates ─────────────────────────────────────────────────────────
 -- Append-only time-series log; never overwrite, never delete.
 
-CREATE TABLE public.indicator_updates (
+CREATE TABLE IF NOT EXISTS public.indicator_updates (
   id                      UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   indicator_id            UUID        NOT NULL REFERENCES public.indicators(id) ON DELETE CASCADE,
   program_id              UUID        NOT NULL REFERENCES public.programs(id)   ON DELETE CASCADE,
@@ -98,7 +108,7 @@ ALTER TABLE public.indicator_updates ENABLE ROW LEVEL SECURITY;
 
 -- ── program_updates ───────────────────────────────────────────────────────────
 
-CREATE TABLE public.program_updates (
+CREATE TABLE IF NOT EXISTS public.program_updates (
   id                 UUID                  PRIMARY KEY DEFAULT gen_random_uuid(),
   program_id         UUID                  NOT NULL REFERENCES public.programs(id)      ON DELETE CASCADE,
   organization_id    UUID                  NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
@@ -113,6 +123,7 @@ CREATE TABLE public.program_updates (
   updated_at         TIMESTAMPTZ           NOT NULL DEFAULT NOW()
 );
 
+DROP TRIGGER IF EXISTS program_updates_updated_at ON public.program_updates;
 CREATE TRIGGER program_updates_updated_at
   BEFORE UPDATE ON public.program_updates
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
@@ -123,18 +134,18 @@ ALTER TABLE public.program_updates ENABLE ROW LEVEL SECURITY;
 -- Indexes
 -- ─────────────────────────────────────────────────────────────────────────────
 
-CREATE INDEX idx_indicators_program_id       ON public.indicators(program_id);
-CREATE INDEX idx_indicators_org_id           ON public.indicators(organization_id);
-CREATE INDEX idx_indicators_key              ON public.indicators(is_key_indicator) WHERE is_key_indicator = TRUE;
-CREATE INDEX idx_indicator_updates_ind_id    ON public.indicator_updates(indicator_id);
-CREATE INDEX idx_indicator_updates_prog_id   ON public.indicator_updates(program_id);
-CREATE INDEX idx_indicator_updates_org_id    ON public.indicator_updates(organization_id);
-CREATE INDEX idx_indicator_updates_time      ON public.indicator_updates(submitted_at DESC);
-CREATE INDEX idx_program_updates_prog_id     ON public.program_updates(program_id);
-CREATE INDEX idx_program_updates_org_id      ON public.program_updates(organization_id);
-CREATE INDEX idx_program_updates_visible     ON public.program_updates(visible_to_donors) WHERE visible_to_donors = TRUE;
-CREATE INDEX idx_programs_visibility         ON public.programs(visibility);
-CREATE INDEX idx_programs_deleted_at         ON public.programs(deleted_at) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_indicators_program_id       ON public.indicators(program_id);
+CREATE INDEX IF NOT EXISTS idx_indicators_org_id           ON public.indicators(organization_id);
+CREATE INDEX IF NOT EXISTS idx_indicators_key              ON public.indicators(is_key_indicator) WHERE is_key_indicator = TRUE;
+CREATE INDEX IF NOT EXISTS idx_indicator_updates_ind_id    ON public.indicator_updates(indicator_id);
+CREATE INDEX IF NOT EXISTS idx_indicator_updates_prog_id   ON public.indicator_updates(program_id);
+CREATE INDEX IF NOT EXISTS idx_indicator_updates_org_id    ON public.indicator_updates(organization_id);
+CREATE INDEX IF NOT EXISTS idx_indicator_updates_time      ON public.indicator_updates(submitted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_program_updates_prog_id     ON public.program_updates(program_id);
+CREATE INDEX IF NOT EXISTS idx_program_updates_org_id      ON public.program_updates(organization_id);
+CREATE INDEX IF NOT EXISTS idx_program_updates_visible     ON public.program_updates(visible_to_donors) WHERE visible_to_donors = TRUE;
+CREATE INDEX IF NOT EXISTS idx_programs_visibility         ON public.programs(visibility);
+CREATE INDEX IF NOT EXISTS idx_programs_deleted_at         ON public.programs(deleted_at) WHERE deleted_at IS NULL;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Helper: does the calling donor have an active, non-expired access grant
@@ -195,11 +206,13 @@ CREATE POLICY "ngo_members_select_programs"
 -- ── indicators ────────────────────────────────────────────────────────────────
 
 -- NGO members can read all indicators for their org
+DROP POLICY IF EXISTS "ngo_members_select_indicators" ON public.indicators;
 CREATE POLICY "ngo_members_select_indicators"
   ON public.indicators FOR SELECT
   USING (public.is_ngo_member(organization_id));
 
 -- NGO editors (ADMIN + STAFF) can create/update indicators
+DROP POLICY IF EXISTS "ngo_editors_insert_indicators" ON public.indicators;
 CREATE POLICY "ngo_editors_insert_indicators"
   ON public.indicators FOR INSERT
   WITH CHECK (
@@ -207,11 +220,13 @@ CREATE POLICY "ngo_editors_insert_indicators"
     AND public.current_user_role() IN ('NGO_ADMIN', 'NGO_STAFF')
   );
 
+DROP POLICY IF EXISTS "ngo_editors_update_indicators" ON public.indicators;
 CREATE POLICY "ngo_editors_update_indicators"
   ON public.indicators FOR UPDATE
   USING (public.is_ngo_editor(organization_id));
 
 -- Only NGO_ADMIN can delete indicators
+DROP POLICY IF EXISTS "ngo_admin_delete_indicators" ON public.indicators;
 CREATE POLICY "ngo_admin_delete_indicators"
   ON public.indicators FOR DELETE
   USING (public.is_ngo_admin(organization_id));
@@ -219,6 +234,7 @@ CREATE POLICY "ngo_admin_delete_indicators"
 -- Donors: see indicators only if they have a sufficient access level grant
 --   AND the indicator is flagged visible_to_donors
 --   AND their access level is INDICATORS or above
+DROP POLICY IF EXISTS "donors_select_indicators" ON public.indicators;
 CREATE POLICY "donors_select_indicators"
   ON public.indicators FOR SELECT
   USING (
@@ -238,11 +254,13 @@ CREATE POLICY "donors_select_indicators"
 -- ── indicator_updates ─────────────────────────────────────────────────────────
 
 -- NGO members can read update history for their org
+DROP POLICY IF EXISTS "ngo_members_select_indicator_updates" ON public.indicator_updates;
 CREATE POLICY "ngo_members_select_indicator_updates"
   ON public.indicator_updates FOR SELECT
   USING (public.is_ngo_member(organization_id));
 
 -- NGO editors can submit updates
+DROP POLICY IF EXISTS "ngo_editors_insert_indicator_updates" ON public.indicator_updates;
 CREATE POLICY "ngo_editors_insert_indicator_updates"
   ON public.indicator_updates FOR INSERT
   WITH CHECK (
@@ -253,6 +271,7 @@ CREATE POLICY "ngo_editors_insert_indicator_updates"
 -- Indicator updates are append-only: no UPDATE or DELETE for anyone
 
 -- Donors: same gate as indicators
+DROP POLICY IF EXISTS "donors_select_indicator_updates" ON public.indicator_updates;
 CREATE POLICY "donors_select_indicator_updates"
   ON public.indicator_updates FOR SELECT
   USING (
@@ -276,11 +295,13 @@ CREATE POLICY "donors_select_indicator_updates"
 -- ── program_updates ───────────────────────────────────────────────────────────
 
 -- NGO members can read all program updates for their org
+DROP POLICY IF EXISTS "ngo_members_select_program_updates" ON public.program_updates;
 CREATE POLICY "ngo_members_select_program_updates"
   ON public.program_updates FOR SELECT
   USING (public.is_ngo_member(organization_id));
 
 -- NGO editors can create/update program updates
+DROP POLICY IF EXISTS "ngo_editors_insert_program_updates" ON public.program_updates;
 CREATE POLICY "ngo_editors_insert_program_updates"
   ON public.program_updates FOR INSERT
   WITH CHECK (
@@ -288,16 +309,19 @@ CREATE POLICY "ngo_editors_insert_program_updates"
     AND public.current_user_role() IN ('NGO_ADMIN', 'NGO_STAFF')
   );
 
+DROP POLICY IF EXISTS "ngo_editors_update_program_updates" ON public.program_updates;
 CREATE POLICY "ngo_editors_update_program_updates"
   ON public.program_updates FOR UPDATE
   USING (public.is_ngo_editor(organization_id));
 
 -- Only NGO_ADMIN can delete program updates
+DROP POLICY IF EXISTS "ngo_admin_delete_program_updates" ON public.program_updates;
 CREATE POLICY "ngo_admin_delete_program_updates"
   ON public.program_updates FOR DELETE
   USING (public.is_ngo_admin(organization_id));
 
 -- Donors: only visible_to_donors=true updates on accessible programs
+DROP POLICY IF EXISTS "donors_select_program_updates" ON public.program_updates;
 CREATE POLICY "donors_select_program_updates"
   ON public.program_updates FOR SELECT
   USING (

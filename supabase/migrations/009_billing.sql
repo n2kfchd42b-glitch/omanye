@@ -6,22 +6,28 @@
 
 -- ── New enums ─────────────────────────────────────────────────────────────────
 
-CREATE TYPE public.billing_cycle AS ENUM (
-  'MONTHLY',
-  'ANNUAL'
-);
+DO $$ BEGIN
+  CREATE TYPE public.billing_cycle AS ENUM (
+    'MONTHLY',
+    'ANNUAL'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE public.subscription_status AS ENUM (
-  'ACTIVE',
-  'PAST_DUE',
-  'CANCELLED',
-  'TRIALING',
-  'INCOMPLETE'
-);
+DO $$ BEGIN
+  CREATE TYPE public.subscription_status AS ENUM (
+    'ACTIVE',
+    'PAST_DUE',
+    'CANCELLED',
+    'TRIALING',
+    'INCOMPLETE'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ── subscriptions ─────────────────────────────────────────────────────────────
 
-CREATE TABLE public.subscriptions (
+CREATE TABLE IF NOT EXISTS public.subscriptions (
   id                      UUID                         PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id         UUID                         NOT NULL UNIQUE
                             REFERENCES public.organizations(id) ON DELETE CASCADE,
@@ -39,16 +45,16 @@ CREATE TABLE public.subscriptions (
   updated_at              TIMESTAMPTZ                  NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_subscriptions_org     ON public.subscriptions(organization_id);
-CREATE INDEX idx_subscriptions_stripe  ON public.subscriptions(stripe_customer_id);
-CREATE INDEX idx_subscriptions_status  ON public.subscriptions(status);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_org     ON public.subscriptions(organization_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe  ON public.subscriptions(stripe_customer_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_status  ON public.subscriptions(status);
 
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- ── billing_events ────────────────────────────────────────────────────────────
 -- Immutable log of all Stripe webhook events; used for idempotency and audit.
 
-CREATE TABLE public.billing_events (
+CREATE TABLE IF NOT EXISTS public.billing_events (
   id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id  UUID        REFERENCES public.organizations(id) ON DELETE SET NULL,
   stripe_event_id  TEXT        NOT NULL UNIQUE,   -- idempotency key
@@ -58,10 +64,10 @@ CREATE TABLE public.billing_events (
   created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_billing_events_org       ON public.billing_events(organization_id);
-CREATE INDEX idx_billing_events_stripe_id ON public.billing_events(stripe_event_id);
-CREATE INDEX idx_billing_events_type      ON public.billing_events(event_type);
-CREATE INDEX idx_billing_events_processed ON public.billing_events(processed) WHERE NOT processed;
+CREATE INDEX IF NOT EXISTS idx_billing_events_org       ON public.billing_events(organization_id);
+CREATE INDEX IF NOT EXISTS idx_billing_events_stripe_id ON public.billing_events(stripe_event_id);
+CREATE INDEX IF NOT EXISTS idx_billing_events_type      ON public.billing_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_billing_events_processed ON public.billing_events(processed) WHERE NOT processed;
 
 ALTER TABLE public.billing_events ENABLE ROW LEVEL SECURITY;
 
@@ -75,6 +81,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS trg_subscriptions_updated_at ON public.subscriptions;
 CREATE TRIGGER trg_subscriptions_updated_at
   BEFORE UPDATE ON public.subscriptions
   FOR EACH ROW EXECUTE FUNCTION public.set_subscriptions_updated_at();
@@ -91,6 +98,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS trg_org_create_subscription ON public.organizations;
 CREATE TRIGGER trg_org_create_subscription
   AFTER INSERT ON public.organizations
   FOR EACH ROW EXECUTE FUNCTION public.create_default_subscription();
@@ -109,6 +117,7 @@ ON CONFLICT (organization_id) DO NOTHING;
 -- ── subscriptions ─────────────────────────────────────────────────────────────
 
 -- NGO_ADMIN can read their own org's subscription
+DROP POLICY IF EXISTS "ngo_admin_select_subscription" ON public.subscriptions;
 CREATE POLICY "ngo_admin_select_subscription"
   ON public.subscriptions FOR SELECT
   USING (

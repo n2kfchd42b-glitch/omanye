@@ -76,6 +76,7 @@ CREATE TRIGGER trg_funder_opportunities_updated_at
 
 ALTER TABLE funder_opportunities ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "funder_opps_read_authenticated" ON funder_opportunities;
 CREATE POLICY "funder_opps_read_authenticated"
   ON funder_opportunities FOR SELECT
   TO authenticated

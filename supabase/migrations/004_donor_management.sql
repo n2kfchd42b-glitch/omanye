@@ -5,35 +5,41 @@
 
 -- ── New enums ─────────────────────────────────────────────────────────────────
 
-CREATE TYPE public.invitation_status AS ENUM (
-  'PENDING',
-  'ACCEPTED',
-  'EXPIRED',
-  'REVOKED'
-);
+DO $$ BEGIN
+  CREATE TYPE public.invitation_status AS ENUM (
+    'PENDING',
+    'ACCEPTED',
+    'EXPIRED',
+    'REVOKED'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE public.donor_notification_type AS ENUM (
-  'ACCESS_GRANTED',
-  'ACCESS_UPDATED',
-  'ACCESS_REVOKED',
-  'NEW_UPDATE',
-  'NEW_REPORT',
-  'REQUEST_APPROVED',
-  'REQUEST_DENIED',
-  'TRANCHE_REMINDER'
-);
+DO $$ BEGIN
+  CREATE TYPE public.donor_notification_type AS ENUM (
+    'ACCESS_GRANTED',
+    'ACCESS_UPDATED',
+    'ACCESS_REVOKED',
+    'NEW_UPDATE',
+    'NEW_REPORT',
+    'REQUEST_APPROVED',
+    'REQUEST_DENIED',
+    'TRANCHE_REMINDER'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ── Extend donor_program_access ────────────────────────────────────────────────
 
 ALTER TABLE public.donor_program_access
-  ADD COLUMN nickname         TEXT,
-  ADD COLUMN internal_notes   TEXT,
-  ADD COLUMN last_viewed_at   TIMESTAMPTZ,
-  ADD COLUMN view_count       INTEGER NOT NULL DEFAULT 0;
+  ADD COLUMN IF NOT EXISTS nickname         TEXT,
+  ADD COLUMN IF NOT EXISTS internal_notes   TEXT,
+  ADD COLUMN IF NOT EXISTS last_viewed_at   TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS view_count       INTEGER NOT NULL DEFAULT 0;
 
 -- ── donor_invitations ─────────────────────────────────────────────────────────
 
-CREATE TABLE public.donor_invitations (
+CREATE TABLE IF NOT EXISTS public.donor_invitations (
   id                   UUID                      PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id      UUID                      NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
   program_id           UUID                      NOT NULL REFERENCES public.programs(id)      ON DELETE CASCADE,
@@ -51,17 +57,17 @@ CREATE TABLE public.donor_invitations (
   created_at           TIMESTAMPTZ               NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_invitations_org         ON public.donor_invitations(organization_id);
-CREATE INDEX idx_invitations_program     ON public.donor_invitations(program_id);
-CREATE INDEX idx_invitations_email       ON public.donor_invitations(email);
-CREATE INDEX idx_invitations_token       ON public.donor_invitations(token);
-CREATE INDEX idx_invitations_status      ON public.donor_invitations(status);
+CREATE INDEX IF NOT EXISTS idx_invitations_org         ON public.donor_invitations(organization_id);
+CREATE INDEX IF NOT EXISTS idx_invitations_program     ON public.donor_invitations(program_id);
+CREATE INDEX IF NOT EXISTS idx_invitations_email       ON public.donor_invitations(email);
+CREATE INDEX IF NOT EXISTS idx_invitations_token       ON public.donor_invitations(token);
+CREATE INDEX IF NOT EXISTS idx_invitations_status      ON public.donor_invitations(status);
 
 ALTER TABLE public.donor_invitations ENABLE ROW LEVEL SECURITY;
 
 -- ── donor_notifications ───────────────────────────────────────────────────────
 
-CREATE TABLE public.donor_notifications (
+CREATE TABLE IF NOT EXISTS public.donor_notifications (
   id              UUID                          PRIMARY KEY DEFAULT gen_random_uuid(),
   donor_id        UUID                          NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   organization_id UUID                          NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
@@ -74,10 +80,10 @@ CREATE TABLE public.donor_notifications (
   created_at      TIMESTAMPTZ                   NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_notifications_donor     ON public.donor_notifications(donor_id);
-CREATE INDEX idx_notifications_org       ON public.donor_notifications(organization_id);
-CREATE INDEX idx_notifications_read      ON public.donor_notifications(read);
-CREATE INDEX idx_notifications_created   ON public.donor_notifications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_donor     ON public.donor_notifications(donor_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_org       ON public.donor_notifications(organization_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_read      ON public.donor_notifications(read);
+CREATE INDEX IF NOT EXISTS idx_notifications_created   ON public.donor_notifications(created_at DESC);
 
 ALTER TABLE public.donor_notifications ENABLE ROW LEVEL SECURITY;
 
@@ -88,11 +94,13 @@ ALTER TABLE public.donor_notifications ENABLE ROW LEVEL SECURITY;
 -- ── donor_invitations ─────────────────────────────────────────────────────────
 
 -- NGO members can read invitations for their org
+DROP POLICY IF EXISTS "ngo_members_select_invitations" ON public.donor_invitations;
 CREATE POLICY "ngo_members_select_invitations"
   ON public.donor_invitations FOR SELECT
   USING (public.is_ngo_member(organization_id));
 
 -- NGO_ADMIN and NGO_STAFF can create invitations
+DROP POLICY IF EXISTS "ngo_editors_insert_invitations" ON public.donor_invitations;
 CREATE POLICY "ngo_editors_insert_invitations"
   ON public.donor_invitations FOR INSERT
   WITH CHECK (
@@ -101,22 +109,26 @@ CREATE POLICY "ngo_editors_insert_invitations"
   );
 
 -- NGO_ADMIN can update (revoke) invitations
+DROP POLICY IF EXISTS "ngo_admin_update_invitations" ON public.donor_invitations;
 CREATE POLICY "ngo_admin_update_invitations"
   ON public.donor_invitations FOR UPDATE
   USING (public.is_ngo_admin(organization_id));
 
 -- NGO_ADMIN can delete invitations
+DROP POLICY IF EXISTS "ngo_admin_delete_invitations" ON public.donor_invitations;
 CREATE POLICY "ngo_admin_delete_invitations"
   ON public.donor_invitations FOR DELETE
   USING (public.is_ngo_admin(organization_id));
 
 -- Unauthenticated / any: read single row by token (invite acceptance page)
 -- Note: uses anon role — token is the secret
+DROP POLICY IF EXISTS "public_read_invitation_by_token" ON public.donor_invitations;
 CREATE POLICY "public_read_invitation_by_token"
   ON public.donor_invitations FOR SELECT
   USING (TRUE);  -- Token validation done in application layer; token is a UUID secret
 
 -- Donor: read own accepted invitations (by email match via auth.email())
+DROP POLICY IF EXISTS "donor_read_own_invitations" ON public.donor_invitations;
 CREATE POLICY "donor_read_own_invitations"
   ON public.donor_invitations FOR SELECT
   USING (
@@ -127,6 +139,7 @@ CREATE POLICY "donor_read_own_invitations"
 -- ── donor_notifications ───────────────────────────────────────────────────────
 
 -- Donors: read own notifications
+DROP POLICY IF EXISTS "donor_select_own_notifications" ON public.donor_notifications;
 CREATE POLICY "donor_select_own_notifications"
   ON public.donor_notifications FOR SELECT
   USING (
@@ -135,6 +148,7 @@ CREATE POLICY "donor_select_own_notifications"
   );
 
 -- Donors: mark own notifications as read (update read column only)
+DROP POLICY IF EXISTS "donor_update_own_notifications" ON public.donor_notifications;
 CREATE POLICY "donor_update_own_notifications"
   ON public.donor_notifications FOR UPDATE
   USING (
@@ -143,6 +157,7 @@ CREATE POLICY "donor_update_own_notifications"
   );
 
 -- NGO team: insert notifications for donors (fire-and-forget)
+DROP POLICY IF EXISTS "ngo_insert_notifications" ON public.donor_notifications;
 CREATE POLICY "ngo_insert_notifications"
   ON public.donor_notifications FOR INSERT
   WITH CHECK (
@@ -159,6 +174,7 @@ CREATE POLICY "ngo_insert_notifications"
 -- We add an update policy for tracking last_viewed_at from donor sessions.
 
 -- Donors can update last_viewed_at and view_count on their own rows
+DROP POLICY IF EXISTS "donor_update_own_access_tracking" ON public.donor_program_access;
 CREATE POLICY "donor_update_own_access_tracking"
   ON public.donor_program_access FOR UPDATE
   USING (

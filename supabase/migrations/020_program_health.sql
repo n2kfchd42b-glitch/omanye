@@ -48,6 +48,7 @@ CREATE INDEX IF NOT EXISTS idx_health_scores_org_time
 ALTER TABLE program_health_scores ENABLE ROW LEVEL SECURITY;
 
 -- Org members can view their org's health scores
+DROP POLICY IF EXISTS health_scores_select ON program_health_scores;
 CREATE POLICY health_scores_select ON program_health_scores
   FOR SELECT
   USING (

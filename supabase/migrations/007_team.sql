@@ -3,13 +3,16 @@
 
 -- ── Enums ────────────────────────────────────────────────────────────────────
 
-CREATE TYPE team_invitation_status AS ENUM (
-  'PENDING', 'ACCEPTED', 'EXPIRED', 'REVOKED'
-);
+DO $$ BEGIN
+  CREATE TYPE team_invitation_status AS ENUM (
+    'PENDING', 'ACCEPTED', 'EXPIRED', 'REVOKED'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ── team_invitations ──────────────────────────────────────────────────────────
 
-CREATE TABLE team_invitations (
+CREATE TABLE IF NOT EXISTS team_invitations (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   invited_by      UUID NOT NULL REFERENCES profiles(id)       ON DELETE SET NULL,
@@ -24,14 +27,14 @@ CREATE TABLE team_invitations (
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_team_invitations_org      ON team_invitations(organization_id);
-CREATE INDEX idx_team_invitations_token    ON team_invitations(token);
-CREATE INDEX idx_team_invitations_email    ON team_invitations(email);
-CREATE INDEX idx_team_invitations_status   ON team_invitations(status);
+CREATE INDEX IF NOT EXISTS idx_team_invitations_org      ON team_invitations(organization_id);
+CREATE INDEX IF NOT EXISTS idx_team_invitations_token    ON team_invitations(token);
+CREATE INDEX IF NOT EXISTS idx_team_invitations_email    ON team_invitations(email);
+CREATE INDEX IF NOT EXISTS idx_team_invitations_status   ON team_invitations(status);
 
 -- ── program_assignments ───────────────────────────────────────────────────────
 
-CREATE TABLE program_assignments (
+CREATE TABLE IF NOT EXISTS program_assignments (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   program_id      UUID NOT NULL REFERENCES programs(id)  ON DELETE CASCADE,
   profile_id      UUID NOT NULL REFERENCES profiles(id)  ON DELETE CASCADE,
@@ -41,15 +44,16 @@ CREATE TABLE program_assignments (
   UNIQUE (program_id, profile_id)
 );
 
-CREATE INDEX idx_program_assignments_program  ON program_assignments(program_id);
-CREATE INDEX idx_program_assignments_profile  ON program_assignments(profile_id);
-CREATE INDEX idx_program_assignments_org      ON program_assignments(organization_id);
+CREATE INDEX IF NOT EXISTS idx_program_assignments_program  ON program_assignments(program_id);
+CREATE INDEX IF NOT EXISTS idx_program_assignments_profile  ON program_assignments(profile_id);
+CREATE INDEX IF NOT EXISTS idx_program_assignments_org      ON program_assignments(organization_id);
 
 -- ── RLS — team_invitations ────────────────────────────────────────────────────
 
 ALTER TABLE team_invitations ENABLE ROW LEVEL SECURITY;
 
 -- NGO_ADMIN: full read/write for their org
+DROP POLICY IF EXISTS "ti: admin full access" ON team_invitations;
 CREATE POLICY "ti: admin full access"
   ON team_invitations
   FOR ALL
@@ -63,6 +67,7 @@ CREATE POLICY "ti: admin full access"
   );
 
 -- NGO_STAFF / NGO_VIEWER: read own invitation (by email match via auth)
+DROP POLICY IF EXISTS "ti: staff read own" ON team_invitations;
 CREATE POLICY "ti: staff read own"
   ON team_invitations
   FOR SELECT
@@ -72,6 +77,7 @@ CREATE POLICY "ti: staff read own"
   );
 
 -- Unauthenticated / anyone: read a single row by token (for invitation acceptance)
+DROP POLICY IF EXISTS "ti: public read by token" ON team_invitations;
 CREATE POLICY "ti: public read by token"
   ON team_invitations
   FOR SELECT
@@ -82,6 +88,7 @@ CREATE POLICY "ti: public read by token"
 ALTER TABLE program_assignments ENABLE ROW LEVEL SECURITY;
 
 -- NGO_ADMIN: full read/write for their org
+DROP POLICY IF EXISTS "pa: admin full access" ON program_assignments;
 CREATE POLICY "pa: admin full access"
   ON program_assignments
   FOR ALL
@@ -95,6 +102,7 @@ CREATE POLICY "pa: admin full access"
   );
 
 -- NGO_STAFF / NGO_VIEWER: read own assignments
+DROP POLICY IF EXISTS "pa: staff read own" ON program_assignments;
 CREATE POLICY "pa: staff read own"
   ON program_assignments
   FOR SELECT
@@ -104,6 +112,7 @@ CREATE POLICY "pa: staff read own"
   );
 
 -- All NGO team: read all assignments for their org
+DROP POLICY IF EXISTS "pa: ngo team read org assignments" ON program_assignments;
 CREATE POLICY "pa: ngo team read org assignments"
   ON program_assignments
   FOR SELECT

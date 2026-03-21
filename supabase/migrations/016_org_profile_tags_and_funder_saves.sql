@@ -73,6 +73,7 @@ CREATE TRIGGER trg_funder_saved_updated_at
 ALTER TABLE funder_saved_opportunities ENABLE ROW LEVEL SECURITY;
 
 -- Members of the org can view their org's saved opportunities
+DROP POLICY IF EXISTS funder_saved_select ON funder_saved_opportunities;
 CREATE POLICY funder_saved_select ON funder_saved_opportunities
   FOR SELECT
   USING (
@@ -82,6 +83,7 @@ CREATE POLICY funder_saved_select ON funder_saved_opportunities
   );
 
 -- Members of the org can insert saves
+DROP POLICY IF EXISTS funder_saved_insert ON funder_saved_opportunities;
 CREATE POLICY funder_saved_insert ON funder_saved_opportunities
   FOR INSERT
   WITH CHECK (
@@ -92,6 +94,7 @@ CREATE POLICY funder_saved_insert ON funder_saved_opportunities
   );
 
 -- Members of the org can update their saved records
+DROP POLICY IF EXISTS funder_saved_update ON funder_saved_opportunities;
 CREATE POLICY funder_saved_update ON funder_saved_opportunities
   FOR UPDATE
   USING (
@@ -101,6 +104,7 @@ CREATE POLICY funder_saved_update ON funder_saved_opportunities
   );
 
 -- Members of the org can delete their saved records
+DROP POLICY IF EXISTS funder_saved_delete ON funder_saved_opportunities;
 CREATE POLICY funder_saved_delete ON funder_saved_opportunities
   FOR DELETE
   USING (

@@ -35,6 +35,7 @@ CREATE INDEX IF NOT EXISTS idx_impact_estimates_org_created
 ALTER TABLE impact_estimates ENABLE ROW LEVEL SECURITY;
 
 -- NGO members can view estimates for their own organization
+DROP POLICY IF EXISTS "org_members_can_view_impact_estimates" ON impact_estimates;
 CREATE POLICY "org_members_can_view_impact_estimates"
   ON impact_estimates FOR SELECT
   USING (
@@ -44,6 +45,7 @@ CREATE POLICY "org_members_can_view_impact_estimates"
   );
 
 -- NGO_ADMIN and NGO_STAFF can create estimates
+DROP POLICY IF EXISTS "org_staff_can_insert_impact_estimates" ON impact_estimates;
 CREATE POLICY "org_staff_can_insert_impact_estimates"
   ON impact_estimates FOR INSERT
   WITH CHECK (

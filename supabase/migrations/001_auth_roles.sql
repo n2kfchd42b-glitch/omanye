@@ -5,39 +5,54 @@
 
 -- ── Enums ────────────────────────────────────────────────────────────────────
 
-CREATE TYPE public.omanye_role AS ENUM (
-  'NGO_ADMIN',
-  'NGO_STAFF',
-  'NGO_VIEWER',
-  'DONOR'
-);
+DO $$ BEGIN
+  CREATE TYPE public.omanye_role AS ENUM (
+    'NGO_ADMIN',
+    'NGO_STAFF',
+    'NGO_VIEWER',
+    'DONOR'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE public.subscription_tier AS ENUM (
-  'FREE',
-  'STARTER',
-  'PROFESSIONAL',
-  'ENTERPRISE'
-);
+DO $$ BEGIN
+  CREATE TYPE public.subscription_tier AS ENUM (
+    'FREE',
+    'STARTER',
+    'PROFESSIONAL',
+    'ENTERPRISE'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE public.program_status AS ENUM (
-  'PLANNING',
-  'ACTIVE',
-  'COMPLETED',
-  'SUSPENDED'
-);
+DO $$ BEGIN
+  CREATE TYPE public.program_status AS ENUM (
+    'PLANNING',
+    'ACTIVE',
+    'COMPLETED',
+    'SUSPENDED'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE public.access_level AS ENUM (
-  'SUMMARY_ONLY',           -- program overview + narrative only
-  'INDICATORS',             -- + KPI progress
-  'INDICATORS_AND_BUDGET',  -- + budget burn rate
-  'FULL'                    -- everything not explicitly hidden by NGO
-);
+DO $$ BEGIN
+  CREATE TYPE public.access_level AS ENUM (
+    'SUMMARY_ONLY',           -- program overview + narrative only
+    'INDICATORS',             -- + KPI progress
+    'INDICATORS_AND_BUDGET',  -- + budget burn rate
+    'FULL'                    -- everything not explicitly hidden by NGO
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TYPE public.request_status AS ENUM (
-  'PENDING',
-  'APPROVED',
-  'DENIED'
-);
+DO $$ BEGIN
+  CREATE TYPE public.request_status AS ENUM (
+    'PENDING',
+    'APPROVED',
+    'DENIED'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ── Shared trigger: keep updated_at current ───────────────────────────────────
 
@@ -52,7 +67,7 @@ $$;
 -- ── organizations ─────────────────────────────────────────────────────────────
 -- One row per NGO. NGO_ADMIN owns it; other staff belong to it via profiles.
 
-CREATE TABLE public.organizations (
+CREATE TABLE IF NOT EXISTS public.organizations (
   id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   name                TEXT        NOT NULL,
   slug                TEXT        UNIQUE NOT NULL,   -- e.g. healthbridge-ghana
@@ -66,6 +81,7 @@ CREATE TABLE public.organizations (
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+DROP TRIGGER IF EXISTS organizations_updated_at ON public.organizations;
 CREATE TRIGGER organizations_updated_at
   BEFORE UPDATE ON public.organizations
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
@@ -76,7 +92,7 @@ ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
 -- Extends auth.users. One row per user regardless of role.
 -- DONOR accounts have organization_id = NULL; they link via donor_program_access.
 
-CREATE TABLE public.profiles (
+CREATE TABLE IF NOT EXISTS public.profiles (
   id                  UUID              PRIMARY KEY REFERENCES auth.users ON DELETE CASCADE,
   full_name           TEXT,
   avatar_url          TEXT,
@@ -88,6 +104,7 @@ CREATE TABLE public.profiles (
   updated_at          TIMESTAMPTZ       NOT NULL DEFAULT NOW()
 );
 
+DROP TRIGGER IF EXISTS profiles_updated_at ON public.profiles;
 CREATE TRIGGER profiles_updated_at
   BEFORE UPDATE ON public.profiles
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
@@ -97,7 +114,7 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 -- ── donor_profiles ────────────────────────────────────────────────────────────
 -- Extra fields only for DONOR accounts.
 
-CREATE TABLE public.donor_profiles (
+CREATE TABLE IF NOT EXISTS public.donor_profiles (
   id                UUID  PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
   organization_name TEXT,                  -- the funder org, e.g. "GIZ", "USAID"
   contact_email     TEXT,
@@ -110,7 +127,7 @@ ALTER TABLE public.donor_profiles ENABLE ROW LEVEL SECURITY;
 -- ── programs ──────────────────────────────────────────────────────────────────
 -- Defined here to support access-control joins; detailed fields live in app layer.
 
-CREATE TABLE public.programs (
+CREATE TABLE IF NOT EXISTS public.programs (
   id              UUID                 PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID                 NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
   name            TEXT                 NOT NULL,
@@ -119,6 +136,7 @@ CREATE TABLE public.programs (
   updated_at      TIMESTAMPTZ          NOT NULL DEFAULT NOW()
 );
 
+DROP TRIGGER IF EXISTS programs_updated_at ON public.programs;
 CREATE TRIGGER programs_updated_at
   BEFORE UPDATE ON public.programs
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
@@ -129,7 +147,7 @@ ALTER TABLE public.programs ENABLE ROW LEVEL SECURITY;
 -- Core of the donor model. Each row = "this donor may see this program at this level".
 -- NGO_ADMIN grants access; access can be time-limited via expires_at.
 
-CREATE TABLE public.donor_program_access (
+CREATE TABLE IF NOT EXISTS public.donor_program_access (
   id                   UUID              PRIMARY KEY DEFAULT gen_random_uuid(),
   donor_id             UUID              NOT NULL REFERENCES public.profiles(id)      ON DELETE CASCADE,
   program_id           UUID              NOT NULL REFERENCES public.programs(id)      ON DELETE CASCADE,
@@ -148,7 +166,7 @@ ALTER TABLE public.donor_program_access ENABLE ROW LEVEL SECURITY;
 -- ── donor_access_requests ─────────────────────────────────────────────────────
 -- Donors request access; NGO_ADMIN approves or denies.
 
-CREATE TABLE public.donor_access_requests (
+CREATE TABLE IF NOT EXISTS public.donor_access_requests (
   id                     UUID                  PRIMARY KEY DEFAULT gen_random_uuid(),
   donor_id               UUID                  NOT NULL REFERENCES public.profiles(id)      ON DELETE CASCADE,
   program_id             UUID                  NOT NULL REFERENCES public.programs(id)      ON DELETE CASCADE,
@@ -168,15 +186,15 @@ ALTER TABLE public.donor_access_requests ENABLE ROW LEVEL SECURITY;
 -- Indexes
 -- ─────────────────────────────────────────────────────────────────────────────
 
-CREATE INDEX idx_profiles_organization_id          ON public.profiles(organization_id);
-CREATE INDEX idx_profiles_role                     ON public.profiles(role);
-CREATE INDEX idx_programs_organization_id          ON public.programs(organization_id);
-CREATE INDEX idx_dpa_donor_id                      ON public.donor_program_access(donor_id);
-CREATE INDEX idx_dpa_program_id                    ON public.donor_program_access(program_id);
-CREATE INDEX idx_dpa_organization_id               ON public.donor_program_access(organization_id);
-CREATE INDEX idx_dar_donor_id                      ON public.donor_access_requests(donor_id);
-CREATE INDEX idx_dar_organization_id               ON public.donor_access_requests(organization_id);
-CREATE INDEX idx_dar_status                        ON public.donor_access_requests(status);
+CREATE INDEX IF NOT EXISTS idx_profiles_organization_id          ON public.profiles(organization_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_role                     ON public.profiles(role);
+CREATE INDEX IF NOT EXISTS idx_programs_organization_id          ON public.programs(organization_id);
+CREATE INDEX IF NOT EXISTS idx_dpa_donor_id                      ON public.donor_program_access(donor_id);
+CREATE INDEX IF NOT EXISTS idx_dpa_program_id                    ON public.donor_program_access(program_id);
+CREATE INDEX IF NOT EXISTS idx_dpa_organization_id               ON public.donor_program_access(organization_id);
+CREATE INDEX IF NOT EXISTS idx_dar_donor_id                      ON public.donor_access_requests(donor_id);
+CREATE INDEX IF NOT EXISTS idx_dar_organization_id               ON public.donor_access_requests(organization_id);
+CREATE INDEX IF NOT EXISTS idx_dar_status                        ON public.donor_access_requests(status);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Helper functions  (SECURITY DEFINER so policies stay lean)
@@ -234,11 +252,13 @@ $$;
 -- ── organizations ──────────────────────────────────────────────────────────
 
 -- Any NGO member can read their own org row.
+DROP POLICY IF EXISTS "ngo_members_select_own_org" ON public.organizations;
 CREATE POLICY "ngo_members_select_own_org"
   ON public.organizations FOR SELECT
   USING (public.is_ngo_member(id));
 
 -- NGO_ADMIN can update their own org.
+DROP POLICY IF EXISTS "ngo_admin_update_org" ON public.organizations;
 CREATE POLICY "ngo_admin_update_org"
   ON public.organizations FOR UPDATE
   USING (public.is_ngo_admin(id));
@@ -246,11 +266,13 @@ CREATE POLICY "ngo_admin_update_org"
 -- ── profiles ───────────────────────────────────────────────────────────────
 
 -- Every authenticated user can read their own profile.
+DROP POLICY IF EXISTS "users_select_own_profile" ON public.profiles;
 CREATE POLICY "users_select_own_profile"
   ON public.profiles FOR SELECT
   USING (id = auth.uid());
 
 -- NGO members can read all profiles within their org.
+DROP POLICY IF EXISTS "ngo_members_select_org_profiles" ON public.profiles;
 CREATE POLICY "ngo_members_select_org_profiles"
   ON public.profiles FOR SELECT
   USING (
@@ -260,31 +282,37 @@ CREATE POLICY "ngo_members_select_org_profiles"
   );
 
 -- Users can update their own profile (name, avatar, job_title, etc.).
+DROP POLICY IF EXISTS "users_update_own_profile" ON public.profiles;
 CREATE POLICY "users_update_own_profile"
   ON public.profiles FOR UPDATE
   USING (id = auth.uid());
 
 -- Signup inserts are handled via service-role in server actions.
 -- This policy allows the signed-in user to insert their own row if needed.
+DROP POLICY IF EXISTS "users_insert_own_profile" ON public.profiles;
 CREATE POLICY "users_insert_own_profile"
   ON public.profiles FOR INSERT
   WITH CHECK (id = auth.uid());
 
 -- ── donor_profiles ─────────────────────────────────────────────────────────
 
+DROP POLICY IF EXISTS "donors_select_own" ON public.donor_profiles;
 CREATE POLICY "donors_select_own"
   ON public.donor_profiles FOR SELECT
   USING (id = auth.uid());
 
+DROP POLICY IF EXISTS "donors_update_own" ON public.donor_profiles;
 CREATE POLICY "donors_update_own"
   ON public.donor_profiles FOR UPDATE
   USING (id = auth.uid());
 
+DROP POLICY IF EXISTS "donors_insert_own" ON public.donor_profiles;
 CREATE POLICY "donors_insert_own"
   ON public.donor_profiles FOR INSERT
   WITH CHECK (id = auth.uid());
 
 -- NGO_ADMIN can read donor profiles for donors with access to their programs.
+DROP POLICY IF EXISTS "ngo_admin_select_donor_profiles" ON public.donor_profiles;
 CREATE POLICY "ngo_admin_select_donor_profiles"
   ON public.donor_profiles FOR SELECT
   USING (
@@ -299,11 +327,13 @@ CREATE POLICY "ngo_admin_select_donor_profiles"
 -- ── programs ───────────────────────────────────────────────────────────────
 
 -- NGO members can read all programs belonging to their org.
+DROP POLICY IF EXISTS "ngo_members_select_programs" ON public.programs;
 CREATE POLICY "ngo_members_select_programs"
   ON public.programs FOR SELECT
   USING (public.is_ngo_member(organization_id));
 
 -- NGO_ADMIN and NGO_STAFF can create programs.
+DROP POLICY IF EXISTS "ngo_editors_insert_programs" ON public.programs;
 CREATE POLICY "ngo_editors_insert_programs"
   ON public.programs FOR INSERT
   WITH CHECK (
@@ -312,16 +342,19 @@ CREATE POLICY "ngo_editors_insert_programs"
   );
 
 -- NGO_ADMIN and NGO_STAFF can update programs.
+DROP POLICY IF EXISTS "ngo_editors_update_programs" ON public.programs;
 CREATE POLICY "ngo_editors_update_programs"
   ON public.programs FOR UPDATE
   USING (public.is_ngo_editor(organization_id));
 
 -- Only NGO_ADMIN can delete programs.
+DROP POLICY IF EXISTS "ngo_admin_delete_programs" ON public.programs;
 CREATE POLICY "ngo_admin_delete_programs"
   ON public.programs FOR DELETE
   USING (public.is_ngo_admin(organization_id));
 
 -- Donors see only programs where they have an active, non-expired access grant.
+DROP POLICY IF EXISTS "donors_select_accessible_programs" ON public.programs;
 CREATE POLICY "donors_select_accessible_programs"
   ON public.programs FOR SELECT
   USING (
@@ -338,16 +371,19 @@ CREATE POLICY "donors_select_accessible_programs"
 -- ── donor_program_access ───────────────────────────────────────────────────
 
 -- Donors can read their own access grants.
+DROP POLICY IF EXISTS "donors_select_own_access" ON public.donor_program_access;
 CREATE POLICY "donors_select_own_access"
   ON public.donor_program_access FOR SELECT
   USING (donor_id = auth.uid());
 
 -- NGO members can read access grants for their org.
+DROP POLICY IF EXISTS "ngo_members_select_access_grants" ON public.donor_program_access;
 CREATE POLICY "ngo_members_select_access_grants"
   ON public.donor_program_access FOR SELECT
   USING (public.is_ngo_member(organization_id));
 
 -- Only NGO_ADMIN can grant access.
+DROP POLICY IF EXISTS "ngo_admin_insert_access" ON public.donor_program_access;
 CREATE POLICY "ngo_admin_insert_access"
   ON public.donor_program_access FOR INSERT
   WITH CHECK (
@@ -356,6 +392,7 @@ CREATE POLICY "ngo_admin_insert_access"
   );
 
 -- Only NGO_ADMIN can modify access grants (e.g. change level or revoke).
+DROP POLICY IF EXISTS "ngo_admin_update_access" ON public.donor_program_access;
 CREATE POLICY "ngo_admin_update_access"
   ON public.donor_program_access FOR UPDATE
   USING (
@@ -363,6 +400,7 @@ CREATE POLICY "ngo_admin_update_access"
     AND public.current_user_role() = 'NGO_ADMIN'
   );
 
+DROP POLICY IF EXISTS "ngo_admin_delete_access" ON public.donor_program_access;
 CREATE POLICY "ngo_admin_delete_access"
   ON public.donor_program_access FOR DELETE
   USING (
@@ -373,11 +411,13 @@ CREATE POLICY "ngo_admin_delete_access"
 -- ── donor_access_requests ──────────────────────────────────────────────────
 
 -- Donors can read their own requests.
+DROP POLICY IF EXISTS "donors_select_own_requests" ON public.donor_access_requests;
 CREATE POLICY "donors_select_own_requests"
   ON public.donor_access_requests FOR SELECT
   USING (donor_id = auth.uid());
 
 -- Donors can submit new access requests.
+DROP POLICY IF EXISTS "donors_insert_requests" ON public.donor_access_requests;
 CREATE POLICY "donors_insert_requests"
   ON public.donor_access_requests FOR INSERT
   WITH CHECK (
@@ -386,11 +426,13 @@ CREATE POLICY "donors_insert_requests"
   );
 
 -- NGO members can read access requests for their org.
+DROP POLICY IF EXISTS "ngo_members_select_requests" ON public.donor_access_requests;
 CREATE POLICY "ngo_members_select_requests"
   ON public.donor_access_requests FOR SELECT
   USING (public.is_ngo_member(organization_id));
 
 -- NGO_ADMIN can approve or deny requests.
+DROP POLICY IF EXISTS "ngo_admin_update_requests" ON public.donor_access_requests;
 CREATE POLICY "ngo_admin_update_requests"
   ON public.donor_access_requests FOR UPDATE
   USING (

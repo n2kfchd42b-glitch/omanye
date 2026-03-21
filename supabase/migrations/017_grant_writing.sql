@@ -79,6 +79,7 @@ ALTER TABLE grants         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE grant_versions ENABLE ROW LEVEL SECURITY;
 
 -- grants: org members can select
+DROP POLICY IF EXISTS grants_select ON grants;
 CREATE POLICY grants_select ON grants
   FOR SELECT
   USING (
@@ -88,6 +89,7 @@ CREATE POLICY grants_select ON grants
   );
 
 -- grants: org members can insert
+DROP POLICY IF EXISTS grants_insert ON grants;
 CREATE POLICY grants_insert ON grants
   FOR INSERT
   WITH CHECK (
@@ -98,6 +100,7 @@ CREATE POLICY grants_insert ON grants
   );
 
 -- grants: org members can update
+DROP POLICY IF EXISTS grants_update ON grants;
 CREATE POLICY grants_update ON grants
   FOR UPDATE
   USING (
@@ -107,6 +110,7 @@ CREATE POLICY grants_update ON grants
   );
 
 -- grants: org admin can delete draft grants
+DROP POLICY IF EXISTS grants_delete ON grants;
 CREATE POLICY grants_delete ON grants
   FOR DELETE
   USING (
@@ -118,6 +122,7 @@ CREATE POLICY grants_delete ON grants
   );
 
 -- grant_versions: readable by org members via the parent grant
+DROP POLICY IF EXISTS grant_versions_select ON grant_versions;
 CREATE POLICY grant_versions_select ON grant_versions
   FOR SELECT
   USING (
@@ -130,6 +135,7 @@ CREATE POLICY grant_versions_select ON grant_versions
   );
 
 -- grant_versions: insertable by org members
+DROP POLICY IF EXISTS grant_versions_insert ON grant_versions;
 CREATE POLICY grant_versions_insert ON grant_versions
   FOR INSERT
   WITH CHECK (

@@ -16,6 +16,7 @@ create table if not exists public.contact_submissions (
 alter table public.contact_submissions enable row level security;
 
 -- Public can INSERT (unauthenticated form submissions)
+DROP POLICY IF EXISTS "Anyone can submit contact form" ON public.contact_submissions;
 create policy "Anyone can submit contact form"
   on public.contact_submissions
   for insert
