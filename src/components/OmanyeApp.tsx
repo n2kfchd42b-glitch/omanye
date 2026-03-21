@@ -1,8 +1,9 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AuditProvider }  from '@/lib/useAuditLog'
+import { createClient } from '@/lib/supabase/client'
 import type {
   ViewId, User, Program, Dataset,
   Analysis, Document, TeamMember,
@@ -52,6 +53,21 @@ export default function OmanyeApp({
   const [reports,    setReports]    = useState<DonorReport[]>([])
   const [alertRules, setAlertRules] = useState<AlertRule[]>([])
   const [periods,    setPeriods]    = useState<CollectionPeriod[]>([])
+
+  // Fetch programs from Supabase when orgId is available
+  useEffect(() => {
+    if (!orgId) return
+    const supabase = createClient()
+    supabase
+      .from('programs')
+      .select('id, name, status')
+      .eq('organization_id', orgId)
+      .is('deleted_at', null)
+      .order('name')
+      .then(({ data }) => {
+        if (data) setPrograms(data as unknown as Program[])
+      })
+  }, [orgId])
 
   // Navigation — read initial view from URL query param (e.g. ?view=data-hub)
   const initialView = (searchParams.get('view') as ViewId) || 'dashboard'
