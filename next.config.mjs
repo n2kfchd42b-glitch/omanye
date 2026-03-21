@@ -7,6 +7,12 @@ const extraHosts = process.env.NEXT_PUBLIC_ALLOWED_HOSTS
   : []
 
 const nextConfig = {
+  // Disabled to prevent Supabase gotrue-js auth lock contention warning in dev.
+  // React Strict Mode double-fires effects which causes the auth token lock to
+  // be held across the first unmount, triggering a 5000ms timeout warning.
+  // This setting has no effect on production builds.
+  reactStrictMode: false,
+
   experimental: {
     serverActions: {
       allowedOrigins: [
