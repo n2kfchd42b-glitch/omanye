@@ -1,0 +1,41 @@
+-- ─────────────────────────────────────────────────────────────────────────────
+-- OMANYE  —  Fix infinite recursion in profiles RLS  —  Migration 024
+-- ─────────────────────────────────────────────────────────────────────────────
+--
+-- PROBLEM:
+--   Migration 013 added `profiles_same_org_select` with this USING clause:
+--
+--     id = auth.uid()
+--     OR (
+--       organization_id IS NOT NULL
+--       AND organization_id = (
+--         SELECT organization_id FROM public.profiles WHERE id = auth.uid()
+--       )
+--     )
+--
+--   The inline subquery references `public.profiles` from within an RLS policy
+--   on `public.profiles`. PostgreSQL detects this as infinite recursion during
+--   policy expansion and raises ERRCODE_INVALID_RECURSION, which PostgREST
+--   returns as HTTP 500 on every query to the profiles table.
+--
+-- WHY IT IS SAFE TO DROP:
+--   The policy is entirely redundant. Two policies from migration 001 already
+--   cover the same access without any recursion risk:
+--
+--   1. `users_select_own_profile`
+--      USING (id = auth.uid())
+--      → covers reading your own profile row
+--
+--   2. `ngo_members_select_org_profiles`
+--      USING (
+--        organization_id IS NOT NULL
+--        AND organization_id = public.current_user_org()   -- SECURITY DEFINER
+--        AND public.current_user_role() IN (...)           -- SECURITY DEFINER
+--      )
+--      → covers reading other org members' profiles using SECURITY DEFINER
+--        functions that bypass RLS safely (no inline self-reference)
+--
+-- FIX: drop the recursive policy.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+DROP POLICY IF EXISTS "profiles_same_org_select" ON public.profiles;
