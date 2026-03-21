@@ -120,7 +120,7 @@ export default async function OrgDashboardPage({ params }: Props) {
 
     supabase
       .from('donor_access_requests')
-      .select('id, status, created_at, programs(name), profiles(full_name)')
+      .select('id, status, created_at, programs(name), donor:profiles!donor_access_requests_donor_id_fkey(full_name)')
       .eq('organization_id', orgId)
       .order('created_at', { ascending: false })
       .limit(5),
@@ -163,7 +163,7 @@ export default async function OrgDashboardPage({ params }: Props) {
   }
 
   for (const row of (accessRequests.data ?? []) as Record<string, unknown>[]) {
-    const prof = row.profiles as Record<string, unknown> | null
+    const prof = row.donor as Record<string, unknown> | null
     const prog = row.programs as Record<string, unknown> | null
     activityItems.push({
       id:        row.id as string,

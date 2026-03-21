@@ -66,10 +66,10 @@ export default function GlobalError({ error, reset }: ErrorProps) {
             Try again
           </button>
           <Link
-            href="/donor/dashboard"
+            href="/login"
             className="px-5 py-2.5 rounded-lg border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-100 transition-colors"
           >
-            Go to dashboard
+            Back to login
           </Link>
         </div>
       </div>
