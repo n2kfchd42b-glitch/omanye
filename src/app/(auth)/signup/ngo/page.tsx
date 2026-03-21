@@ -74,49 +74,53 @@ export default function NGOSignupPage() {
     setServerError(null)
     setInfoMessage(null)
 
-    // 1. Create user + org + profile via server route (uses service role to bypass RLS)
-    const res = await fetch('/api/auth/signup/ngo', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        orgName:            values.orgName,
-        country:            values.country,
-        registrationNumber: values.registrationNumber,
-        fullName:           values.fullName,
-        email:              values.email,
-        password:           values.password,
-      }),
-    })
+    try {
+      // 1. Create user + org + profile via server route (uses service role to bypass RLS)
+      const res = await fetch('/api/auth/signup/ngo', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          orgName:            values.orgName,
+          country:            values.country,
+          registrationNumber: values.registrationNumber,
+          fullName:           values.fullName,
+          email:              values.email,
+          password:           values.password,
+        }),
+      })
 
-    const body = await res.json()
+      const body = await res.json()
 
-    if (!res.ok) {
-      setServerError(body.error ?? 'Failed to create account.')
-      return
+      if (!res.ok) {
+        setServerError(body.error ?? 'Failed to create account.')
+        return
+      }
+
+      if (!body.canSignInNow) {
+        // Email confirmation is enabled and the service-role key could not
+        // bypass it. The user must confirm via inbox before signing in.
+        setInfoMessage(
+          'Account created! Please check your email and click the confirmation link, then sign in.'
+        )
+        return
+      }
+
+      // Sign in to establish a browser session
+      const supabase = createClient()
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email:    values.email,
+        password: values.password,
+      })
+
+      if (signInError) {
+        setServerError(signInError.message)
+        return
+      }
+
+      router.replace('/onboarding')
+    } catch (err) {
+      setServerError(err instanceof Error ? err.message : 'An unexpected error occurred.')
     }
-
-    if (!body.canSignInNow) {
-      // Email confirmation is enabled and the service-role key could not
-      // bypass it. The user must confirm via inbox before signing in.
-      setInfoMessage(
-        'Account created! Please check your email and click the confirmation link, then sign in.'
-      )
-      return
-    }
-
-    // Sign in to establish a browser session
-    const supabase = createClient()
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email:    values.email,
-      password: values.password,
-    })
-
-    if (signInError) {
-      setServerError(signInError.message)
-      return
-    }
-
-    router.replace('/onboarding')
   }
 
   return (
